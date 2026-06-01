@@ -13,6 +13,7 @@
         "name": "next"
       }
     ],
+    "types": ["jest"],
     "baseUrl": ".",
     "paths": {
       "@/*": [
