@@ -64,7 +64,7 @@ jobs:
           CI: true
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: frontend/coverage/lcov.info
@@ -136,7 +136,7 @@ jobs:
         continue-on-error: false
 
       - name: Upload Wasm artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.contract }}-contract
           path: contracts/${{ matrix.contract }}/target/wasm32-unknown-unknown/release/*.wasm
@@ -190,7 +190,7 @@ jobs:
           RUSTFLAGS: ""
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.contract }}-coverage
           path: contracts/${{ matrix.contract }}/lcov.info
@@ -276,7 +276,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ matrix.browser }}
           path: frontend/playwright-report/
@@ -284,7 +284,7 @@ jobs:
 
       - name: Upload visual regression snapshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-snapshots-${{ matrix.browser }}
           path: frontend/e2e/snapshots/
