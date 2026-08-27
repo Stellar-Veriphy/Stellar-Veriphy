@@ -1,3 +1,44 @@
+//! # StellarVeriphy — Registry Contract
+//!
+//! Maintains the on-chain registry of:
+//! - **Approved TEE code hashes** — SHA-256 digests of trusted enclave
+//!   binaries accepted by the oracle contract during attestation.
+//! - **Authorised oracle provider public keys** — Ed25519 keys whose
+//!   attestation signatures are considered trustworthy.
+//!
+//! ## Architecture
+//!
+//! The registry acts as the *root of trust* for the whole StellarVeriphy
+//! system.  Before any oracle provider can submit an attestation, the
+//! [`OracleContract`] calls back into this registry to confirm that:
+//!
+//! 1. The TEE binary hash supplied in the attestation is listed here.
+//! 2. The provider public key is registered and not blacklisted.
+//!
+//! ## Storage model
+//!
+//! | Key pattern | Storage type | Lifetime |
+//! |---|---|---|
+//! | `DataKey::Admin` | `instance` | contract lifetime |
+//! | `DataKey::TeeHash(hash)` | `persistent` | until explicitly removed |
+//! | `DataKey::Provider(key)` | `persistent` | until removed / blacklisted |
+//! | `DataKey::Application(id)` | `persistent` | until reviewed |
+//! | `DataKey::Proposal(id)` | `persistent` | until executed or expired |
+//!
+//! ## Multi-sig governance
+//!
+//! Administrative operations (adding / removing TEE hashes and providers)
+//! can optionally be gated behind a multi-sig `threshold` so that no single
+//! admin can unilaterally change the trust anchor set.
+//!
+//! ## Example (off-chain SDK call)
+//!
+//! ```ignore
+//! // Check if a TEE hash is approved before submitting an attestation
+//! let approved = registry_client.is_tee_hash_approved(&env, &tee_hash);
+//! assert!(approved);
+//! ```
+
 #![no_std]
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN,

@@ -1,5 +1,23 @@
+/**
+ * next.config.ts
+ *
+ * Next.js build and runtime configuration.
+ *
+ * Security headers are applied to every route via the `headers()` hook.
+ * Image optimisation is configured via `images.remotePatterns` so that
+ * next/image can serve IPFS and Arweave assets.
+ *
+ * Constants are sourced from `config/app.ts` to avoid magic strings.
+ */
+
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
+
+import { ALLOWED_IMAGE_URL_PATTERNS } from "./config/app";
+
+// ---------------------------------------------------------------------------
+// Content Security Policy
+// ---------------------------------------------------------------------------
 
 const cspValue = [
   "default-src 'self'",
@@ -16,37 +34,66 @@ const cspValue = [
   "report-uri /api/csp-report",
 ].join("; ");
 
+// ---------------------------------------------------------------------------
+// Next.js config
+// ---------------------------------------------------------------------------
+
 const nextConfig: NextConfig = {
+  // -------------------------------------------------------------------------
+  // Image optimisation
+  // -------------------------------------------------------------------------
+  images: {
+    /**
+     * Allow next/image to fetch and optimise images from IPFS gateways and
+     * Arweave.  Patterns are maintained in config/app.ts so they stay in sync
+     * with the CSP connect-src and the TypeScript types.
+     */
+    remotePatterns: ALLOWED_IMAGE_URL_PATTERNS,
+    /**
+     * Serve AVIF first (best compression), then WebP as a fallback.
+     * Browsers that support neither receive the original format.
+     */
+    formats: ["image/avif", "image/webp"],
+    /**
+     * Device widths used to generate the srcset for responsive images.
+     * Covers from small mobile (320) up to wide-screen (1920).
+     */
+    deviceSizes: [320, 480, 640, 750, 828, 1080, 1200, 1920],
+    /**
+     * Fixed-size widths for the `sizes` attribute on icon / thumbnail images.
+     */
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    /**
+     * Minimum seconds a generated image variant is kept in the cache.
+     * Default is 60 s; bump to 10 min since IPFS content is immutable.
+     */
+    minimumCacheTTL: 600,
+    /**
+     * Disable the blur placeholder computation on the server-side for
+     * remote images (we supply our own static blur URI from config/app.ts).
+     */
+    dangerouslyAllowSVG: false,
+    contentDispositionType: "attachment",
+  },
+
+  // -------------------------------------------------------------------------
+  // Security headers
+  // -------------------------------------------------------------------------
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: [
-          {
-            key: "Content-Security-Policy",
-            value: cspValue,
-          },
+          { key: "Content-Security-Policy", value: cspValue },
           {
             key: "Report-To",
             value:
               '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-report"}]}',
           },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(), payment=()",
@@ -55,10 +102,7 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains",
           },
-          {
-            key: "X-DNS-Prefetch-Control",
-            value: "on",
-          },
+          { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
     ];
