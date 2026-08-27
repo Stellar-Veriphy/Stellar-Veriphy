@@ -1,11 +1,49 @@
+//! # StellarVeriphy — Registry Contract
+//!
+//! Maintains the on-chain registry of:
+//! - **Approved TEE code hashes** — SHA-256 digests of trusted enclave
+//!   binaries accepted by the oracle contract during attestation.
+//! - **Authorised oracle provider public keys** — Ed25519 keys whose
+//!   attestation signatures are considered trustworthy.
+//!
+//! ## Architecture
+//!
+//! The registry acts as the *root of trust* for the whole StellarVeriphy
+//! system.  Before any oracle provider can submit an attestation, the
+//! [`OracleContract`] calls back into this registry to confirm that:
+//!
+//! 1. The TEE binary hash supplied in the attestation is listed here.
+//! 2. The provider public key is registered and not blacklisted.
+//!
+//! ## Storage model
+//!
+//! | Key pattern | Storage type | Lifetime |
+//! |---|---|---|
+//! | `DataKey::Admin` | `instance` | contract lifetime |
+//! | `DataKey::TeeHash(hash)` | `persistent` | until explicitly removed |
+//! | `DataKey::Provider(key)` | `persistent` | until removed / blacklisted |
+//! | `DataKey::Application(id)` | `persistent` | until reviewed |
+//! | `DataKey::Proposal(id)` | `persistent` | until executed or expired |
+//!
+//! ## Multi-sig governance
+//!
+//! Administrative operations (adding / removing TEE hashes and providers)
+//! can optionally be gated behind a multi-sig `threshold` so that no single
+//! admin can unilaterally change the trust anchor set.
+//!
+//! ## Example (off-chain SDK call)
+//!
+//! ```ignore
+//! // Check if a TEE hash is approved before submitting an attestation
+//! let approved = registry_client.is_tee_hash_approved(&env, &tee_hash);
+//! assert!(approved);
+//! ```
+
 #![no_std]
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, Address, Bytes, BytesN, Env, String,
-    Symbol, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN,
+    Env, String, Symbol, Vec,
 };
-    contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, String, Vec,
-};
-use soroban_sdk::{contract, contractimpl, contracttype, contracterror, Address, Bytes, BytesN, Env, String, Vec};
 
 // ---------------------------------------------------------------------------
 // #24 – provenance cross-contract client
@@ -106,35 +144,42 @@ pub enum Error {
 // Storage keys  (#21 Provider variant, #23 typed BytesN<32> keys)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Storage keys  (#21 Provider variant, #23 typed BytesN<32> keys)
+// #439 — deduplicated and compacted: each variant appears exactly once.
+// ---------------------------------------------------------------------------
+
 #[contracttype]
 pub enum DataKey {
+    // ── singleton config (instance storage) ──────────────────────────────
     Admin,
     Provenance,
-    TeeHash(BytesN<32>),          // #23
-    Provider(BytesN<32>),         // #21
-    ProviderInfo(BytesN<32>),     // #188 / #190
-    ProviderList,                 // #188
-    TeeHashInfo(BytesN<32>),      // #191
-    TeeHashMigration(BytesN<32>), // #191
-    Application(u64),             // #189
-    ApplicationCount,             // #189
-    TeeHash(BytesN<32>),  // #23
-    Provider(BytesN<32>), // #21
     MultisigThreshold,
     MultisigAdmins,
+    NextProposalId,
+    TeeHashVersionHistory,             // #187
+    ApplicationCount,                  // #189
+    // ── per-TEE-hash (persistent storage) ────────────────────────────────
+    TeeHash(BytesN<32>),               // #23 — approved flag
+    TeeHashInfo(BytesN<32>),           // #191 — expiry / warning metadata
+    TeeHashMigration(BytesN<32>),      // #191 — migration state
+    TeeHashVersionInfo(BytesN<32>),    // #187 — versioning
+    TeeHashesByVersion(u32),           // #187 — index by version number
+    TeeHashCertRef(BytesN<32>),        // certificate reference on a TEE hash
+    // ── per-provider (persistent storage) ────────────────────────────────
+    Provider(BytesN<32>),              // #21 — approved flag
+    ProviderInfo(BytesN<32>),          // #188 / #190 — extended info
+    ProviderList,                      // #186 / #188 — full list
+    ProviderReputation(BytesN<32>),    // #186
+    ProviderRegions(BytesN<32>),       // #192
+    ProviderCapacity(BytesN<32>),      // #193
+    ProviderSpecializations(BytesN<32>), // #194
+    ProviderBlacklist(BytesN<32>),     // #195
+    // ── multisig governance ───────────────────────────────────────────────
     Proposal(u64),
     ProposalApprovals(u64),
-    NextProposalId,
-    TeeHashVersionInfo(BytesN<32>),      // #187
-    TeeHashesByVersion(u32),             // #187
-    TeeHashVersionHistory,               // #187
-    ProviderReputation(BytesN<32>),      // #186
-    ProviderList,                        // #186
-    TeeHashCertRef(BytesN<32>),          // certificate reference on a TEE hash
-    ProviderRegions(BytesN<32>),         // #192
-    ProviderCapacity(BytesN<32>),        // #193
-    ProviderSpecializations(BytesN<32>), // #194
-    ProviderBlacklist(BytesN<32>),       // #195
+    // ── provider applications ─────────────────────────────────────────────
+    Application(u64),                  // #189
 }
 
 // ---------------------------------------------------------------------------

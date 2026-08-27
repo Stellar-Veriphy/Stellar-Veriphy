@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 import { WizardProvider } from "@/app/context/WizardContext";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { KeyboardShortcutsProvider } from "@/components/KeyboardShortcutsProvider";
 import { NotificationProvider } from "@/components/notifications";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
@@ -16,14 +17,13 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { HelpSearchOverlay } from "@/components/ui/HelpSearchOverlay";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
 import { TutorialOverlay } from "@/components/ui/TutorialOverlay";
+// #442 — import centralised constants instead of duplicating them here
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/config/app";
 import { HelpProvider } from "@/context/HelpContext";
 import { WalletProvider } from "@/context/WalletContext";
+// #440 — wrap application with React Query provider
+import { ReactQueryProvider } from "@/lib/queryClient";
 import { SkipToContentLink } from "@/utils/accessibility";
-
-const SITE_NAME = "StellarVeriphy";
-const SITE_DESCRIPTION =
-  "Decentralized content verification and provenance on the Stellar blockchain — cryptographically verify media authenticity and origin.";
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://stellarveriphy.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "StellarVeriphy",
+    title: SITE_NAME,
   },
   other: {
     "darkreader-lock": "true",
@@ -86,6 +86,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans safe-inset`}>
         <SkipToContentLink />
+        <ReactQueryProvider>
+          <ThemeProvider>
         <ThemeProvider>
           <WalletProvider>
             <NotificationProvider>
@@ -107,6 +109,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </WizardProvider>
             </NotificationProvider>
           </WalletProvider>
+          {/* #438 — top-level boundary: catches errors in any provider or page */}
+          <ErrorBoundary section="Application">
+            <WalletProvider>
+              <NotificationProvider>
+                <WizardProvider>
+                  <HelpProvider>
+                    <KeyboardShortcutsProvider>
+                      <ToastProvider>
+                        {children}
+                        {/* #438 — boundary around the page content */}
+                        <ErrorBoundary section="Page">
+                          {children}
+                        </ErrorBoundary>
+                        <ScrollToTop />
+                        <HelpSearchOverlay />
+                        <TutorialOverlay />
+                        <PWAInstallPrompt />
+                        <PWAUpdatePrompt />
+                        <ConsentBanner />
+                      </ToastProvider>
+                    </KeyboardShortcutsProvider>
+                  </HelpProvider>
+                </WizardProvider>
+              </NotificationProvider>
+            </WalletProvider>
+          </ThemeProvider>
+        </ReactQueryProvider>
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>

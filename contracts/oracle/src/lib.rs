@@ -1,27 +1,78 @@
+//! # StellarVeriphy — Oracle Contract
+//!
+//! Manages **verification request lifecycles** and oracle provider
+//! registration for the StellarVeriphy platform.
+//!
+//! ## Workflow
+//!
+//! 1. A creator submits a verification request via [`submit_request`],
+//!    providing a content hash, manifest hash, storage reference, and an
+//!    optional TEE attestation proof.
+//! 2. The contract selects the next eligible oracle provider using a
+//!    round-robin algorithm that skips suspended or recently failed nodes.
+//! 3. The assigned provider fetches the media, runs verification inside a
+//!    TEE enclave, and calls [`verify_attestation`] with an Ed25519 signature
+//!    over the attestation payload.
+//! 4. The oracle contract validates the signature against the provider's
+//!    registered key, confirms the TEE code hash is approved in the
+//!    [`RegistryContract`], then calls `provenance_client.mint` to issue
+//!    an on-chain certificate.
+//!
+//! ## Provider management
+//!
+//! Oracle providers must:
+//! - Be registered via [`register_provider`].
+//! - Stake at least [`MINIMUM_STAKE`] stroops (≈ 10 XLM).
+//! - Maintain an SLA compliance rate above [`SLA_SUSPENSION_THRESHOLD`] % or
+//!   they are automatically suspended.
+//!
+//! ## Circuit breaker
+//!
+//! The contract administrator can pause all new request submissions via the
+//! circuit-breaker flag.  In-flight requests are not affected.
+//!
+//! ## Storage model
+//!
+//! | Key pattern | Storage type | Lifetime |
+//! |---|---|---|
+//! | `DataKey::Admin` | `instance` | contract lifetime |
+//! | `DataKey::Request(id)` | `persistent` | until archived / TTL |
+//! | `DataKey::Provider(addr)` | `persistent` | until removed |
+//! | `DataKey::ProviderStake(addr)` | `persistent` | until withdrawn |
+//! | `DataKey::ProviderSLA(addr)` | `persistent` | rolling window |
+//!
+//! ## Example (off-chain SDK call)
+//!
+//! ```ignore
+//! // Submit a new verification request
+//! let request_id = oracle_client.submit_request(
+//!     &env,
+//!     &content_hash,
+//!     &manifest_hash,
+//!     &storage_ref,
+//!     None,              // attestation_proof (supplied by provider later)
+//!     &Priority::Normal,
+//!     &ContentComplexity::Simple,
+//! );
+//! ```
+
 #![no_std]
 use soroban_sdk::{
     contract, contractimpl, contracttype, contracterror, contractevent,
     vec, Bytes, BytesN, Env, Symbol, Address, Vec,
 };
 
-const REQUEST_TTL_LEDGERS: u32 = 100;
-const MINIMUM_STAKE: u128 = 1_000_000_000;
-const WITHDRAWAL_COOLDOWN_LEDGERS: u32 = 7200;
-const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000;
-const DEFAULT_REQUEST_TTL_LEDGERS: u32 = 100;
-const DEFAULT_EXPIRATION_WARNING_LEDGERS: u32 = 20;
-
-// SLA suspension threshold: providers below this compliance % are auto-suspended
-const SLA_SUSPENSION_THRESHOLD: u32 = 70;
-    contract, contractimpl, contracttype, contracterror,
-    vec, Bytes, BytesN, Env, Symbol, Address, Vec,
-};
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const MINIMUM_STAKE: u128 = 1_000_000_000; // 1 billion stroops (10 XLM)
 const WITHDRAWAL_COOLDOWN_LEDGERS: u32 = 7200; // ~1 hour
-const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000; // Archive after 1000 ledgers
+const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000; // archive after 1000 ledgers
 const DEFAULT_REQUEST_TTL_LEDGERS: u32 = 100;
 const DEFAULT_EXPIRATION_WARNING_LEDGERS: u32 = 10;
+// SLA suspension threshold: providers below this compliance % are auto-suspended
+const SLA_SUSPENSION_THRESHOLD: u32 = 70;
 // Load balancing: max consecutive failures before a provider is skipped
 const MAX_RECENT_FAILURES: u32 = 5;
 // Load balancing: how many ledgers to consider a provider "recently failed"
@@ -121,41 +172,39 @@ pub enum Error {
 
 // ---------------------------------------------------------------------------
 // Storage keys
+// #439 — deduplicated and compacted: each variant appears exactly once.
+// Variants that only ever hold a single scalar use small fixed-size names to
+// keep the on-chain serialisation compact.
 // ---------------------------------------------------------------------------
 
 #[contracttype]
 pub enum DataKey {
+    // ── singleton config (instance storage) ──────────────────────────────
     Registry,
     Provenance,
     Admin,
     Paused,
+    RoundRobinIndex,
+    NextRequestId,
+    LastArchivalLedger,
+    RequestTTL,
+    ExpirationWarningLedgers,
+    NextDisputeId,
+    // ── per-provider (persistent storage) ────────────────────────────────
     Provider(Address),
     ProviderList,
     ProviderStake(Address),
     ProviderWithdrawalCooldown(Address),
     ProviderMetrics(Address),
     ProviderLastFailureLedger(Address),
-    RoundRobinIndex,
-    NextRequestId,
-    Request(u64),
-    RequestsByState(RequestState),
-    Paused,
-    RequestTTL,
-    ExpirationWarningLedgers,
-    ProviderStake(Address),
-    ProviderWithdrawalCooldown(Address),
-    LastArchivalLedger,
-    ArchivedRequest(u64),
-    // SLA keys
     ProviderSLA(Address),
     ProviderSuspended(Address),
-    // Pricing key
     ProviderPricing(Address),
+    // ── per-request (temporary storage) ──────────────────────────────────
+    Request(u64),
+    RequestsByState(RequestState),
     ArchivedRequest(u64),
-    LastArchivalLedger,
-    RequestTTL,
-    ExpirationWarningLedgers,
-    NextDisputeId,
+    // ── dispute tracking ──────────────────────────────────────────────────
     Dispute(u64),
     DisputesByProvider(Address),
 }

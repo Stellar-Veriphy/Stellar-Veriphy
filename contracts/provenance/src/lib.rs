@@ -1,3 +1,55 @@
+//! # StellarVeriphy — Provenance Contract
+//!
+//! Mints and manages **on-chain provenance certificates** that bind a piece
+//! of digital media to its verified origin.
+//!
+//! ## What is a certificate?
+//!
+//! A [`ProvenanceCert`] is a permanent on-chain record containing:
+//!
+//! - `storage_ref`      — IPFS CID or Arweave URI pointing to the raw media bytes.
+//! - `manifest_hash`    — SHA-256 hex digest of the manifest JSON (content metadata).
+//! - `attestation_hash` — SHA-256 hex digest of the TEE attestation payload.
+//! - `creator`          — Stellar address of the content creator.
+//! - `timestamp`        — Ledger Unix timestamp at the time of minting.
+//!
+//! Once minted, the certificate is immutable (unless explicitly revoked or
+//! locked by the creator).
+//!
+//! ## Key operations
+//!
+//! | Function | Description |
+//! |---|---|
+//! | [`mint`] | Mint a new certificate for a single media asset. |
+//! | [`mint_batch`] | Mint up to [`MAX_BATCH_SIZE`] certificates in one transaction. |
+//! | [`revoke`] | Mark a certificate as revoked with a [`RevocationReason`]. |
+//! | [`transfer_certificate`] | Transfer ownership to a new Stellar address. |
+//! | [`lock_certificate`] | Permanently lock a certificate against future changes. |
+//! | [`get`] | Look up a certificate by its auto-incremented numeric ID. |
+//! | [`get_by_code`] | Resolve a human-readable verification code to a certificate. |
+//!
+//! ## Storage model
+//!
+//! | Key pattern | Storage type | Lifetime |
+//! |---|---|---|
+//! | `DataKey::Admin` | `instance` | contract lifetime |
+//! | `DataKey::Certificate(id)` | `persistent` | until manually pruned |
+//! | `DataKey::NextId` | `instance` | contract lifetime |
+//! | `DataKey::Code(code)` → `id` | `persistent` | until code expires |
+//!
+//! ## Example (off-chain SDK call)
+//!
+//! ```ignore
+//! // Mint a new certificate
+//! let id = provenance_client.mint(
+//!     &env,
+//!     &String::from_str(&env, "ipfs://Qm..."),
+//!     &String::from_str(&env, "a1b2c3..."),
+//!     &String::from_str(&env, "d4e5f6..."),
+//!     &creator_address,
+//! );
+//! ```
+
 #![no_std]
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, symbol_short, Address,
@@ -17,12 +69,9 @@ pub enum ProvenanceError {
     BatchSizeExceeded = 4,
     CodeNotFound = 5,
     InvalidMediaMetadata = 6,
-}
-
-// Minimal type required for ProvenanceCert.revocation_reason to compile.
-    UnauthorizedRevocation = 5,
-    InvalidExpiration = 6,
-    CircularReference = 7,
+    UnauthorizedRevocation = 7,
+    InvalidExpiration = 8,
+    CircularReference = 9,
 }
 
 // #171 — Revocation reason
@@ -52,8 +101,6 @@ pub enum CertificateRelation {
     Parent(u64),
     Child(u64),
     Sibling(u64),
-    CollectionNotFound = 5,
-    CertificateLocked = 6,
 }
 
 // #14 — String fields (was Bytes)
@@ -240,6 +287,53 @@ pub struct CertificatesLinked {
     #[topic]
     pub related_id: u64,
     pub relation: CertificateRelation,
+}
+
+// ---------------------------------------------------------------------------
+// Storage keys  — #439 typed DataKey replaces raw symbol_short! strings.
+// Using a typed enum prevents typos, enables exhaustive matching, and keeps
+// key serialisation compact (Soroban encodes enum variants as u32 tags).
+// ---------------------------------------------------------------------------
+
+#[contracttype]
+pub enum DataKey {
+    // ── singleton config (persistent storage) ─────────────────────────────
+    /// Address of the oracle authorised to mint certificates.
+    Oracle,
+    /// Optional admin address (set via set_admin).
+    Admin,
+    /// Running total of minted certificates (also the next id - 1).
+    CertCount,
+    // ── per-certificate (persistent storage) ──────────────────────────────
+    /// The `ProvenanceCert` struct for a given certificate id.
+    Cert(u64),
+    /// Manifest-hash → certificate-id deduplication mapping.
+    ManifestIndex(String),
+    /// Amendment history log for a certificate.
+    History(u64),
+    /// Linked-certificate relations for a certificate.
+    Links(u64),
+    /// Metadata (display name / description) for a certificate.
+    Metadata(u64),
+    /// Metadata version history for a certificate.
+    MetadataHistory(u64),
+    /// Media properties attached to a certificate.
+    Media(u64),
+    // ── per-creator (persistent storage) ──────────────────────────────────
+    /// How many certificates a creator has minted.
+    CreatorCount(Address),
+    /// Ordered list of certificate ids for a creator.
+    CreatorIndex(Address),
+    // ── collections (persistent storage) ──────────────────────────────────
+    /// Counter for collection ids.
+    CollectionCount,
+    /// Collection metadata.
+    Collection(u64),
+    /// List of certificate ids in a collection.
+    CollectionCerts(u64),
+    // ── time-series stats (persistent storage) ────────────────────────────
+    /// Daily minting count for a given day bucket (DAY_SECONDS granularity).
+    DailyCount(u64),
 }
 
 #[contract]
