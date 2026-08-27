@@ -1,3 +1,4 @@
+export { CircularProgress } from "./CircularProgress";
 export {
   FileUploadProgress,
   PageTransitionLoader,

@@ -9,6 +9,7 @@ import { ConsentBanner } from "@/components/ConsentBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { KeyboardShortcutsProvider } from "@/components/KeyboardShortcutsProvider";
 import { NotificationProvider } from "@/components/notifications";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -88,6 +89,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ReactQueryProvider>
           <ThemeProvider>
         <ThemeProvider>
+          <WalletProvider>
+            <NotificationProvider>
+              <WizardProvider>
+                <HelpProvider>
+                  <KeyboardShortcutsProvider>
+                    <ToastProvider>
+                      {children}
+                      <ScrollToTop />
+                      <HelpSearchOverlay />
+                      <TutorialOverlay />
+                      <PWAInstallPrompt />
+                      <PWAUpdatePrompt />
+                      <ConsentBanner />
+                      <OnboardingFlow />
+                    </ToastProvider>
+                  </KeyboardShortcutsProvider>
+                </HelpProvider>
+              </WizardProvider>
+            </NotificationProvider>
+          </WalletProvider>
           {/* #438 — top-level boundary: catches errors in any provider or page */}
           <ErrorBoundary section="Application">
             <WalletProvider>
