@@ -8,6 +8,7 @@ import { WizardProvider } from "@/app/context/WizardContext";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { KeyboardShortcutsProvider } from "@/components/KeyboardShortcutsProvider";
 import { NotificationProvider } from "@/components/notifications";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -99,6 +100,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       <PWAInstallPrompt />
                       <PWAUpdatePrompt />
                       <ConsentBanner />
+                      <OnboardingFlow />
                     </ToastProvider>
                   </KeyboardShortcutsProvider>
                 </HelpProvider>

@@ -319,6 +319,34 @@ export function PageHeaderSkeleton() {
 }
 
 // ---------------------------------------------------------------------------
+// List Skeleton (generic, content-agnostic list of items)
+// ---------------------------------------------------------------------------
+
+export function ListSkeleton({ count = 5 }: { count?: number }) {
+  return (
+    <div role="status" aria-label="Loading list">
+      {Array.from({ length: count }).map((_, i) => (
+        <ListItemSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard Skeleton (stat cards + widget grid)
+// ---------------------------------------------------------------------------
+
+export function DashboardSkeleton() {
+  return (
+    <div className="space-y-6" role="status" aria-label="Loading dashboard">
+      <PageHeaderSkeleton />
+      <StatsCardsSkeleton />
+      <CardGridSkeleton count={3} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Text Line Skeleton
 // ---------------------------------------------------------------------------
 
