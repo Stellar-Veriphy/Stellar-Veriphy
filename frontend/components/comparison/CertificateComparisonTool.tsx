@@ -15,7 +15,7 @@ export interface Certificate {
   storageRef: string;
   manifestHash: string;
   attestationHash: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean>;
   status: string;
 }
 
@@ -144,11 +144,12 @@ export function CertificateComparisonTool({
   const findDifferences = useCallback(() => {
     if (selectedCertificates.length < 2) return [];
 
-    const differences: Array<{ field: string; values: any[] }> = [];
-    const fields = ["creator", "status", "storageRef"];
+    type CertificateField = keyof Omit<Certificate, "metadata">;
+    const differences: Array<{ field: string; values: (string | number)[] }> = [];
+    const fields: CertificateField[] = ["creator", "status", "storageRef"];
 
     for (const field of fields) {
-      const values = selectedCertificates.map((c) => (c as any)[field]);
+      const values = selectedCertificates.map((c) => c[field]);
       const unique = new Set(values);
       if (unique.size > 1) {
         differences.push({ field, values: Array.from(unique) });

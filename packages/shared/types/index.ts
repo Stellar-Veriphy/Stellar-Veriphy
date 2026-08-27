@@ -175,3 +175,100 @@ export interface TeeHashWithCert {
   approved: boolean;
   certRef?: TeeHashCertRef;
 }
+
+// ---------------------------------------------------------------------------
+// Type Guards
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrows an `ApiResponse<T>` to the success branch.
+ * Use this instead of checking `response.success === true` manually.
+ */
+export function isApiSuccess<T>(
+  response: ApiResponse<T>,
+): response is { success: true; data: T; error?: never } {
+  return response.success === true;
+}
+
+/**
+ * Narrows an `ApiResponse<T>` to the failure branch.
+ */
+export function isApiError<T>(
+  response: ApiResponse<T>,
+): response is { success: false; error: string; data?: never } {
+  return response.success === false;
+}
+
+/**
+ * Returns true if `status` is a valid `VerificationStatus` string.
+ */
+export function isVerificationStatus(status: string): status is VerificationStatus {
+  return (
+    status === "pending" ||
+    status === "processing" ||
+    status === "certified" ||
+    status === "failed"
+  );
+}
+
+/**
+ * Returns true if `status` is a valid `VerificationJobStatus` string.
+ */
+export function isVerificationJobStatus(status: string): status is VerificationJobStatus {
+  return (
+    status === "pending" ||
+    status === "processing" ||
+    status === "verified" ||
+    status === "rejected" ||
+    status === "failed"
+  );
+}
+
+/**
+ * Type guard for `CertificateDetails`. Validates that the required fields are
+ * present and correctly typed so callers don't need to cast from `unknown`.
+ */
+export function isCertificateDetails(value: unknown): value is CertificateDetails {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === "string" &&
+    typeof v.storageRef === "string" &&
+    typeof v.manifestHash === "string" &&
+    typeof v.attestationHash === "string" &&
+    typeof v.creator === "string" &&
+    typeof v.timestamp === "number"
+  );
+}
+
+/**
+ * Type guard for `ContentManifest`.
+ */
+export function isContentManifest(value: unknown): value is ContentManifest {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.contentHash === "string" &&
+    typeof v.creator === "string" &&
+    typeof v.timestamp === "string"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Generic utility types
+// ---------------------------------------------------------------------------
+
+/** Makes every property of T deeply readonly. */
+export type DeepReadonly<T> = T extends (infer U)[]
+  ? ReadonlyArray<DeepReadonly<U>>
+  : T extends object
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+
+/** Extracts the data type from a successful ApiResponse. */
+export type ApiData<R extends ApiResponse<unknown>> = R extends { success: true; data: infer D }
+  ? D
+  : never;
+
+/** Makes the listed keys required while keeping the rest as-is. */
+export type RequireFields<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;

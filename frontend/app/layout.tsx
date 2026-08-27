@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 import { WizardProvider } from "@/app/context/WizardContext";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { KeyboardShortcutsProvider } from "@/components/KeyboardShortcutsProvider";
 import { NotificationProvider } from "@/components/notifications";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -86,6 +87,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SkipToContentLink />
         <ReactQueryProvider>
           <ThemeProvider>
+        <ThemeProvider>
+          {/* #438 — top-level boundary: catches errors in any provider or page */}
+          <ErrorBoundary section="Application">
             <WalletProvider>
               <NotificationProvider>
                 <WizardProvider>
@@ -93,6 +97,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <KeyboardShortcutsProvider>
                       <ToastProvider>
                         {children}
+                        {/* #438 — boundary around the page content */}
+                        <ErrorBoundary section="Page">
+                          {children}
+                        </ErrorBoundary>
                         <ScrollToTop />
                         <HelpSearchOverlay />
                         <TutorialOverlay />
@@ -107,6 +115,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </WalletProvider>
           </ThemeProvider>
         </ReactQueryProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

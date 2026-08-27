@@ -10,6 +10,7 @@
  * Constants are sourced from `config/app.ts` to avoid magic strings.
  */
 
+import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 import { ALLOWED_IMAGE_URL_PATTERNS } from "./config/app";
@@ -106,6 +107,22 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // #437 — code splitting: keep heavy vendor chunks separate so unchanged
+  // pages don't bust the cache for unrelated vendor code.
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "react-icons",
+    ],
+  },
 };
 
-export default nextConfig;
+// #437 — wrap with bundle analyser; run `ANALYZE=true pnpm build` to open report
+const analyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+export default analyzer(nextConfig);

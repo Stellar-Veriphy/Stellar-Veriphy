@@ -69,12 +69,9 @@ pub enum ProvenanceError {
     BatchSizeExceeded = 4,
     CodeNotFound = 5,
     InvalidMediaMetadata = 6,
-}
-
-// Minimal type required for ProvenanceCert.revocation_reason to compile.
-    UnauthorizedRevocation = 5,
-    InvalidExpiration = 6,
-    CircularReference = 7,
+    UnauthorizedRevocation = 7,
+    InvalidExpiration = 8,
+    CircularReference = 9,
 }
 
 // #171 — Revocation reason
@@ -104,8 +101,6 @@ pub enum CertificateRelation {
     Parent(u64),
     Child(u64),
     Sibling(u64),
-    CollectionNotFound = 5,
-    CertificateLocked = 6,
 }
 
 // #14 — String fields (was Bytes)
@@ -292,6 +287,53 @@ pub struct CertificatesLinked {
     #[topic]
     pub related_id: u64,
     pub relation: CertificateRelation,
+}
+
+// ---------------------------------------------------------------------------
+// Storage keys  — #439 typed DataKey replaces raw symbol_short! strings.
+// Using a typed enum prevents typos, enables exhaustive matching, and keeps
+// key serialisation compact (Soroban encodes enum variants as u32 tags).
+// ---------------------------------------------------------------------------
+
+#[contracttype]
+pub enum DataKey {
+    // ── singleton config (persistent storage) ─────────────────────────────
+    /// Address of the oracle authorised to mint certificates.
+    Oracle,
+    /// Optional admin address (set via set_admin).
+    Admin,
+    /// Running total of minted certificates (also the next id - 1).
+    CertCount,
+    // ── per-certificate (persistent storage) ──────────────────────────────
+    /// The `ProvenanceCert` struct for a given certificate id.
+    Cert(u64),
+    /// Manifest-hash → certificate-id deduplication mapping.
+    ManifestIndex(String),
+    /// Amendment history log for a certificate.
+    History(u64),
+    /// Linked-certificate relations for a certificate.
+    Links(u64),
+    /// Metadata (display name / description) for a certificate.
+    Metadata(u64),
+    /// Metadata version history for a certificate.
+    MetadataHistory(u64),
+    /// Media properties attached to a certificate.
+    Media(u64),
+    // ── per-creator (persistent storage) ──────────────────────────────────
+    /// How many certificates a creator has minted.
+    CreatorCount(Address),
+    /// Ordered list of certificate ids for a creator.
+    CreatorIndex(Address),
+    // ── collections (persistent storage) ──────────────────────────────────
+    /// Counter for collection ids.
+    CollectionCount,
+    /// Collection metadata.
+    Collection(u64),
+    /// List of certificate ids in a collection.
+    CollectionCerts(u64),
+    // ── time-series stats (persistent storage) ────────────────────────────
+    /// Daily minting count for a given day bucket (DAY_SECONDS granularity).
+    DailyCount(u64),
 }
 
 #[contract]

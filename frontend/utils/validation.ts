@@ -167,6 +167,15 @@ export function isValidAmount(amount: string | number): boolean {
  * @param data     - Any JSON-serialisable object.
  * @param filename - The suggested download file name (e.g. `"manifest.json"`).
  */
+/** Primitive values that can appear in a serialisable object. */
+type SerializablePrimitive = string | number | boolean | null | undefined;
+
+/** Recursive type for objects that can be serialised to XML. */
+type SerializableValue = SerializablePrimitive | SerializableValue[] | SerializableObject;
+interface SerializableObject {
+  [key: string]: SerializableValue;
+}
+
 export function downloadJSON(data: object, filename: string) {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -189,6 +198,8 @@ export function downloadJSON(data: object, filename: string) {
  */
 export function downloadXML(data: object, filename: string) {
   const xml = objectToXml(data as Record<string, unknown>);
+export function downloadXML(data: SerializableObject, filename: string) {
+  const xml = objectToXml(data);
   const blob = new Blob([xml], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -210,6 +221,7 @@ export function downloadXML(data: object, filename: string) {
  * @returns Full XML document string.
  */
 function objectToXml(obj: Record<string, unknown>, rootName = "root"): string {
+function objectToXml(obj: SerializableObject, rootName = "root"): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += `<${rootName}>\n`;
   xml += objectToXmlContent(obj, 1);
@@ -233,6 +245,7 @@ function objectToXml(obj: Record<string, unknown>, rootName = "root"): string {
  * @returns XML fragment string (no declaration or root wrapper).
  */
 function objectToXmlContent(obj: Record<string, unknown>, indent: number): string {
+function objectToXmlContent(obj: SerializableObject, indent: number): string {
   const spaces = "  ".repeat(indent);
   let xml = "";
 
@@ -243,12 +256,15 @@ function objectToXmlContent(obj: Record<string, unknown>, indent: number): strin
     } else if (typeof value === "object" && !Array.isArray(value)) {
       xml += `${spaces}<${tagName}>\n`;
       xml += objectToXmlContent(value as Record<string, unknown>, indent + 1);
+      xml += objectToXmlContent(value as SerializableObject, indent + 1);
       xml += `${spaces}</${tagName}>\n`;
     } else if (Array.isArray(value)) {
-      value.forEach((item) => {
+      (value as SerializableValue[]).forEach((item) => {
         xml += `${spaces}<item>\n`;
         if (typeof item === "object" && item !== null) {
           xml += objectToXmlContent(item as Record<string, unknown>, indent + 1);
+        if (item !== null && item !== undefined && typeof item === "object" && !Array.isArray(item)) {
+          xml += objectToXmlContent(item as SerializableObject, indent + 1);
         } else {
           xml += `${"  ".repeat(indent + 1)}${String(item)}\n`;
         }

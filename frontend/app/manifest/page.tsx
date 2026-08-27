@@ -49,7 +49,7 @@ export default function ManifestPage() {
     }
   }, []);
 
-  const handleChange = (field: keyof ContentManifest, value: any) => {
+  const handleChange = (field: keyof ContentManifest, value: ContentManifest[typeof field]) => {
     setManifest((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -104,7 +104,7 @@ export default function ManifestPage() {
     }
   };
 
-  const handleMetadataChange = (metadata: Record<string, any>) => {
+  const handleMetadataChange = (metadata: Record<string, string | number | boolean>) => {
     setManifest((prev) => ({ ...prev, metadata }));
   };
 
