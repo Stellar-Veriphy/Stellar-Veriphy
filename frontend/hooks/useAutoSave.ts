@@ -1,22 +1,69 @@
+/**
+ * useAutoSave.ts
+ *
+ * React hook that periodically persists form state to `localStorage` so
+ * that in-progress work is not lost on accidental navigation or browser crash.
+ *
+ * Features
+ * --------
+ * - Configurable save interval (default 30 s).
+ * - Restores the last saved value on demand.
+ * - Tracks `hasUnsaved` state and fires a native `beforeunload` warning.
+ * - Broadcasts a custom `autosave-storage` DOM event so sibling tabs
+ *   can pick up the latest saved value without a page refresh.
+ *
+ * @module hooks/useAutoSave
+ *
+ * @example
+ * ```tsx
+ * const { state, save, restore, discard } = useAutoSave({
+ *   key: "manifest-editor",
+ *   data: formValues,
+ *   interval: 10_000,        // save every 10 s
+ *   onRestore: (v) => reset(v),
+ * });
+ * ```
+ */
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** Default auto-save interval in milliseconds (30 seconds). */
 const DEFAULT_INTERVAL = 30000;
+
+/** Custom DOM event name used to notify sibling tabs of a save. */
 const STORAGE_EVENT_KEY = "autosave-storage";
 
+/**
+ * Configuration for {@link useAutoSave}.
+ *
+ * @template T - The shape of the data being persisted.
+ */
 interface AutoSaveOptions<T> {
+  /** `localStorage` key under which the data will be stored. */
   key: string;
+  /** The current value to persist.  Changes trigger the "unsaved" flag. */
   data: T;
+  /** Called after every successful save with the serialised value. */
   onSave?: (data: T) => void;
+  /** Called when `restore()` successfully reads back a saved value. */
   onRestore?: (data: T) => void;
+  /** How often (ms) to write to `localStorage`.  Default: 30 000. */
   interval?: number;
+  /** Set to `false` to suspend all auto-save activity. Default: `true`. */
   enabled?: boolean;
 }
 
+/**
+ * Snapshot of the current auto-save lifecycle state.
+ */
 interface AutoSaveState {
+  /** Unix timestamp (ms) of the last successful save, or `null` if never saved. */
   lastSaved: number | null;
+  /** `true` while a save write is in progress. */
   isSaving: boolean;
+  /** `true` when `data` has changed since the last successful save. */
   hasUnsaved: boolean;
 }
 
@@ -26,6 +73,15 @@ declare global {
   }
 }
 
+/**
+ * Periodically persists `data` to `localStorage` and optionally restores
+ * it on demand.
+ *
+ * @template T - The type of the data being auto-saved.
+ * @param options - Configuration; see {@link AutoSaveOptions}.
+ * @returns An object containing the current {@link AutoSaveState} and
+ *   imperative helpers: `save`, `restore`, `clearSaved`, `discard`.
+ */
 export function useAutoSave<T>({
   key,
   data,
