@@ -1,45 +1,38 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+/**
+ * WalletProvider.tsx
+ *
+ * Thin provider shim that initialises the Zustand wallet store on mount.
+ * The full wallet state is now managed in `@/store/useWalletStore` — this
+ * component simply calls `store.init()` once so that the persisted session
+ * (localStorage) is restored when the app boots.
+ *
+ * Consuming components should import directly from the store:
+ *
+ *   import { useWallet }        from "@/store/useWalletStore"; // full state
+ *   import { useWalletActions } from "@/store/useWalletStore"; // actions only
+ *   import { useWalletPublicKey } from "@/store/useWalletStore"; // single slice
+ *
+ * The legacy `useWallet` export from this file is kept for backward
+ * compatibility — it re-exports from the store.
+ */
 
-interface WalletState {
-  publicKey: string | null;
-  connected: boolean;
-  connect: () => Promise<void>;
-  disconnect: () => void;
-}
+import { useEffect } from "react";
 
-const WalletContext = createContext<WalletState>({
-  publicKey: null,
-  connected: false,
-  connect: async () => {},
-  disconnect: () => {},
-});
+import { useWalletStore } from "@/store/useWalletStore";
+
+export { useWallet } from "@/store/useWalletStore";
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const init = useWalletStore((s) => s.init);
 
-  const connect = useCallback(async () => {
-    // Freighter wallet integration point
-    if (typeof window === "undefined") return;
-    try {
-      const freighter = (window as Window & { freighter?: { getPublicKey: () => Promise<string> } })
-        .freighter;
-      if (!freighter) throw new Error("Freighter wallet not found");
-      const key = await freighter.getPublicKey();
-      setPublicKey(key);
-    } catch (err) {
-      console.error("Wallet connection failed:", err);
-    }
+  useEffect(() => {
+    void init();
+    // init is stable (created once by Zustand) — safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const disconnect = useCallback(() => setPublicKey(null), []);
-
-  return (
-    <WalletContext.Provider value={{ publicKey, connected: !!publicKey, connect, disconnect }}>
-      {children}
-    </WalletContext.Provider>
-  );
+  // This provider is purely for side-effects — it renders no extra DOM nodes.
+  return <>{children}</>;
 }
-
-export const useWallet = () => useContext(WalletContext);
