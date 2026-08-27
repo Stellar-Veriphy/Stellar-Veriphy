@@ -76,6 +76,15 @@ export function isValidAmount(amount: string | number): boolean {
   return /^\d+(\.\d+)?$/.test(str);
 }
 
+/** Primitive values that can appear in a serialisable object. */
+type SerializablePrimitive = string | number | boolean | null | undefined;
+
+/** Recursive type for objects that can be serialised to XML. */
+type SerializableValue = SerializablePrimitive | SerializableValue[] | SerializableObject;
+interface SerializableObject {
+  [key: string]: SerializableValue;
+}
+
 export function downloadJSON(data: object, filename: string) {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -87,7 +96,7 @@ export function downloadJSON(data: object, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function downloadXML(data: object, filename: string) {
+export function downloadXML(data: SerializableObject, filename: string) {
   const xml = objectToXml(data);
   const blob = new Blob([xml], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
@@ -98,7 +107,7 @@ export function downloadXML(data: object, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function objectToXml(obj: any, rootName = "root"): string {
+function objectToXml(obj: SerializableObject, rootName = "root"): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += `<${rootName}>\n`;
   xml += objectToXmlContent(obj, 1);
@@ -106,7 +115,7 @@ function objectToXml(obj: any, rootName = "root"): string {
   return xml;
 }
 
-function objectToXmlContent(obj: any, indent: number): string {
+function objectToXmlContent(obj: SerializableObject, indent: number): string {
   const spaces = "  ".repeat(indent);
   let xml = "";
 
@@ -116,15 +125,15 @@ function objectToXmlContent(obj: any, indent: number): string {
       xml += `${spaces}<${tagName} />\n`;
     } else if (typeof value === "object" && !Array.isArray(value)) {
       xml += `${spaces}<${tagName}>\n`;
-      xml += objectToXmlContent(value, indent + 1);
+      xml += objectToXmlContent(value as SerializableObject, indent + 1);
       xml += `${spaces}</${tagName}>\n`;
     } else if (Array.isArray(value)) {
-      value.forEach((item) => {
+      (value as SerializableValue[]).forEach((item) => {
         xml += `${spaces}<item>\n`;
-        if (typeof item === "object") {
-          xml += objectToXmlContent(item, indent + 1);
+        if (item !== null && item !== undefined && typeof item === "object" && !Array.isArray(item)) {
+          xml += objectToXmlContent(item as SerializableObject, indent + 1);
         } else {
-          xml += `${"  ".repeat(indent + 1)}${item}\n`;
+          xml += `${"  ".repeat(indent + 1)}${String(item)}\n`;
         }
         xml += `${spaces}</item>\n`;
       });

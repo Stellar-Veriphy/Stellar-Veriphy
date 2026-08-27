@@ -4,24 +4,17 @@ use soroban_sdk::{
     vec, Bytes, BytesN, Env, Symbol, Address, Vec,
 };
 
-const REQUEST_TTL_LEDGERS: u32 = 100;
-const MINIMUM_STAKE: u128 = 1_000_000_000;
-const WITHDRAWAL_COOLDOWN_LEDGERS: u32 = 7200;
-const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000;
-const DEFAULT_REQUEST_TTL_LEDGERS: u32 = 100;
-const DEFAULT_EXPIRATION_WARNING_LEDGERS: u32 = 20;
-
-// SLA suspension threshold: providers below this compliance % are auto-suspended
-const SLA_SUSPENSION_THRESHOLD: u32 = 70;
-    contract, contractimpl, contracttype, contracterror,
-    vec, Bytes, BytesN, Env, Symbol, Address, Vec,
-};
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const MINIMUM_STAKE: u128 = 1_000_000_000; // 1 billion stroops (10 XLM)
 const WITHDRAWAL_COOLDOWN_LEDGERS: u32 = 7200; // ~1 hour
-const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000; // Archive after 1000 ledgers
+const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000; // archive after 1000 ledgers
 const DEFAULT_REQUEST_TTL_LEDGERS: u32 = 100;
 const DEFAULT_EXPIRATION_WARNING_LEDGERS: u32 = 10;
+// SLA suspension threshold: providers below this compliance % are auto-suspended
+const SLA_SUSPENSION_THRESHOLD: u32 = 70;
 // Load balancing: max consecutive failures before a provider is skipped
 const MAX_RECENT_FAILURES: u32 = 5;
 // Load balancing: how many ledgers to consider a provider "recently failed"
@@ -121,41 +114,39 @@ pub enum Error {
 
 // ---------------------------------------------------------------------------
 // Storage keys
+// #439 — deduplicated and compacted: each variant appears exactly once.
+// Variants that only ever hold a single scalar use small fixed-size names to
+// keep the on-chain serialisation compact.
 // ---------------------------------------------------------------------------
 
 #[contracttype]
 pub enum DataKey {
+    // ── singleton config (instance storage) ──────────────────────────────
     Registry,
     Provenance,
     Admin,
     Paused,
+    RoundRobinIndex,
+    NextRequestId,
+    LastArchivalLedger,
+    RequestTTL,
+    ExpirationWarningLedgers,
+    NextDisputeId,
+    // ── per-provider (persistent storage) ────────────────────────────────
     Provider(Address),
     ProviderList,
     ProviderStake(Address),
     ProviderWithdrawalCooldown(Address),
     ProviderMetrics(Address),
     ProviderLastFailureLedger(Address),
-    RoundRobinIndex,
-    NextRequestId,
-    Request(u64),
-    RequestsByState(RequestState),
-    Paused,
-    RequestTTL,
-    ExpirationWarningLedgers,
-    ProviderStake(Address),
-    ProviderWithdrawalCooldown(Address),
-    LastArchivalLedger,
-    ArchivedRequest(u64),
-    // SLA keys
     ProviderSLA(Address),
     ProviderSuspended(Address),
-    // Pricing key
     ProviderPricing(Address),
+    // ── per-request (temporary storage) ──────────────────────────────────
+    Request(u64),
+    RequestsByState(RequestState),
     ArchivedRequest(u64),
-    LastArchivalLedger,
-    RequestTTL,
-    ExpirationWarningLedgers,
-    NextDisputeId,
+    // ── dispute tracking ──────────────────────────────────────────────────
     Dispute(u64),
     DisputesByProvider(Address),
 }

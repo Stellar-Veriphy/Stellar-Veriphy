@@ -1,4 +1,16 @@
-export function jsonToXml(obj: any, rootName = "manifest"): string {
+/** Primitive values that can appear in a JSON/XML manifest tree. */
+type JsonPrimitive = string | number | boolean | null;
+
+/** Recursive JSON value type used for manifest serialisation. */
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+
+/** Parsed XML node result — either a leaf string or a nested record. */
+type XmlNode = string | XmlNodeObject;
+interface XmlNodeObject {
+  [key: string]: XmlNode | XmlNode[];
+}
+
+export function jsonToXml(obj: JsonValue, rootName = "manifest"): string {
   const escape = (str: string) =>
     String(str)
       .replace(/&/g, "&amp;")
@@ -6,21 +18,21 @@ export function jsonToXml(obj: any, rootName = "manifest"): string {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
-  const convert = (obj: any, name: string): string => {
-    if (obj === null || obj === undefined) {
+  const convert = (value: JsonValue, name: string): string => {
+    if (value === null || value === undefined) {
       return `<${name} />`;
     }
 
-    if (typeof obj !== "object") {
-      return `<${name}>${escape(obj)}</${name}>`;
+    if (typeof value !== "object") {
+      return `<${name}>${escape(String(value))}</${name}>`;
     }
 
-    if (Array.isArray(obj)) {
-      return obj.map((item) => convert(item, name.replace(/s$/, ""))).join("\n");
+    if (Array.isArray(value)) {
+      return value.map((item) => convert(item as JsonValue, name.replace(/s$/, ""))).join("\n");
     }
 
-    const children = Object.entries(obj)
-      .map(([key, value]) => convert(value, key))
+    const children = Object.entries(value as Record<string, JsonValue>)
+      .map(([key, child]) => convert(child, key))
       .join("\n");
 
     return `<${name}>\n${children}\n</${name}>`;
@@ -29,7 +41,7 @@ export function jsonToXml(obj: any, rootName = "manifest"): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n${convert(obj, rootName)}`;
 }
 
-export function xmlToJson(xml: string): any {
+export function xmlToJson(xml: string): XmlNode {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xml, "text/xml");
 
@@ -37,8 +49,8 @@ export function xmlToJson(xml: string): any {
     throw new Error("Invalid XML");
   }
 
-  const convert = (node: Element): any => {
-    const obj: any = {};
+  const convert = (node: Element): XmlNode => {
+    const obj: XmlNodeObject = {};
 
     if (node.children.length === 0) {
       return node.textContent || "";
@@ -48,11 +60,13 @@ export function xmlToJson(xml: string): any {
       const key = child.tagName;
       const value = convert(child);
 
-      if (obj[key]) {
-        if (!Array.isArray(obj[key])) {
-          obj[key] = [obj[key]];
+      const existing = obj[key];
+      if (existing !== undefined) {
+        if (!Array.isArray(existing)) {
+          obj[key] = [existing, value];
+        } else {
+          existing.push(value);
         }
-        obj[key].push(value);
       } else {
         obj[key] = value;
       }
