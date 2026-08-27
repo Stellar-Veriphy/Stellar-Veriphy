@@ -5,3 +5,5 @@ export { CertificateResultCard } from "./CertificateResultCard";
 export type { CertificateStatus } from "./CertificateStatusBadge";
 export { CertificateStatusBadge } from "./CertificateStatusBadge";
 export { CertificateVerificationPanel } from "./CertificateVerificationPanel";
+export type { BadgeSize, BadgeStyle, VerificationLevel } from "./VerificationBadge";
+export { VerificationBadge } from "./VerificationBadge";
