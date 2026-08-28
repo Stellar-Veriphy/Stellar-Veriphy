@@ -58,8 +58,8 @@
 
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, contracterror, contractevent,
-    vec, Bytes, BytesN, Env, Symbol, Address, Vec,
+    contract, contracterror, contractimpl, contracttype, vec, Address, Bytes, BytesN, Env, Symbol,
+    Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ const MINIMUM_STAKE: u128 = 1_000_000_000; // 1 billion stroops (10 XLM)
 const WITHDRAWAL_COOLDOWN_LEDGERS: u32 = 7200; // ~1 hour
 const ARCHIVAL_THRESHOLD_LEDGERS: u32 = 1000; // archive after 1000 ledgers
 const DEFAULT_REQUEST_TTL_LEDGERS: u32 = 100;
-const DEFAULT_EXPIRATION_WARNING_LEDGERS: u32 = 10;
+const DEFAULT_EXPIRATION_WARNING_LEDGERS: u32 = 20;
 // SLA suspension threshold: providers below this compliance % are auto-suspended
 const SLA_SUSPENSION_THRESHOLD: u32 = 70;
 // Load balancing: max consecutive failures before a provider is skipped
@@ -168,6 +168,11 @@ pub enum Error {
     /// The provided expiration warning threshold is invalid.
     /// Occurs in `update_warning_threshold` if the ledger threshold is set to 0.
     InvalidThreshold = 21,
+
+    /// #453 — The caller is not the currently-authorized delegate for the principal.
+    /// Occurs in `submit_request_as_delegate` if `delegate` doesn't match the
+    /// principal's stored delegate (or none was ever authorized).
+    NotAuthorizedDelegate = 22,
 }
 
 // ---------------------------------------------------------------------------
@@ -202,11 +207,18 @@ pub enum DataKey {
     ProviderPricing(Address),
     // ── per-request (temporary storage) ──────────────────────────────────
     Request(u64),
+    RequestExpiresAtLedger(u64),
     RequestsByState(RequestState),
     ArchivedRequest(u64),
     // ── dispute tracking ──────────────────────────────────────────────────
     Dispute(u64),
     DisputesByProvider(Address),
+    // ── #453 request delegation (persistent storage) ───────────────────────
+    /// Principal address → the delegate address currently authorized to
+    /// submit verification requests on their behalf.
+    Delegate(Address),
+    /// Request ids submitted on behalf of a principal via delegation.
+    DelegatedRequestsByPrincipal(Address),
 }
 
 // ---------------------------------------------------------------------------
@@ -244,11 +256,7 @@ pub enum ContentComplexity {
 // ---------------------------------------------------------------------------
 
 #[contracttype]
-#[derive(Clone, Debug)]
-pub struct TTLConfig {
-    pub default_ttl: u32,
-    pub high_priority_ttl: u32,
-    pub low_priority_ttl: u32,
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DisputeState {
     Open,
     Resolved,
@@ -261,39 +269,45 @@ pub enum DisputeResolution {
     ProviderFault,
     RequesterFault,
     Inconclusive,
+    NoFault,
+    /// Not yet resolved.
+    Pending,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct VerificationRequest {
-    pub storage_ref:   Bytes,
+    pub storage_ref: Bytes,
     pub manifest_hash: Bytes,
     pub requester:     Address,
     pub state:         RequestState,
     pub priority:      Priority,
     // #449 — Optional comments/notes for context during verification
     pub comment:       Option<String>,
+    pub requester: Address,
+    pub state: RequestState,
+    pub priority: Priority,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct RequestWithId {
-    pub id:      u64,
+    pub id: u64,
     pub request: VerificationRequest,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct PaginatedRequests {
-    pub requests:    Vec<RequestWithId>,
+    pub requests: Vec<RequestWithId>,
     pub total_count: u32,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct AttestationData {
-    pub provider:  Address,
-    pub tee_hash:  BytesN<32>,
+    pub provider: Address,
+    pub tee_hash: BytesN<32>,
     pub signature: BytesN<64>,
     pub timestamp: u64,
 }
@@ -301,24 +315,24 @@ pub struct AttestationData {
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct ProviderStakeInfo {
-    pub amount:                    u128,
+    pub amount: u128,
     pub withdrawal_cooldown_until: u32,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct ArchivedRequest {
-    pub request:           VerificationRequest,
+    pub request: VerificationRequest,
     pub archived_at_ledger: u32,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct AggregatedRequest {
-    pub primary_id:    u64,
-    pub member_ids:    Vec<u64>,
+    pub primary_id: u64,
+    pub member_ids: Vec<u64>,
     pub manifest_hash: Bytes,
-    pub total_fee:     u128,
+    pub total_fee: u128,
 }
 
 // ---------------------------------------------------------------------------
@@ -349,8 +363,8 @@ pub struct ProviderSLA {
     pub actual_success_rate: u32,
 
     // ── Counters used to compute actuals ───────────────────────────────────
-    pub total_requests:    u64,
-    pub successful:        u64,
+    pub total_requests: u64,
+    pub successful: u64,
     pub total_response_sum: u64,
 }
 
@@ -358,9 +372,9 @@ pub struct ProviderSLA {
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct SLACompliance {
-    pub response_time_ok:   bool,
-    pub uptime_ok:          bool,
-    pub success_rate_ok:    bool,
+    pub response_time_ok: bool,
+    pub uptime_ok: bool,
+    pub success_rate_ok: bool,
     /// Overall compliance percentage (0–100): fraction of targets met × 100.
     pub compliance_percent: u32,
     pub suspended:          bool,
@@ -398,6 +412,7 @@ pub struct RequestCommentEvent {
 pub struct ProviderStakeInfo {
     pub amount:                    u128,
     pub withdrawal_cooldown_until: u32,
+    pub suspended: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -419,22 +434,19 @@ pub struct ProviderPricing {
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct CostEstimate {
-    pub base_fee:      u128,
-    pub size_fee:      u128,
-    pub priority_fee:  u128,
+    pub base_fee: u128,
+    pub size_fee: u128,
+    pub priority_fee: u128,
     pub complexity_fee: u128,
-    pub total:         u128,
-pub struct ArchivedRequest {
-    pub request:            VerificationRequest,
-    pub archived_at_ledger: u32,
+    pub total: u128,
 }
 
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct TTLConfig {
-    pub default_ttl:      u32,
+    pub default_ttl: u32,
     pub high_priority_ttl: u32,
-    pub low_priority_ttl:  u32,
+    pub low_priority_ttl: u32,
 }
 
 /// Tracks verification performance metrics for a provider.
@@ -442,25 +454,25 @@ pub struct TTLConfig {
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct ProviderMetrics {
-    pub total_verifications:      u64,
+    pub total_verifications: u64,
     pub successful_verifications: u64,
-    pub failed_verifications:     u64,
+    pub failed_verifications: u64,
     /// Ledger sequence of the last recorded activity.
-    pub last_activity:            u64,
+    pub last_activity: u64,
 }
 
 /// Dispute record filed against a provider or about a verification result.
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct Dispute {
-    pub id:               u64,
-    pub request_id:       u64,
-    pub provider:         Address,
-    pub requester:        Address,
-    pub reason:           Bytes,
-    pub state:            DisputeState,
-    pub resolution:       Option<DisputeResolution>,
-    pub filed_at_ledger:  u32,
+    pub id: u64,
+    pub request_id: u64,
+    pub provider: Address,
+    pub requester: Address,
+    pub reason: Bytes,
+    pub state: DisputeState,
+    pub resolution: DisputeResolution,
+    pub filed_at_ledger: u32,
     pub resolved_at_ledger: Option<u32>,
     /// Reputation penalty applied (in basis points, e.g. 500 = 5%).
     pub reputation_penalty: u32,
@@ -480,27 +492,28 @@ impl OracleContract {
     // -----------------------------------------------------------------------
 
     pub fn init(
-        env:        Env,
-        registry:   Address,
+        env: Env,
+        registry: Address,
         provenance: Address,
-        admin:      Address,
+        admin: Address,
     ) -> Result<(), Error> {
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(Error::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Registry, &registry);
-        env.storage().instance().set(&DataKey::Provenance, &provenance);
+        env.storage()
+            .instance()
+            .set(&DataKey::Provenance, &provenance);
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::Registry,   &registry);
-        env.storage().instance().set(&DataKey::Provenance, &provenance);
-        env.storage().instance().set(&DataKey::Admin,      &admin);
 
         let default_config = TTLConfig {
-            default_ttl:       DEFAULT_REQUEST_TTL_LEDGERS,
+            default_ttl: DEFAULT_REQUEST_TTL_LEDGERS,
             high_priority_ttl: 200,
-            low_priority_ttl:  50,
+            low_priority_ttl: 50,
         };
-        env.storage().instance().set(&DataKey::RequestTTL, &default_config);
+        env.storage()
+            .instance()
+            .set(&DataKey::RequestTTL, &default_config);
         env.storage().instance().set(
             &DataKey::ExpirationWarningLedgers,
             &DEFAULT_EXPIRATION_WARNING_LEDGERS,
@@ -508,88 +521,14 @@ impl OracleContract {
         Ok(())
     }
 
-    pub fn add_provider(env: Env, provider: Address) -> Result<(), Error> {
-    // -----------------------------------------------------------------------
-    // TTL & expiration config
-    // -----------------------------------------------------------------------
-
-    pub fn update_ttl_config(
-        env:    Env,
-        config: TTLConfig,
-    ) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
-        env.storage().persistent().set(&DataKey::Provider(provider), &true);
-        Ok(())
-    }
-
-    pub fn remove_provider(env: Env, provider: Address) -> Result<(), Error> {
-        if config.default_ttl == 0 || config.high_priority_ttl == 0 || config.low_priority_ttl == 0 {
-            return Err(Error::InvalidTTL);
-        }
-        env.storage().instance().set(&DataKey::RequestTTL, &config);
-        Ok(())
-    }
-
-    pub fn get_ttl_config(env: Env) -> Result<TTLConfig, Error> {
-        env.storage().instance()
-            .get(&DataKey::RequestTTL)
-            .ok_or(Error::NotInitialized)
-    }
-
-    pub fn update_warning_threshold(env: Env, ledgers: u32) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
-        env.storage().persistent().remove(&DataKey::Provider(provider));
-        Ok(())
-    }
-
-    pub fn is_provider(env: Env, provider: Address) -> bool {
-        env.storage().persistent()
-            .get(&DataKey::Provider(provider))
-            .unwrap_or(false)
-        if ledgers == 0 {
-            return Err(Error::InvalidThreshold);
-        }
-        env.storage().instance().set(&DataKey::ExpirationWarningLedgers, &ledgers);
-        Ok(())
-    }
-
-    pub fn get_warning_threshold(env: Env) -> u32 {
-        env.storage().instance()
-            .get(&DataKey::ExpirationWarningLedgers)
-            .unwrap_or(DEFAULT_EXPIRATION_WARNING_LEDGERS)
-    }
-
-    pub fn check_expiration_warning(env: Env, id: u64) -> bool {
-        let req = match env.storage().temporary().get::<_, VerificationRequest>(&DataKey::Request(id)) {
-            Some(r) => r,
-            None => return false,
-        };
-        if req.state != RequestState::Pending {
-            return false;
-        }
-        let ttl = env.storage().temporary().get_ttl(&DataKey::Request(id));
-        let threshold: u32 = env.storage().instance()
-            .get(&DataKey::ExpirationWarningLedgers)
-            .unwrap_or(DEFAULT_EXPIRATION_WARNING_LEDGERS);
-        let near = ttl <= threshold;
-        if near {
-            env.events().publish((Symbol::new(&env, "expiration_warning"),), id);
-        }
-        near
-    }
-
     // -----------------------------------------------------------------------
     // Pause / unpause
     // -----------------------------------------------------------------------
 
     pub fn pause(env: Env) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
@@ -599,7 +538,9 @@ impl OracleContract {
     }
 
     pub fn unpause(env: Env) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
@@ -609,7 +550,10 @@ impl OracleContract {
     }
 
     pub fn is_paused(env: Env) -> bool {
-        env.storage().instance().get(&DataKey::Paused).unwrap_or(false)
+        env.storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false)
     }
 
     // -----------------------------------------------------------------------
@@ -617,14 +561,20 @@ impl OracleContract {
     // -----------------------------------------------------------------------
 
     pub fn add_provider(env: Env, provider: Address) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::Provider(provider.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Provider(provider.clone()), &true);
 
         // Maintain a global provider list for round-robin iteration
-        let mut list: Vec<Address> = env.storage().persistent()
+        let mut list: Vec<Address> = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderList)
             .unwrap_or(vec![&env]);
         // Only add if not already present
@@ -637,21 +587,30 @@ impl OracleContract {
         }
         if !found {
             list.push_back(provider.clone());
-            env.storage().persistent().set(&DataKey::ProviderList, &list);
+            env.storage()
+                .persistent()
+                .set(&DataKey::ProviderList, &list);
         }
-        env.events().publish((Symbol::new(&env, "provider_added"),), provider);
+        env.events()
+            .publish((Symbol::new(&env, "provider_added"),), provider);
         Ok(())
     }
 
     pub fn remove_provider(env: Env, provider: Address) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
-        env.storage().persistent().remove(&DataKey::Provider(provider.clone()));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Provider(provider.clone()));
 
         // Remove from provider list
-        let list: Vec<Address> = env.storage().persistent()
+        let list: Vec<Address> = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderList)
             .unwrap_or(vec![&env]);
         let mut new_list: Vec<Address> = vec![&env];
@@ -661,13 +620,17 @@ impl OracleContract {
                 new_list.push_back(p);
             }
         }
-        env.storage().persistent().set(&DataKey::ProviderList, &new_list);
-        env.events().publish((Symbol::new(&env, "provider_removed"),), provider);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderList, &new_list);
+        env.events()
+            .publish((Symbol::new(&env, "provider_removed"),), provider);
         Ok(())
     }
 
     pub fn is_provider(env: Env, provider: Address) -> bool {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&DataKey::Provider(provider))
             .unwrap_or(false)
     }
@@ -681,90 +644,106 @@ impl OracleContract {
         if amount < MINIMUM_STAKE {
             return Err(Error::InsufficientStake);
         }
-        let current: ProviderStakeInfo = env.storage().persistent()
+        let current: ProviderStakeInfo = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderStake(provider.clone()))
-            .unwrap_or(ProviderStakeInfo { amount: 0, withdrawal_cooldown_until: 0 });
+            .unwrap_or(ProviderStakeInfo {
+                amount: 0,
+                withdrawal_cooldown_until: 0,
+            });
         let stake_info = ProviderStakeInfo {
             amount: current.amount.saturating_add(amount),
             withdrawal_cooldown_until: current.withdrawal_cooldown_until,
-        let current: u128 = env.storage().persistent()
-            .get(&DataKey::ProviderStake(provider.clone()))
-            .map(|s: ProviderStakeInfo| s.amount)
-            .unwrap_or(0u128);
-        let stake_info = ProviderStakeInfo {
-            amount: current.saturating_add(amount),
-            withdrawal_cooldown_until: 0,
         };
-        env.storage().persistent().set(&DataKey::ProviderStake(provider.clone()), &stake_info);
-        env.events().publish((Symbol::new(&env, "stake_deposited"),), (provider, amount));
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderStake(provider.clone()), &stake_info);
+        env.events()
+            .publish((Symbol::new(&env, "stake_deposited"),), (provider, amount));
         Ok(())
     }
 
     pub fn initiate_withdrawal(env: Env, provider: Address, amount: u128) -> Result<(), Error> {
         provider.require_auth();
-        let stake_info: ProviderStakeInfo = env.storage().persistent()
+        let stake_info: ProviderStakeInfo = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderStake(provider.clone()))
             .ok_or(Error::NoStake)?;
         if stake_info.amount < amount {
             return Err(Error::InsufficientStake);
         }
-        let cooldown_until = env.ledger().sequence() + WITHDRAWAL_COOLDOWN_LEDGERS;
         let current_ledger = env.ledger().sequence();
         let cooldown_until = current_ledger + WITHDRAWAL_COOLDOWN_LEDGERS;
         let updated = ProviderStakeInfo {
             amount: stake_info.amount.saturating_sub(amount),
             withdrawal_cooldown_until: cooldown_until,
         };
-        env.storage().persistent().set(&DataKey::ProviderStake(provider.clone()), &updated);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderStake(provider.clone()), &updated);
         env.storage().persistent().set(
             &DataKey::ProviderWithdrawalCooldown(provider.clone()),
             &(cooldown_until, amount),
         );
-        env.events().publish((Symbol::new(&env, "withdrawal_initiated"),), (provider, amount));
+        env.events().publish(
+            (Symbol::new(&env, "withdrawal_initiated"),),
+            (provider, amount),
+        );
         Ok(())
     }
 
     pub fn complete_withdrawal(env: Env, provider: Address) -> Result<u128, Error> {
         provider.require_auth();
-        let (cooldown_until, amount): (u32, u128) = env.storage().persistent()
+        let (cooldown_until, amount): (u32, u128) = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderWithdrawalCooldown(provider.clone()))
             .ok_or(Error::NoStake)?;
         if env.ledger().sequence() < cooldown_until {
             return Err(Error::WithdrawalCooldown);
         }
-        env.storage().persistent().remove(&DataKey::ProviderWithdrawalCooldown(provider));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::ProviderWithdrawalCooldown(provider));
         Ok(amount)
     }
 
     pub fn get_provider_stake(env: Env, provider: Address) -> u128 {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&DataKey::ProviderStake(provider))
             .map(|s: ProviderStakeInfo| s.amount)
             .unwrap_or(0u128)
     }
 
     pub fn slash_stake(env: Env, provider: Address, amount: u128) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
-        let stake_info: ProviderStakeInfo = env.storage().persistent()
+        let stake_info: ProviderStakeInfo = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderStake(provider.clone()))
             .ok_or(Error::NoStake)?;
-        let slashed = if stake_info.amount >= amount { amount } else { stake_info.amount };
+        let slashed = if stake_info.amount >= amount {
+            amount
+        } else {
+            stake_info.amount
+        };
         let updated = ProviderStakeInfo {
             amount: stake_info.amount.saturating_sub(slashed),
             withdrawal_cooldown_until: stake_info.withdrawal_cooldown_until,
         };
-        env.storage().persistent().set(&DataKey::ProviderStake(provider.clone()), &updated);
-        env.events().publish((Symbol::new(&env, "stake_slashed"),), (provider, slashed));
-        let slash = if stake_info.amount >= amount { amount } else { stake_info.amount };
-        let updated = ProviderStakeInfo {
-            amount: stake_info.amount.saturating_sub(slash),
-            withdrawal_cooldown_until: stake_info.withdrawal_cooldown_until,
-        };
-        env.storage().persistent().set(&DataKey::ProviderStake(provider.clone()), &updated);
-        env.events().publish((Symbol::new(&env, "stake_slashed"),), (provider, slash));
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderStake(provider.clone()), &updated);
+        env.events()
+            .publish((Symbol::new(&env, "stake_slashed"),), (provider, slashed));
         Ok(())
     }
 
@@ -774,55 +753,67 @@ impl OracleContract {
 
     /// Record a successful verification by a provider.
     pub fn record_verification_success(env: Env, provider: Address) {
-        let mut m: ProviderMetrics = env.storage().persistent()
+        let mut m: ProviderMetrics = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderMetrics(provider.clone()))
             .unwrap_or(ProviderMetrics {
-                total_verifications:      0,
+                total_verifications: 0,
                 successful_verifications: 0,
-                failed_verifications:     0,
-                last_activity:            0,
+                failed_verifications: 0,
+                last_activity: 0,
             });
-        m.total_verifications      = m.total_verifications.saturating_add(1);
+        m.total_verifications = m.total_verifications.saturating_add(1);
         m.successful_verifications = m.successful_verifications.saturating_add(1);
-        m.last_activity            = env.ledger().timestamp();
-        env.storage().persistent().set(&DataKey::ProviderMetrics(provider), &m);
+        m.last_activity = env.ledger().timestamp();
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderMetrics(provider), &m);
     }
 
     /// Record a failed verification by a provider.
     pub fn record_verification_failure(env: Env, provider: Address) {
-        let mut m: ProviderMetrics = env.storage().persistent()
+        let mut m: ProviderMetrics = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderMetrics(provider.clone()))
             .unwrap_or(ProviderMetrics {
-                total_verifications:      0,
+                total_verifications: 0,
                 successful_verifications: 0,
-                failed_verifications:     0,
-                last_activity:            0,
+                failed_verifications: 0,
+                last_activity: 0,
             });
-        m.total_verifications  = m.total_verifications.saturating_add(1);
+        m.total_verifications = m.total_verifications.saturating_add(1);
         m.failed_verifications = m.failed_verifications.saturating_add(1);
-        m.last_activity        = env.ledger().timestamp();
+        m.last_activity = env.ledger().timestamp();
         // Record ledger of last failure for cooldown check
         env.storage().persistent().set(
             &DataKey::ProviderLastFailureLedger(provider.clone()),
             &env.ledger().sequence(),
         );
-        env.storage().persistent().set(&DataKey::ProviderMetrics(provider), &m);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderMetrics(provider), &m);
     }
 
-    /// Retrieve metrics for a provider.  Returns None if never recorded.
-    pub fn get_provider_metrics(env: Env, provider: Address) -> Option<ProviderMetrics> {
-        env.storage().persistent().get(&DataKey::ProviderMetrics(provider))
+    /// Retrieve round-robin/reputation metrics for a provider.  Returns None if never recorded.
+    pub fn get_verification_metrics(env: Env, provider: Address) -> Option<ProviderMetrics> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderMetrics(provider))
     }
 
     /// Compute a reputation score 0-100 for a provider.
     /// Score = (successful / total) * 100, clamped to 100.
     /// Returns 100 if no verifications recorded (new providers start trusted).
     pub fn get_reputation_score(env: Env, provider: Address) -> u32 {
-        let m: ProviderMetrics = match env.storage().persistent()
+        let m: ProviderMetrics = match env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderMetrics(provider))
         {
             Some(m) => m,
-            None    => return 100,
+            None => return 100,
         };
         if m.total_verifications == 0 {
             return 100;
@@ -846,7 +837,9 @@ impl OracleContract {
     /// The round-robin index advances after every call so no single provider
     /// monopolises requests when scores are equal.
     pub fn get_next_available_provider(env: Env) -> Result<Address, Error> {
-        let list: Vec<Address> = env.storage().persistent()
+        let list: Vec<Address> = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderList)
             .unwrap_or(vec![&env]);
 
@@ -861,7 +854,9 @@ impl OracleContract {
         let mut best_score: u32 = 0;
 
         // Start iteration from the saved round-robin index to break ties fairly
-        let rr_start: u32 = env.storage().instance()
+        let rr_start: u32 = env
+            .storage()
+            .instance()
             .get(&DataKey::RoundRobinIndex)
             .unwrap_or(0u32);
 
@@ -872,7 +867,9 @@ impl OracleContract {
             let provider = list.get(idx).unwrap();
 
             // Skip if not registered
-            if !env.storage().persistent()
+            if !env
+                .storage()
+                .persistent()
                 .get(&DataKey::Provider(provider.clone()))
                 .unwrap_or(false)
             {
@@ -880,12 +877,16 @@ impl OracleContract {
             }
 
             // Skip if inside failure cooldown
-            let last_failure: u32 = env.storage().persistent()
+            let last_failure: u32 = env
+                .storage()
+                .persistent()
                 .get(&DataKey::ProviderLastFailureLedger(provider.clone()))
                 .unwrap_or(0u32);
             if last_failure > 0 && current_ledger < last_failure + FAILURE_COOLDOWN_LEDGERS {
                 // Only skip if they have had recent consecutive failures
-                let m: ProviderMetrics = env.storage().persistent()
+                let m: ProviderMetrics = env
+                    .storage()
+                    .persistent()
                     .get(&DataKey::ProviderMetrics(provider.clone()))
                     .unwrap_or(ProviderMetrics {
                         total_verifications: 0,
@@ -900,7 +901,7 @@ impl OracleContract {
 
             let score = Self::get_reputation_score(env.clone(), provider.clone());
             if best_provider.is_none() || score > best_score {
-                best_score    = score;
+                best_score = score;
                 best_provider = Some(provider);
             }
         }
@@ -909,7 +910,9 @@ impl OracleContract {
 
         // Advance round-robin index
         let next_rr = (rr_start + 1) % len;
-        env.storage().instance().set(&DataKey::RoundRobinIndex, &next_rr);
+        env.storage()
+            .instance()
+            .set(&DataKey::RoundRobinIndex, &next_rr);
 
         env.events().publish(
             (Symbol::new(&env, "provider_selected"),),
@@ -920,7 +923,8 @@ impl OracleContract {
 
     /// Return all registered providers with their current capacity info.
     pub fn get_provider_list(env: Env) -> Vec<Address> {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&DataKey::ProviderList)
             .unwrap_or(vec![&env])
     }
@@ -934,46 +938,58 @@ impl OracleContract {
     /// The requester must be the original requester of the request.
     /// Emits a `dispute_filed` event.
     pub fn file_dispute(
-        env:        Env,
+        env: Env,
         request_id: u64,
-        provider:   Address,
-        reason:     Bytes,
+        provider: Address,
+        reason: Bytes,
     ) -> Result<u64, Error> {
         // Fetch request — accept both live and archived
-        let req: VerificationRequest = env.storage().temporary()
+        let req: VerificationRequest = env
+            .storage()
+            .temporary()
             .get(&DataKey::Request(request_id))
             .ok_or(Error::RequestNotFound)?;
 
         req.requester.require_auth();
 
         // Assign dispute ID
-        let dispute_id: u64 = env.storage().instance()
+        let dispute_id: u64 = env
+            .storage()
+            .instance()
             .get(&DataKey::NextDisputeId)
             .unwrap_or(0u64)
             + 1;
-        env.storage().instance().set(&DataKey::NextDisputeId, &dispute_id);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextDisputeId, &dispute_id);
 
         let dispute = Dispute {
-            id:                  dispute_id,
+            id: dispute_id,
             request_id,
-            provider:            provider.clone(),
-            requester:           req.requester.clone(),
+            provider: provider.clone(),
+            requester: req.requester.clone(),
             reason,
-            state:               DisputeState::Open,
-            resolution:          None,
-            filed_at_ledger:     env.ledger().sequence(),
-            resolved_at_ledger:  None,
-            reputation_penalty:  0,
+            state: DisputeState::Open,
+            resolution: DisputeResolution::Pending,
+            filed_at_ledger: env.ledger().sequence(),
+            resolved_at_ledger: None,
+            reputation_penalty: 0,
         };
 
-        env.storage().persistent().set(&DataKey::Dispute(dispute_id), &dispute);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Dispute(dispute_id), &dispute);
 
         // Index by provider
-        let mut by_provider: Vec<u64> = env.storage().persistent()
+        let mut by_provider: Vec<u64> = env
+            .storage()
+            .persistent()
             .get(&DataKey::DisputesByProvider(provider.clone()))
             .unwrap_or(vec![&env]);
         by_provider.push_back(dispute_id);
-        env.storage().persistent().set(&DataKey::DisputesByProvider(provider.clone()), &by_provider);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DisputesByProvider(provider.clone()), &by_provider);
 
         env.events().publish(
             (Symbol::new(&env, "dispute_filed"),),
@@ -989,18 +1005,22 @@ impl OracleContract {
     ///                        (only applied when resolution == ProviderFault).
     /// `slash_amount`      — amount of stake to slash (0 = no slash).
     pub fn resolve_dispute(
-        env:               Env,
-        dispute_id:        u64,
-        resolution:        DisputeResolution,
+        env: Env,
+        dispute_id: u64,
+        resolution: DisputeResolution,
         reputation_penalty: u32,
-        slash_amount:      u128,
+        slash_amount: u128,
     ) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
 
-        let mut dispute: Dispute = env.storage().persistent()
+        let mut dispute: Dispute = env
+            .storage()
+            .persistent()
             .get(&DataKey::Dispute(dispute_id))
             .ok_or(Error::DisputeNotFound)?;
 
@@ -1008,8 +1028,8 @@ impl OracleContract {
             return Err(Error::DisputeAlreadyResolved);
         }
 
-        dispute.state              = DisputeState::Resolved;
-        dispute.resolution         = Some(resolution.clone());
+        dispute.state = DisputeState::Resolved;
+        dispute.resolution = resolution.clone();
         dispute.resolved_at_ledger = Some(env.ledger().sequence());
         dispute.reputation_penalty = reputation_penalty;
 
@@ -1017,38 +1037,47 @@ impl OracleContract {
         if resolution == DisputeResolution::ProviderFault {
             // Record the penalty as a synthetic failure in provider metrics
             if reputation_penalty > 0 {
-                let mut m: ProviderMetrics = env.storage().persistent()
+                let mut m: ProviderMetrics = env
+                    .storage()
+                    .persistent()
                     .get(&DataKey::ProviderMetrics(dispute.provider.clone()))
                     .unwrap_or(ProviderMetrics {
-                        total_verifications:      0,
+                        total_verifications: 0,
                         successful_verifications: 0,
-                        failed_verifications:     0,
-                        last_activity:            0,
+                        failed_verifications: 0,
+                        last_activity: 0,
                     });
                 // Add synthetic failures proportional to the penalty
                 let penalty_failures = (reputation_penalty / 10) as u64;
                 m.failed_verifications = m.failed_verifications.saturating_add(penalty_failures);
-                m.total_verifications  = m.total_verifications.saturating_add(penalty_failures);
-                env.storage().persistent().set(
-                    &DataKey::ProviderMetrics(dispute.provider.clone()),
-                    &m,
-                );
+                m.total_verifications = m.total_verifications.saturating_add(penalty_failures);
+                env.storage()
+                    .persistent()
+                    .set(&DataKey::ProviderMetrics(dispute.provider.clone()), &m);
             }
 
             // Slash stake if requested
             if slash_amount > 0 {
-                let stake_info: ProviderStakeInfo = env.storage().persistent()
+                let stake_info: ProviderStakeInfo = env
+                    .storage()
+                    .persistent()
                     .get(&DataKey::ProviderStake(dispute.provider.clone()))
-                    .unwrap_or(ProviderStakeInfo { amount: 0, withdrawal_cooldown_until: 0 });
-                let slash = if stake_info.amount >= slash_amount { slash_amount } else { stake_info.amount };
+                    .unwrap_or(ProviderStakeInfo {
+                        amount: 0,
+                        withdrawal_cooldown_until: 0,
+                    });
+                let slash = if stake_info.amount >= slash_amount {
+                    slash_amount
+                } else {
+                    stake_info.amount
+                };
                 let updated = ProviderStakeInfo {
                     amount: stake_info.amount.saturating_sub(slash),
                     withdrawal_cooldown_until: stake_info.withdrawal_cooldown_until,
                 };
-                env.storage().persistent().set(
-                    &DataKey::ProviderStake(dispute.provider.clone()),
-                    &updated,
-                );
+                env.storage()
+                    .persistent()
+                    .set(&DataKey::ProviderStake(dispute.provider.clone()), &updated);
                 env.events().publish(
                     (Symbol::new(&env, "stake_slashed"),),
                     (dispute.provider.clone(), slash),
@@ -1056,7 +1085,9 @@ impl OracleContract {
             }
         }
 
-        env.storage().persistent().set(&DataKey::Dispute(dispute_id), &dispute);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Dispute(dispute_id), &dispute);
 
         env.events().publish(
             (Symbol::new(&env, "dispute_resolved"),),
@@ -1067,12 +1098,16 @@ impl OracleContract {
 
     /// Dismiss an open dispute (admin only, e.g. frivolous claim).
     pub fn dismiss_dispute(env: Env, dispute_id: u64) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
 
-        let mut dispute: Dispute = env.storage().persistent()
+        let mut dispute: Dispute = env
+            .storage()
+            .persistent()
             .get(&DataKey::Dispute(dispute_id))
             .ok_or(Error::DisputeNotFound)?;
 
@@ -1080,9 +1115,11 @@ impl OracleContract {
             return Err(Error::DisputeAlreadyResolved);
         }
 
-        dispute.state              = DisputeState::Dismissed;
+        dispute.state = DisputeState::Dismissed;
         dispute.resolved_at_ledger = Some(env.ledger().sequence());
-        env.storage().persistent().set(&DataKey::Dispute(dispute_id), &dispute);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Dispute(dispute_id), &dispute);
 
         env.events().publish(
             (Symbol::new(&env, "dispute_dismissed"),),
@@ -1093,12 +1130,15 @@ impl OracleContract {
 
     /// Get a single dispute by ID.
     pub fn get_dispute(env: Env, dispute_id: u64) -> Option<Dispute> {
-        env.storage().persistent().get(&DataKey::Dispute(dispute_id))
+        env.storage()
+            .persistent()
+            .get(&DataKey::Dispute(dispute_id))
     }
 
     /// Get all dispute IDs filed against a provider.
     pub fn get_disputes_by_provider(env: Env, provider: Address) -> Vec<u64> {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&DataKey::DisputesByProvider(provider))
             .unwrap_or(vec![&env])
     }
@@ -1108,69 +1148,139 @@ impl OracleContract {
     // -----------------------------------------------------------------------
 
     pub fn submit_request(
-        env:           Env,
-        storage_ref:   Bytes,
+        env: Env,
+        storage_ref: Bytes,
         manifest_hash: Bytes,
         requester: Address,
         priority: Priority,
-        requester:     Address,
-        priority:      Priority,
     ) -> Result<u64, Error> {
         requester.require_auth();
-        if Self::is_paused(env.clone()) {
-            return Err(Error::ContractPaused);
-        }
-
-        let ttl_config: TTLConfig = env.storage().instance()
-            .get(&DataKey::RequestTTL)
-            .unwrap_or(TTLConfig {
-                default_ttl: DEFAULT_REQUEST_TTL_LEDGERS,
-                high_priority_ttl: 200,
-                low_priority_ttl: 50,
-            });
-        let ttl = match priority {
-            Priority::High | Priority::Urgent => ttl_config.high_priority_ttl,
-            Priority::Low  => ttl_config.low_priority_ttl,
-                default_ttl:       DEFAULT_REQUEST_TTL_LEDGERS,
-                high_priority_ttl: 200,
-                low_priority_ttl:  50,
-            });
-
-        let ttl = match priority {
-            Priority::Low    => ttl_config.low_priority_ttl,
-            Priority::High | Priority::Urgent => ttl_config.high_priority_ttl,
-            Priority::Normal => ttl_config.default_ttl,
-        };
-
-        let id: u64 = env.storage().instance()
-            .get(&DataKey::NextRequestId)
-            .unwrap_or(0u64) + 1;
-        env.storage().instance().set(&DataKey::NextRequestId, &id);
-
-        let req = VerificationRequest {
-            storage_ref,
-            manifest_hash,
-            requester: requester.clone(),
-            state:     RequestState::Pending,
-            priority,
-        };
-
-        env.storage().temporary().set(&DataKey::Request(id), &req);
-        env.storage().temporary().extend_ttl(&DataKey::Request(id), ttl, ttl);
-
-        Self::add_request_to_state_index(&env, &RequestState::Pending, id);
-
-        let fee = Self::calculate_priority_fee(&req.priority);
-        env.events().publish((Symbol::new(&env, "submitted"),), (id, fee));
-        Ok(id)
+        Self::create_pending_request(&env, storage_ref, manifest_hash, requester, priority)
     }
 
     pub fn get_request(env: Env, id: u64) -> Option<VerificationRequest> {
         env.storage().temporary().get(&DataKey::Request(id))
     }
 
+    // -----------------------------------------------------------------------
+    // #453 — Request delegation
+    // -----------------------------------------------------------------------
+
+    /// Authorize `delegate` to submit verification requests on behalf of
+    /// `principal`. Replaces any previously-authorized delegate.
+    pub fn authorize_delegate(
+        env: Env,
+        principal: Address,
+        delegate: Address,
+    ) -> Result<(), Error> {
+        principal.require_auth();
+        env.storage()
+            .persistent()
+            .set(&DataKey::Delegate(principal.clone()), &delegate);
+        env.events().publish(
+            (Symbol::new(&env, "delegate_authorized"),),
+            (principal, delegate),
+        );
+        Ok(())
+    }
+
+    /// Revoke `principal`'s currently-authorized delegate, if any.
+    pub fn revoke_delegate(env: Env, principal: Address) -> Result<(), Error> {
+        principal.require_auth();
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Delegate(principal.clone()));
+        env.events()
+            .publish((Symbol::new(&env, "delegate_revoked"),), principal);
+        Ok(())
+    }
+
+    /// The address currently authorized to submit requests on behalf of
+    /// `principal`, if any.
+    pub fn get_delegate(env: Env, principal: Address) -> Option<Address> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Delegate(principal))
+    }
+
+    /// Submit a verification request on behalf of `principal`. `delegate`
+    /// must be the address `principal` currently has authorized via
+    /// `authorize_delegate`, and must itself authorize this call. The
+    /// resulting request (and any certificate minted from it) is owned by
+    /// `principal`, not `delegate`.
+    pub fn submit_request_as_delegate(
+        env: Env,
+        principal: Address,
+        delegate: Address,
+        storage_ref: Bytes,
+        manifest_hash: Bytes,
+        priority: Priority,
+    ) -> Result<u64, Error> {
+        delegate.require_auth();
+
+        let authorized: Option<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Delegate(principal.clone()));
+        if authorized != Some(delegate) {
+            return Err(Error::NotAuthorizedDelegate);
+        }
+
+        let id = Self::create_pending_request(
+            &env,
+            storage_ref,
+            manifest_hash,
+            principal.clone(),
+            priority,
+        )?;
+
+        let idx_key = DataKey::DelegatedRequestsByPrincipal(principal);
+        let mut ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&idx_key)
+            .unwrap_or(vec![&env]);
+        ids.push_back(id);
+        env.storage().persistent().set(&idx_key, &ids);
+
+        Ok(id)
+    }
+
+    /// Request ids submitted on behalf of `principal` via delegation,
+    /// paginated (most recent first).
+    pub fn get_delegated_requests(
+        env: Env,
+        principal: Address,
+        offset: u32,
+        limit: u32,
+    ) -> Vec<u64> {
+        let ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::DelegatedRequestsByPrincipal(principal))
+            .unwrap_or(vec![&env]);
+
+        let mut results: Vec<u64> = vec![&env];
+        let mut count = 0u32;
+        let mut skipped = 0u32;
+
+        let mut i = ids.len();
+        while i > 0 && count < limit {
+            i -= 1;
+            if skipped < offset {
+                skipped += 1;
+                continue;
+            }
+            results.push_back(ids.get(i).unwrap());
+            count += 1;
+        }
+
+        results
+    }
+
     pub fn get_ttl_config(env: Env) -> TTLConfig {
-        env.storage().instance()
+        env.storage()
+            .instance()
             .get(&DataKey::RequestTTL)
             .unwrap_or(TTLConfig {
                 default_ttl: DEFAULT_REQUEST_TTL_LEDGERS,
@@ -1185,54 +1295,72 @@ impl OracleContract {
         high_priority_ttl: u32,
         low_priority_ttl: u32,
     ) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
         if default_ttl == 0 || high_priority_ttl == 0 || low_priority_ttl == 0 {
             return Err(Error::InvalidState);
         }
-        env.storage().instance().set(&DataKey::RequestTTL, &TTLConfig {
-            default_ttl,
-            high_priority_ttl,
-            low_priority_ttl,
-        });
+        env.storage().instance().set(
+            &DataKey::RequestTTL,
+            &TTLConfig {
+                default_ttl,
+                high_priority_ttl,
+                low_priority_ttl,
+            },
+        );
         Ok(())
     }
 
     pub fn get_warning_threshold(env: Env) -> u32 {
-        env.storage().instance()
+        env.storage()
+            .instance()
             .get(&DataKey::ExpirationWarningLedgers)
             .unwrap_or(DEFAULT_EXPIRATION_WARNING_LEDGERS)
     }
 
     pub fn update_warning_threshold(env: Env, ledgers: u32) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
         if ledgers == 0 {
             return Err(Error::InvalidState);
         }
-        env.storage().instance().set(&DataKey::ExpirationWarningLedgers, &ledgers);
+        env.storage()
+            .instance()
+            .set(&DataKey::ExpirationWarningLedgers, &ledgers);
         Ok(())
     }
 
     pub fn check_expiration_warning(env: Env, id: u64) -> bool {
         let threshold = Self::get_warning_threshold(env.clone());
-        let ttl = env.storage().temporary().get_ttl(&DataKey::Request(id));
-        if ttl <= threshold {
-            env.events().publish(
-                (Symbol::new(&env, "expiring_soon"),),
-                (id, ttl),
-            );
+        let expires_at_ledger: u32 = match env
+            .storage()
+            .temporary()
+            .get(&DataKey::RequestExpiresAtLedger(id))
+        {
+            Some(l) => l,
+            None => return false,
+        };
+        let remaining = expires_at_ledger.saturating_sub(env.ledger().sequence());
+        if remaining <= threshold {
+            env.events()
+                .publish((Symbol::new(&env, "expiring_soon"),), (id, remaining));
             return true;
         }
         false
     }
 
     pub fn cancel_request(env: Env, id: u64) -> Result<(), Error> {
-        let mut req: VerificationRequest = env.storage().temporary()
+        let mut req: VerificationRequest = env
+            .storage()
+            .temporary()
             .get(&DataKey::Request(id))
             .ok_or(Error::RequestNotFound)?;
 
@@ -1251,7 +1379,7 @@ impl OracleContract {
     }
 
     pub fn submit_batch_request(
-        env:      Env,
+        env: Env,
         requests: Vec<(Bytes, Bytes, Address, Priority)>,
     ) -> Result<Vec<u64>, Error> {
         if requests.len() > 10 {
@@ -1262,12 +1390,14 @@ impl OracleContract {
             return Err(Error::ContractPaused);
         }
 
-        let ttl_config: TTLConfig = env.storage().instance()
+        let ttl_config: TTLConfig = env
+            .storage()
+            .instance()
             .get(&DataKey::RequestTTL)
             .unwrap_or(TTLConfig {
-                default_ttl:       DEFAULT_REQUEST_TTL_LEDGERS,
+                default_ttl: DEFAULT_REQUEST_TTL_LEDGERS,
                 high_priority_ttl: 200,
-                low_priority_ttl:  50,
+                low_priority_ttl: 50,
             });
 
         let mut ids: Vec<u64> = vec![&env];
@@ -1277,32 +1407,46 @@ impl OracleContract {
             requester.require_auth();
 
             let ttl = match priority {
-                Priority::Low    => ttl_config.low_priority_ttl,
+                Priority::Low => ttl_config.low_priority_ttl,
                 Priority::High | Priority::Urgent => ttl_config.high_priority_ttl,
                 Priority::Normal => ttl_config.default_ttl,
             };
 
-            let id: u64 = env.storage().instance()
+            let id: u64 = env
+                .storage()
+                .instance()
                 .get(&DataKey::NextRequestId)
                 .unwrap_or(0u64)
                 + 1;
             env.storage().instance().set(&DataKey::NextRequestId, &id);
 
             let req = VerificationRequest {
-                storage_ref:   storage_ref.clone(),
+                storage_ref: storage_ref.clone(),
                 manifest_hash: manifest_hash.clone(),
-                requester:     requester.clone(),
-                state:         RequestState::Pending,
-                priority:      priority.clone(),
+                requester: requester.clone(),
+                state: RequestState::Pending,
+                priority: priority.clone(),
             };
 
             env.storage().temporary().set(&DataKey::Request(id), &req);
-            env.storage().temporary().extend_ttl(&DataKey::Request(id), ttl, ttl);
+            env.storage()
+                .temporary()
+                .extend_ttl(&DataKey::Request(id), ttl, ttl);
+
+            let expires_at_ledger = env.ledger().sequence() + ttl;
+            env.storage()
+                .temporary()
+                .set(&DataKey::RequestExpiresAtLedger(id), &expires_at_ledger);
+            env.storage()
+                .temporary()
+                .extend_ttl(&DataKey::RequestExpiresAtLedger(id), ttl, ttl);
+
             Self::add_request_to_state_index(&env, &RequestState::Pending, id);
             ids.push_back(id);
         }
 
-        env.events().publish((Symbol::new(&env, "batch_submitted"),), ids.clone());
+        env.events()
+            .publish((Symbol::new(&env, "batch_submitted"),), ids.clone());
         Ok(ids)
     }
 
@@ -1311,42 +1455,55 @@ impl OracleContract {
     // -----------------------------------------------------------------------
 
     pub fn get_requests_by_state(
-        env:       Env,
-        state:     RequestState,
-        offset:    u32,
-        limit:     u32,
+        env: Env,
+        state: RequestState,
+        offset: u32,
+        limit: u32,
         requester: Option<Address>,
     ) -> PaginatedRequests {
-        let all_ids: Vec<u64> = env.storage().persistent()
+        let all_ids: Vec<u64> = env
+            .storage()
+            .persistent()
             .get(&DataKey::RequestsByState(state.clone()))
             .unwrap_or(vec![&env]);
 
         let mut results: Vec<RequestWithId> = vec![&env];
         let mut count = 0u32;
         let limit_val = if limit == 0 { 100 } else { limit.min(100) };
-        let start = offset as usize;
+        let start = offset;
 
         if start >= all_ids.len() {
             return PaginatedRequests {
-                requests:    results,
+                requests: results,
                 total_count: all_ids.len() as u32,
             };
         }
 
         for i in start..all_ids.len() {
-            if count >= limit_val { break; }
-            let req_id = all_ids.get(i as u32).unwrap();
-            if let Some(req) = env.storage().temporary().get::<_, VerificationRequest>(&DataKey::Request(req_id)) {
+            if count >= limit_val {
+                break;
+            }
+            let req_id = all_ids.get(i).unwrap();
+            if let Some(req) = env
+                .storage()
+                .temporary()
+                .get::<_, VerificationRequest>(&DataKey::Request(req_id))
+            {
                 if let Some(ref addr) = requester {
-                    if req.requester != *addr { continue; }
+                    if req.requester != *addr {
+                        continue;
+                    }
                 }
-                results.push_back(RequestWithId { id: req_id, request: req });
+                results.push_back(RequestWithId {
+                    id: req_id,
+                    request: req,
+                });
                 count += 1;
             }
         }
 
         PaginatedRequests {
-            requests:    results,
+            requests: results,
             total_count: all_ids.len() as u32,
         }
     }
@@ -1357,53 +1514,70 @@ impl OracleContract {
 
     pub fn archive_old_requests(env: Env) -> u32 {
         let current_ledger = env.ledger().sequence();
-        let last_archival: u32 = env.storage().persistent()
+        let last_archival: u32 = env
+            .storage()
+            .persistent()
             .get(&DataKey::LastArchivalLedger)
             .unwrap_or(0u32);
         if current_ledger < last_archival + ARCHIVAL_THRESHOLD_LEDGERS {
             return 0;
         }
         let mut archived_count = 0u32;
-        let next_id: u64 = env.storage().instance()
+        let next_id: u64 = env
+            .storage()
+            .instance()
             .get(&DataKey::NextRequestId)
             .unwrap_or(0u64);
         for i in 1..=next_id {
-            if let Some(req) = env.storage().temporary()
+            if let Some(req) = env
+                .storage()
+                .temporary()
                 .get::<_, VerificationRequest>(&DataKey::Request(i))
             {
                 let archived = ArchivedRequest {
-                    request:            req,
+                    request: req,
                     archived_at_ledger: current_ledger,
                 };
-                env.storage().persistent().set(&DataKey::ArchivedRequest(i), &archived);
+                env.storage()
+                    .persistent()
+                    .set(&DataKey::ArchivedRequest(i), &archived);
                 env.storage().temporary().remove(&DataKey::Request(i));
                 env.events().publish((Symbol::new(&env, "archived"),), i);
                 archived_count += 1;
             }
         }
-        env.storage().persistent().set(&DataKey::LastArchivalLedger, &current_ledger);
+        env.storage()
+            .persistent()
+            .set(&DataKey::LastArchivalLedger, &current_ledger);
         archived_count
     }
 
     pub fn get_archived_request(env: Env, id: u64) -> Option<ArchivedRequest> {
-        env.storage().persistent().get(&DataKey::ArchivedRequest(id))
+        env.storage()
+            .persistent()
+            .get(&DataKey::ArchivedRequest(id))
     }
 
     pub fn get_last_archival_ledger(env: Env) -> u32 {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&DataKey::LastArchivalLedger)
             .unwrap_or(0u32)
     }
 
     pub fn get_provider_metrics(env: Env, provider: Address) -> Option<ProviderSLA> {
-        env.storage().persistent().get(&DataKey::ProviderSLA(provider))
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderSLA(provider))
     }
     // -----------------------------------------------------------------------
     // Attestation
     // -----------------------------------------------------------------------
 
     pub fn verify_tee_hash(env: Env, tee_hash: BytesN<32>) -> Result<(), Error> {
-        let registry: Address = env.storage().instance()
+        let registry: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Registry)
             .ok_or(Error::RegistryNotConfigured)?;
         let approved: bool = env.invoke_contract(
@@ -1412,18 +1586,22 @@ impl OracleContract {
             vec![&env, tee_hash.into()],
         );
 
-        if !approved { return Err(Error::TeeNotVerified); }
+        if !approved {
+            return Err(Error::TeeNotVerified);
+        }
         Ok(())
     }
 
     pub fn verify_attestation(
-        env:       Env,
-        provider:  BytesN<32>,
-        tee_hash:  BytesN<32>,
-        payload:   Bytes,
+        env: Env,
+        provider: BytesN<32>,
+        tee_hash: BytesN<32>,
+        payload: Bytes,
         signature: BytesN<64>,
     ) -> Result<(), Error> {
-        let registry: Address = env.storage().instance()
+        let registry: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Registry)
             .ok_or(Error::RegistryNotConfigured)?;
         let provider_ok: bool = env.invoke_contract(
@@ -1431,113 +1609,20 @@ impl OracleContract {
             &Symbol::new(&env, "is_provider"),
             vec![&env, provider.clone().into()],
         );
-        if !provider_ok { return Err(Error::UnauthorizedSigner); }
+        if !provider_ok {
+            return Err(Error::UnauthorizedSigner);
+        }
 
         let tee_ok: bool = env.invoke_contract(
             &registry,
             &Symbol::new(&env, "is_tee_hash_approved"),
             vec![&env, tee_hash.into()],
         );
-        if !tee_ok { return Err(Error::TeeNotVerified); }
+        if !tee_ok {
+            return Err(Error::TeeNotVerified);
+        }
         env.crypto().ed25519_verify(&provider, &payload, &signature);
         Ok(())
-    }
-
-    // -----------------------------------------------------------------------
-    // Batch processing
-    // -----------------------------------------------------------------------
-
-    pub fn submit_batch_request(
-        env: Env,
-        requests: Vec<(Bytes, Bytes, Address, Priority)>,
-    ) -> Result<Vec<u64>, Error> {
-        if requests.len() > 10 {
-            return Err(Error::BatchSizeExceeded);
-        }
-        let mut ids: Vec<u64> = vec![&env];
-        for i in 0..requests.len() {
-            let (storage_ref, manifest_hash, requester, priority) = requests.get(i).unwrap();
-            requester.require_auth();
-            let id: u64 = env.storage().instance()
-                .get(&DataKey::NextRequestId)
-                .unwrap_or(0u64) + 1;
-            env.storage().instance().set(&DataKey::NextRequestId, &id);
-            let req = VerificationRequest {
-                storage_ref: storage_ref.clone(),
-                manifest_hash: manifest_hash.clone(),
-                requester: requester.clone(),
-                state: RequestState::Pending,
-                priority: priority.clone(),
-            };
-            env.storage().temporary().set(&DataKey::Request(id), &req);
-            env.storage().temporary().extend_ttl(
-                &DataKey::Request(id),
-                REQUEST_TTL_LEDGERS,
-                REQUEST_TTL_LEDGERS,
-            );
-            Self::add_request_to_state_index(&env, &RequestState::Pending, id);
-            ids.push_back(id);
-        }
-        env.events().publish((Symbol::new(&env, "batch_submitted"),), ids.clone());
-        Ok(ids)
-    }
-
-    // -----------------------------------------------------------------------
-    // Request cancellation
-    // -----------------------------------------------------------------------
-
-    pub fn cancel_request(env: Env, id: u64) -> Result<(), Error> {
-        let mut req: VerificationRequest = env.storage().temporary()
-            .get(&DataKey::Request(id))
-            .ok_or(Error::RequestNotFound)?;
-        req.requester.require_auth();
-        if req.state != RequestState::Pending {
-            return Err(Error::InvalidState);
-        }
-        Self::remove_request_from_state_index(&env, &req.state, id);
-        req.state = RequestState::Cancelled;
-        Self::add_request_to_state_index(&env, &RequestState::Cancelled, id);
-        env.storage().temporary().set(&DataKey::Request(id), &req);
-        env.events().publish((Symbol::new(&env, "cancelled"),), id);
-
-        env.crypto().ed25519_verify(&provider, &payload, &signature);
-        Ok(())
-    }
-
-    // -----------------------------------------------------------------------
-    // Pagination
-    // -----------------------------------------------------------------------
-
-    pub fn get_requests_by_state(
-        env: Env,
-        state: RequestState,
-        offset: u32,
-        limit: u32,
-        requester: Option<Address>,
-    ) -> PaginatedRequests {
-        let all_ids: Vec<u64> = env.storage().persistent()
-            .get(&DataKey::RequestsByState(state.clone()))
-            .unwrap_or(vec![&env]);
-        let mut results: Vec<RequestWithId> = vec![&env];
-        let mut count = 0u32;
-        let limit_val = if limit == 0 { 100 } else { limit.min(100) };
-        let start = offset as usize;
-        if start < all_ids.len() {
-            for i in start..all_ids.len() {
-                if count >= limit_val { break; }
-                let req_id = all_ids.get(i).unwrap();
-                if let Some(req) = env.storage().temporary()
-                    .get::<_, VerificationRequest>(&DataKey::Request(req_id))
-                {
-                    if let Some(ref addr) = requester {
-                        if req.requester != *addr { continue; }
-                    }
-                    results.push_back(RequestWithId { id: req_id, request: req });
-                    count += 1;
-                }
-            }
-        }
-        PaginatedRequests { requests: results, total_count: all_ids.len() as u32 }
     }
 
     // -----------------------------------------------------------------------
@@ -1552,12 +1637,16 @@ impl OracleContract {
         target_uptime_percentage: u32,
         target_success_rate: u32,
     ) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
 
-        let existing: ProviderSLA = env.storage().persistent()
+        let existing: ProviderSLA = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderSLA(provider.clone()))
             .unwrap_or(ProviderSLA {
                 target_response_time_seconds: 0,
@@ -1577,7 +1666,9 @@ impl OracleContract {
             target_success_rate,
             ..existing
         };
-        env.storage().persistent().set(&DataKey::ProviderSLA(provider), &updated);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderSLA(provider), &updated);
         Ok(())
     }
 
@@ -1591,68 +1682,83 @@ impl OracleContract {
         response_time_seconds: u32,
         uptime_sample: u32,
     ) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
 
-        let mut sla: ProviderSLA = env.storage().persistent()
+        let mut sla: ProviderSLA = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderSLA(provider.clone()))
             .ok_or(Error::ProviderNotRegistered)?;
 
         sla.total_requests += 1;
-        if success { sla.successful += 1; }
+        if success {
+            sla.successful += 1;
+        }
         sla.total_response_sum += response_time_seconds as u64;
 
         // Rolling averages
         sla.actual_response_time = (sla.total_response_sum / sla.total_requests) as u32;
-        sla.actual_success_rate  = ((sla.successful * 100) / sla.total_requests) as u32;
+        sla.actual_success_rate = ((sla.successful * 100) / sla.total_requests) as u32;
 
         // Uptime: exponential moving average (weight = 1 / total_requests, capped at 0.1)
         // For simplicity use a simple running mean capped to [0, 100].
         let n = sla.total_requests;
-        sla.actual_uptime = (((sla.actual_uptime as u64).saturating_mul(n - 1)
-            + uptime_sample as u64) / n) as u32;
+        sla.actual_uptime =
+            (((sla.actual_uptime as u64).saturating_mul(n - 1) + uptime_sample as u64) / n) as u32;
 
-        env.storage().persistent().set(&DataKey::ProviderSLA(provider.clone()), &sla);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderSLA(provider.clone()), &sla);
 
         // Emit violation events for each breached target
         if sla.actual_response_time > sla.target_response_time_seconds
             && sla.target_response_time_seconds > 0
         {
-            SLAViolationEvent {
-                provider: provider.clone(),
-                metric: Symbol::new(&env, "response_time"),
-                actual: sla.actual_response_time,
-                target: sla.target_response_time_seconds,
-            }.emit(&env);
+            env.events().publish(
+                (Symbol::new(&env, "sla_violation"), provider.clone()),
+                (
+                    Symbol::new(&env, "response_time"),
+                    sla.actual_response_time,
+                    sla.target_response_time_seconds,
+                ),
+            );
         }
-        if sla.actual_success_rate < sla.target_success_rate
-            && sla.target_success_rate > 0
-        {
-            SLAViolationEvent {
-                provider: provider.clone(),
-                metric: Symbol::new(&env, "success_rate"),
-                actual: sla.actual_success_rate,
-                target: sla.target_success_rate,
-            }.emit(&env);
+        if sla.actual_success_rate < sla.target_success_rate && sla.target_success_rate > 0 {
+            env.events().publish(
+                (Symbol::new(&env, "sla_violation"), provider.clone()),
+                (
+                    Symbol::new(&env, "success_rate"),
+                    sla.actual_success_rate,
+                    sla.target_success_rate,
+                ),
+            );
         }
-        if sla.actual_uptime < sla.target_uptime_percentage
-            && sla.target_uptime_percentage > 0
-        {
-            SLAViolationEvent {
-                provider: provider.clone(),
-                metric: Symbol::new(&env, "uptime"),
-                actual: sla.actual_uptime,
-                target: sla.target_uptime_percentage,
-            }.emit(&env);
+        if sla.actual_uptime < sla.target_uptime_percentage && sla.target_uptime_percentage > 0 {
+            env.events().publish(
+                (Symbol::new(&env, "sla_violation"), provider.clone()),
+                (
+                    Symbol::new(&env, "uptime"),
+                    sla.actual_uptime,
+                    sla.target_uptime_percentage,
+                ),
+            );
         }
 
         // Auto-suspend check
         let compliance = Self::_compliance_percent(&sla);
         if compliance < SLA_SUSPENSION_THRESHOLD {
-            env.storage().persistent().set(&DataKey::ProviderSuspended(provider.clone()), &true);
-            ProviderAutoSuspendedEvent { provider, compliance_percent: compliance }.emit(&env);
+            env.storage()
+                .persistent()
+                .set(&DataKey::ProviderSuspended(provider.clone()), &true);
+            env.events().publish(
+                (Symbol::new(&env, "provider_auto_suspended"),),
+                (provider, compliance),
+            );
         }
 
         Ok(())
@@ -1660,18 +1766,22 @@ impl OracleContract {
 
     /// Returns SLA compliance summary for a provider.
     pub fn get_sla_compliance(env: Env, provider: Address) -> Result<SLACompliance, Error> {
-        let sla: ProviderSLA = env.storage().persistent()
+        let sla: ProviderSLA = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderSLA(provider.clone()))
             .ok_or(Error::ProviderNotRegistered)?;
 
         let response_time_ok = sla.target_response_time_seconds == 0
             || sla.actual_response_time <= sla.target_response_time_seconds;
-        let uptime_ok = sla.target_uptime_percentage == 0
-            || sla.actual_uptime >= sla.target_uptime_percentage;
-        let success_rate_ok = sla.target_success_rate == 0
-            || sla.actual_success_rate >= sla.target_success_rate;
+        let uptime_ok =
+            sla.target_uptime_percentage == 0 || sla.actual_uptime >= sla.target_uptime_percentage;
+        let success_rate_ok =
+            sla.target_success_rate == 0 || sla.actual_success_rate >= sla.target_success_rate;
 
-        let suspended: bool = env.storage().persistent()
+        let suspended: bool = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderSuspended(provider))
             .unwrap_or(false);
 
@@ -1686,16 +1796,21 @@ impl OracleContract {
 
     /// Admin can manually reinstate a suspended provider after remediation.
     pub fn reinstate_provider(env: Env, provider: Address) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
-        env.storage().persistent().remove(&DataKey::ProviderSuspended(provider));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::ProviderSuspended(provider));
         Ok(())
     }
 
     pub fn is_provider_suspended(env: Env, provider: Address) -> bool {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&DataKey::ProviderSuspended(provider))
             .unwrap_or(false)
     }
@@ -1711,19 +1826,26 @@ impl OracleContract {
         base_fee_stroops: u128,
         per_kb_fee_stroops: u128,
     ) -> Result<(), Error> {
-        let admin: Address = env.storage().instance()
+        let admin: Address = env
+            .storage()
+            .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
         env.storage().persistent().set(
             &DataKey::ProviderPricing(provider),
-            &ProviderPricing { base_fee_stroops, per_kb_fee_stroops },
+            &ProviderPricing {
+                base_fee_stroops,
+                per_kb_fee_stroops,
+            },
         );
         Ok(())
     }
 
     pub fn get_provider_pricing(env: Env, provider: Address) -> Option<ProviderPricing> {
-        env.storage().persistent().get(&DataKey::ProviderPricing(provider))
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderPricing(provider))
     }
 
     /// Estimate the cost of a verification request.
@@ -1741,7 +1863,9 @@ impl OracleContract {
         priority: Priority,
         complexity: ContentComplexity,
     ) -> Result<CostEstimate, Error> {
-        let pricing: ProviderPricing = env.storage().persistent()
+        let pricing: ProviderPricing = env
+            .storage()
+            .persistent()
             .get(&DataKey::ProviderPricing(provider))
             .ok_or(Error::PricingNotSet)?;
 
@@ -1752,30 +1876,32 @@ impl OracleContract {
         let size_fee: u128 = pricing.per_kb_fee_stroops.saturating_mul(kb as u128);
 
         // Priority multiplier applied to the base fee
-        let priority_fee: u128 = base_fee.saturating_mul(
-            match priority {
-                Priority::Low    => 0,
-                Priority::Normal => 0,
-                Priority::High   => 50,   // +50 %
-                Priority::Urgent => 150,  // +150 %
-            }
-        ) / 100;
+        let priority_fee: u128 = base_fee.saturating_mul(match priority {
+            Priority::Low => 0,
+            Priority::Normal => 0,
+            Priority::High => 50,    // +50 %
+            Priority::Urgent => 150, // +150 %
+        }) / 100;
 
         // Complexity surcharge on the base fee
-        let complexity_fee: u128 = base_fee.saturating_mul(
-            match complexity {
-                ContentComplexity::Simple   => 0,
-                ContentComplexity::Moderate => 25,  // +25 %
-                ContentComplexity::Complex  => 75,  // +75 %
-            }
-        ) / 100;
+        let complexity_fee: u128 = base_fee.saturating_mul(match complexity {
+            ContentComplexity::Simple => 0,
+            ContentComplexity::Moderate => 25, // +25 %
+            ContentComplexity::Complex => 75,  // +75 %
+        }) / 100;
 
         let total = base_fee
             .saturating_add(size_fee)
             .saturating_add(priority_fee)
             .saturating_add(complexity_fee);
 
-        Ok(CostEstimate { base_fee, size_fee, priority_fee, complexity_fee, total })
+        Ok(CostEstimate {
+            base_fee,
+            size_fee,
+            priority_fee,
+            complexity_fee,
+            total,
+        })
     }
 
     // -----------------------------------------------------------------------
@@ -1788,43 +1914,125 @@ impl OracleContract {
 
         if sla.target_response_time_seconds > 0 {
             total += 1;
-            if sla.actual_response_time <= sla.target_response_time_seconds { met += 1; }
+            if sla.actual_response_time <= sla.target_response_time_seconds {
+                met += 1;
+            }
         }
         if sla.target_uptime_percentage > 0 {
             total += 1;
-            if sla.actual_uptime >= sla.target_uptime_percentage { met += 1; }
+            if sla.actual_uptime >= sla.target_uptime_percentage {
+                met += 1;
+            }
         }
         if sla.target_success_rate > 0 {
             total += 1;
-            if sla.actual_success_rate >= sla.target_success_rate { met += 1; }
+            if sla.actual_success_rate >= sla.target_success_rate {
+                met += 1;
+            }
         }
 
-        if total == 0 { return 100; }
+        if total == 0 {
+            return 100;
+        }
         (met * 100) / total
     }
 
     // Private helpers
     // -----------------------------------------------------------------------
 
+    /// Shared logic behind `submit_request` and `submit_request_as_delegate`:
+    /// allocates an id, stores the pending request, and indexes it. Does
+    /// NOT perform auth — callers are responsible for authorizing themselves
+    /// (the requester for `submit_request`, the delegate for
+    /// `submit_request_as_delegate`) before calling this.
+    fn create_pending_request(
+        env: &Env,
+        storage_ref: Bytes,
+        manifest_hash: Bytes,
+        requester: Address,
+        priority: Priority,
+    ) -> Result<u64, Error> {
+        if Self::is_paused(env.clone()) {
+            return Err(Error::ContractPaused);
+        }
+
+        let ttl_config: TTLConfig = env
+            .storage()
+            .instance()
+            .get(&DataKey::RequestTTL)
+            .unwrap_or(TTLConfig {
+                default_ttl: DEFAULT_REQUEST_TTL_LEDGERS,
+                high_priority_ttl: 200,
+                low_priority_ttl: 50,
+            });
+        let ttl = match priority {
+            Priority::Low => ttl_config.low_priority_ttl,
+            Priority::High | Priority::Urgent => ttl_config.high_priority_ttl,
+            Priority::Normal => ttl_config.default_ttl,
+        };
+
+        let id: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::NextRequestId)
+            .unwrap_or(0u64)
+            + 1;
+        env.storage().instance().set(&DataKey::NextRequestId, &id);
+
+        let req = VerificationRequest {
+            storage_ref,
+            manifest_hash,
+            requester: requester.clone(),
+            state: RequestState::Pending,
+            priority,
+        };
+
+        env.storage().temporary().set(&DataKey::Request(id), &req);
+        env.storage()
+            .temporary()
+            .extend_ttl(&DataKey::Request(id), ttl, ttl);
+
+        let expires_at_ledger = env.ledger().sequence() + ttl;
+        env.storage()
+            .temporary()
+            .set(&DataKey::RequestExpiresAtLedger(id), &expires_at_ledger);
+        env.storage()
+            .temporary()
+            .extend_ttl(&DataKey::RequestExpiresAtLedger(id), ttl, ttl);
+
+        Self::add_request_to_state_index(env, &RequestState::Pending, id);
+
+        let fee = Self::calculate_priority_fee(&req.priority);
+        env.events()
+            .publish((Symbol::new(env, "submitted"),), (id, fee));
+        Ok(id)
+    }
+
     fn calculate_priority_fee(priority: &Priority) -> u64 {
         match priority {
-            Priority::Low    => 100,
+            Priority::Low => 100,
             Priority::Normal => 200,
-            Priority::High   => 400,
+            Priority::High => 400,
             Priority::Urgent => 800,
         }
     }
 
     fn add_request_to_state_index(env: &Env, state: &RequestState, id: u64) {
-        let mut ids: Vec<u64> = env.storage().persistent()
+        let mut ids: Vec<u64> = env
+            .storage()
+            .persistent()
             .get(&DataKey::RequestsByState(state.clone()))
             .unwrap_or(vec![env]);
         ids.push_back(id);
-        env.storage().persistent().set(&DataKey::RequestsByState(state.clone()), &ids);
+        env.storage()
+            .persistent()
+            .set(&DataKey::RequestsByState(state.clone()), &ids);
     }
 
     fn remove_request_from_state_index(env: &Env, state: &RequestState, id: u64) {
-        let ids: Vec<u64> = env.storage().persistent()
+        let ids: Vec<u64> = env
+            .storage()
+            .persistent()
             .get(&DataKey::RequestsByState(state.clone()))
             .unwrap_or(vec![env]);
         let mut new_ids: Vec<u64> = vec![env];
@@ -1833,7 +2041,9 @@ impl OracleContract {
                 new_ids.push_back(ids.get(i).unwrap());
             }
         }
-        env.storage().persistent().set(&DataKey::RequestsByState(state.clone()), &new_ids);
+        env.storage()
+            .persistent()
+            .set(&DataKey::RequestsByState(state.clone()), &new_ids);
     }
 
     // -----------------------------------------------------------------------
