@@ -102,4 +102,5 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
 Button.displayName = "Button";
 
-export default Button;
+// #448 — Memoized to prevent re-renders when parent re-renders without prop changes
+export default React.memo(Button);
