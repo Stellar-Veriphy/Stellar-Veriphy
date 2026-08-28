@@ -33,6 +33,10 @@ export interface CertificateDetails {
   attestationHash: string;
   creator: string;
   timestamp: number;
+  /** Derived status label, populated by search/list endpoints. */
+  statusLabel?: string;
+  /** Derived verification level, populated by search/list endpoints. */
+  verificationLevel?: string;
 }
 
 export interface CertificateVerificationResult {
@@ -60,6 +64,8 @@ export interface CertificateVerificationResult {
 export interface CertificateSearchFilters {
   creator?: string;
   verificationLevel?: string;
+  /** Filter by derived status label (Active / Revoked / Expired / Locked). */
+  status?: string;
   contentType?: string;
   startTime?: number;
   endTime?: number;
@@ -304,11 +310,24 @@ export async function searchCertificates(
     if (filters.endTime) {
       allCerts = allCerts.filter((c) => c.timestamp <= filters.endTime!);
     }
+    if (filters.verificationLevel) {
+      allCerts = allCerts.filter(
+        (c) => buildVerificationResult(c, c.id).verificationLevel === filters.verificationLevel
+      );
+    }
+    if (filters.status) {
+      allCerts = allCerts.filter(
+        (c) => buildVerificationResult(c, c.id).statusLabel === filters.status
+      );
+    }
 
     const offset = filters.offset ?? 0;
     const limit = filters.limit ?? 10;
     const total = allCerts.length;
-    const sliced = allCerts.slice(offset, offset + limit);
+    const sliced = allCerts.slice(offset, offset + limit).map((c) => {
+      const derived = buildVerificationResult(c, c.id);
+      return { ...c, statusLabel: derived.statusLabel, verificationLevel: derived.verificationLevel };
+    });
 
     return {
       success: true,
