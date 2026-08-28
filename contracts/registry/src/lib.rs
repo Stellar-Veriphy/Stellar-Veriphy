@@ -331,6 +331,10 @@ pub enum ProviderStatus {
 pub struct ProviderInfo {
     pub tier: ServiceTier,
     pub status: ProviderStatus,
+    // #451 — Provider metadata for discovery and contact
+    pub name: String,
+    pub website: Option<String>,
+    pub description: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -438,6 +442,9 @@ impl RegistryContract {
             .unwrap_or(ProviderInfo {
                 tier: ServiceTier::Basic,
                 status: ProviderStatus::Active,
+                name: String::from_str(env, ""),
+                website: None,
+                description: String::from_str(env, ""),
             })
     }
 
@@ -681,6 +688,9 @@ impl RegistryContract {
                 &ProviderInfo {
                     tier: ServiceTier::Basic,
                     status: ProviderStatus::Active,
+                    name: String::from_str(&env, ""),
+                    website: None,
+                    description: String::from_str(&env, ""),
                 },
             );
             let mut list: Vec<BytesN<32>> = env
@@ -1588,6 +1598,86 @@ impl RegistryContract {
             .persistent()
             .get(&DataKey::ProposalApprovals(proposal_id))
             .unwrap_or(Vec::new(&env))
+    }
+
+    // -----------------------------------------------------------------------
+    // #451 – Provider metadata management
+    // -----------------------------------------------------------------------
+
+    /// Update provider metadata (name, website, description). Only the admin may call this.
+    pub fn set_provider_metadata(
+        env: Env,
+        provider: BytesN<32>,
+        name: String,
+        website: Option<String>,
+        description: String,
+    ) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Provider(provider.clone()))
+        {
+            return Err(Error::ProviderNotFound);
+        }
+
+        let mut info = Self::provider_info_or_default(&env, &provider);
+        info.name = name;
+        info.website = website;
+        info.description = description;
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderInfo(provider), &info);
+
+        env.events()
+            .publish((symbol_short!("metadata"),), provider);
+        Ok(())
+    }
+
+    /// Get provider metadata (name, website, description).
+    pub fn get_provider_metadata(
+        env: Env,
+        provider: BytesN<32>,
+    ) -> Result<(String, Option<String>, String), Error> {
+        let info: ProviderInfo = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider))
+            .ok_or(Error::ProviderNotFound)?;
+        Ok((info.name, info.website, info.description))
+    }
+
+    /// Get the display name of a provider.
+    pub fn get_provider_name(env: Env, provider: BytesN<32>) -> Result<String, Error> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider))
+            .map(|info| info.name)
+            .ok_or(Error::ProviderNotFound)
+    }
+
+    /// Get the website URL of a provider.
+    pub fn get_provider_website(env: Env, provider: BytesN<32>) -> Result<Option<String>, Error> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider))
+            .map(|info| info.website)
+            .ok_or(Error::ProviderNotFound)
+    }
+
+    /// Get the description of a provider.
+    pub fn get_provider_description(env: Env, provider: BytesN<32>) -> Result<String, Error> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider))
+            .map(|info| info.description)
+            .ok_or(Error::ProviderNotFound)
     }
 
     // -----------------------------------------------------------------------

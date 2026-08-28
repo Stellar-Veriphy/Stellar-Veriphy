@@ -271,6 +271,8 @@ pub struct VerificationRequest {
     pub requester:     Address,
     pub state:         RequestState,
     pub priority:      Priority,
+    // #449 — Optional comments/notes for context during verification
+    pub comment:       Option<String>,
 }
 
 #[contracttype]
@@ -380,6 +382,19 @@ pub struct ProviderAutoSuspendedEvent {
     #[topic]
     pub provider:           Address,
     pub compliance_percent: u32,
+}
+
+/// #449 — Event emitted when a comment is added/updated on a verification request.
+#[contractevent]
+pub struct RequestCommentEvent {
+    #[topic]
+    pub request_id: u64,
+    #[topic]
+    pub requester: Address,
+    pub comment: String,
+    pub timestamp: u64,
+}
+
 pub struct ProviderStakeInfo {
     pub amount:                    u128,
     pub withdrawal_cooldown_until: u32,
@@ -1819,6 +1834,114 @@ impl OracleContract {
             }
         }
         env.storage().persistent().set(&DataKey::RequestsByState(state.clone()), &new_ids);
+    }
+
+    // -----------------------------------------------------------------------
+    // #449 – Request Comments Management
+    // -----------------------------------------------------------------------
+
+    /// #449 — Add or update a comment on a verification request.
+    /// The requester must authenticate and the request must exist and be in Pending state.
+    pub fn add_request_comment(
+        env: Env,
+        request_id: u64,
+        comment: String,
+    ) -> Result<(), Error> {
+        let mut request: VerificationRequest = env
+            .storage()
+            .temporary()
+            .get(&DataKey::Request(request_id))
+            .ok_or(Error::RequestNotFound)?;
+
+        request.requester.require_auth();
+
+        if request.state != RequestState::Pending {
+            return Err(Error::InvalidState);
+        }
+
+        request.comment = Some(comment.clone());
+        env.storage().temporary().set(&DataKey::Request(request_id), &request);
+
+        RequestCommentEvent {
+            request_id,
+            requester: request.requester.clone(),
+            comment,
+            timestamp: env.ledger().timestamp(),
+        }
+        .emit(&env);
+
+        Ok(())
+    }
+
+    /// #449 — Retrieve the comment on a verification request, if any.
+    pub fn get_request_comment(
+        env: Env,
+        request_id: u64,
+    ) -> Result<Option<String>, Error> {
+        let request: VerificationRequest = env
+            .storage()
+            .temporary()
+            .get(&DataKey::Request(request_id))
+            .ok_or(Error::RequestNotFound)?;
+
+        Ok(request.comment)
+    }
+
+    /// #449 — Clear/remove a comment from a verification request.
+    /// The requester must authenticate.
+    pub fn remove_request_comment(
+        env: Env,
+        request_id: u64,
+    ) -> Result<(), Error> {
+        let mut request: VerificationRequest = env
+            .storage()
+            .temporary()
+            .get(&DataKey::Request(request_id))
+            .ok_or(Error::RequestNotFound)?;
+
+        request.requester.require_auth();
+
+        request.comment = None;
+        env.storage().temporary().set(&DataKey::Request(request_id), &request);
+
+        env.events()
+            .publish((Symbol::new(&env, "comment_removed"),), request_id);
+
+        Ok(())
+    }
+
+    /// #449 — Query all pending requests that have comments (supports discovery).
+    pub fn get_requests_with_comments(
+        env: Env,
+        offset: u32,
+        limit: u32,
+    ) -> Vec<RequestWithId> {
+        let all_requests: Vec<RequestWithId> = env
+            .storage()
+            .temporary()
+            .get(&DataKey::RequestsByState(RequestState::Pending))
+            .unwrap_or(Vec::new(&env));
+
+        let mut results: Vec<RequestWithId> = Vec::new(&env);
+        let mut count = 0u32;
+        let mut skipped = 0u32;
+
+        for i in 0..all_requests.len() {
+            if count >= limit {
+                break;
+            }
+            let req_with_id = all_requests.get_unchecked(i);
+            if req_with_id.request.comment.is_some() {
+                if skipped >= offset {
+                    results.push_back(req_with_id);
+                    count += 1;
+                } else {
+                    skipped += 1;
+                }
+            }
+        }
+
+        results
     }
 }
 

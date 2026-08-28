@@ -93,11 +93,14 @@ export function Card({
   );
 }
 
+// #448 — Memoized to prevent re-renders when parent re-renders without prop changes
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Card sub-components (Header, Body, Footer)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function CardHeader({
+// #448 — Memoized sub-components
+export const CardHeader = React.memo(function CardHeader({
   className,
   children,
   ...props
@@ -113,17 +116,17 @@ export function CardHeader({
       {children}
     </div>
   );
-}
+});
 
-export function CardBody({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export const CardBody = React.memo(function CardBody({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("space-y-3", className)} {...props}>
       {children}
     </div>
   );
-}
+});
 
-export function CardFooter({
+export const CardFooter = React.memo(function CardFooter({
   className,
   children,
   ...props
@@ -139,7 +142,7 @@ export function CardFooter({
       {children}
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CertificateCard
@@ -203,7 +206,8 @@ function formatDate(ts: number): string {
   });
 }
 
-export function CertificateCard({
+// #448 — Memoized CertificateCard
+export const CertificateCard = React.memo(function CertificateCard({
   id,
   title,
   creator,
@@ -332,7 +336,7 @@ export function CertificateCard({
       </div>
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // StatCard
@@ -371,7 +375,8 @@ const accentMap: Record<
   cyan: { bg: "bg-cyan-50 dark:bg-cyan-900/30", text: "text-cyan-600 dark:text-cyan-400" },
 };
 
-export function StatCard({
+// #448 — Memoized StatCard
+export const StatCard = React.memo(function StatCard({
   label,
   value,
   description,
@@ -469,7 +474,7 @@ export function StatCard({
       </div>
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ActionCard
@@ -499,7 +504,8 @@ export interface ActionCardProps {
   className?: string;
 }
 
-export function ActionCard({
+// #448 — Memoized ActionCard
+export const ActionCard = React.memo(function ActionCard({
   title,
   description,
   icon,
@@ -604,4 +610,4 @@ export function ActionCard({
       )}
     </div>
   );
-}
+});
