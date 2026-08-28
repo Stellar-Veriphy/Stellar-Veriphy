@@ -1,5 +1,8 @@
 #[cfg(test)]
 mod tests {
+    extern crate std;
+    use std::format;
+
     use crate::{
         CertificateRelation, ProvenanceContract, ProvenanceContractClient, ProvenanceError,
         RevocationReason, VerificationLevel,
@@ -55,7 +58,7 @@ mod tests {
         );
         assert_eq!(id, 1);
 
-        let cert = client.get_certificate(&id).unwrap();
+        let cert = client.get_certificate(&id);
         assert_eq!(cert.storage_ref, s(&env, "storage_ref"));
         assert_eq!(cert.manifest_hash, s(&env, "manifest_hash"));
         assert_eq!(cert.attestation_hash, s(&env, "attestation_hash"));
@@ -126,15 +129,20 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_rev1"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_rev1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         assert!(!client.is_certificate_revoked(&id));
 
         client.revoke_certificate(&id, &RevocationReason::FraudulentContent);
 
         assert!(client.is_certificate_revoked(&id));
-        let cert = client.get_certificate(&id).unwrap();
+        let cert = client.get_certificate(&id);
         assert!(cert.revoked);
-        assert_eq!(cert.revocation_reason, Some(RevocationReason::FraudulentContent));
+        assert_eq!(cert.revocation_reason, RevocationReason::FraudulentContent);
     }
 
     #[test]
@@ -167,7 +175,12 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_exp1"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         assert!(!client.is_certificate_expired(&id));
     }
 
@@ -181,7 +194,12 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_exp2"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp2"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         let now = env.ledger().timestamp();
         client.set_expiration(&id, &Some(now + 100));
         assert!(!client.is_certificate_expired(&id));
@@ -200,10 +218,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_exp3"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp3"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         let now = env.ledger().timestamp();
         assert_eq!(
-            client.try_set_expiration(&id, &Some(now)).unwrap_err().unwrap(),
+            client
+                .try_set_expiration(&id, &Some(now))
+                .unwrap_err()
+                .unwrap(),
             ProvenanceError::InvalidExpiration
         );
     }
@@ -218,7 +244,12 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_exp4"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp4"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         let now = env.ledger().timestamp();
         client.set_expiration(&id, &Some(now + 10));
         env.ledger().with_mut(|li| li.timestamp = now + 20);
@@ -238,7 +269,12 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_exp5"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp5"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         let now = env.ledger().timestamp();
         client.set_expiration(&id, &Some(now + 50));
 
@@ -256,8 +292,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id1 = client.mint(&s(&env, "sid"), &s(&env, "mhash_exp6"), &s(&env, "ahash"), &owner);
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_exp7"), &s(&env, "ahash"), &owner);
+        let id1 = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp6"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_exp7"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         let now = env.ledger().timestamp();
         client.set_expiration(&id1, &Some(now + 10));
@@ -279,8 +325,16 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_lvl1"), &s(&env, "ahash"), &owner);
-        assert_eq!(client.get_verification_level(&id), VerificationLevel::Standard);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lvl1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        assert_eq!(
+            client.get_verification_level(&id),
+            VerificationLevel::Standard
+        );
     }
 
     #[test]
@@ -293,7 +347,12 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_lvl2"), &s(&env, ""), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lvl2"),
+            &s(&env, ""),
+            &owner,
+        );
         assert_eq!(client.get_verification_level(&id), VerificationLevel::Basic);
     }
 
@@ -307,9 +366,17 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id = client.mint(&s(&env, "sid"), &s(&env, "mhash_lvl3"), &s(&env, "ahash"), &owner);
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lvl3"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         client.set_verification_level(&id, &VerificationLevel::Enterprise);
-        assert_eq!(client.get_verification_level(&id), VerificationLevel::Enterprise);
+        assert_eq!(
+            client.get_verification_level(&id),
+            VerificationLevel::Enterprise
+        );
     }
 
     #[test]
@@ -322,16 +389,26 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let id1 = client.mint(&s(&env, "sid"), &s(&env, "mhash_lvl4"), &s(&env, "ahash"), &owner);
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_lvl5"), &s(&env, "ahash"), &owner);
+        let id1 = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lvl4"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lvl5"),
+            &s(&env, "ahash"),
+            &owner,
+        );
         client.set_verification_level(&id1, &VerificationLevel::Premium);
 
-        let results = client.get_certificates_by_verification_level(&VerificationLevel::Premium, &0, &10);
+        let results = client.get_certs_by_verification_level(&VerificationLevel::Premium, &0, &10);
         assert_eq!(results.len(), 1);
         assert_eq!(results.get_unchecked(0).0, id1);
 
         let standard_results =
-            client.get_certificates_by_verification_level(&VerificationLevel::Standard, &0, &10);
+            client.get_certs_by_verification_level(&VerificationLevel::Standard, &0, &10);
         assert_eq!(standard_results.len(), 1);
     }
 
@@ -345,7 +422,10 @@ mod tests {
         client.initialize(&oracle);
 
         assert_eq!(
-            client.try_get_verification_level(&999u64).unwrap_err().unwrap(),
+            client
+                .try_get_verification_level(&999u64)
+                .unwrap_err()
+                .unwrap(),
             ProvenanceError::CertificateNotFound
         );
     }
@@ -362,8 +442,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let a = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk1"), &s(&env, "ahash"), &owner);
-        let b = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk2"), &s(&env, "ahash"), &owner);
+        let a = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        let b = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk2"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         client.link_certificates(&b, &CertificateRelation::Parent(a));
 
@@ -386,13 +476,29 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let c = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk3"), &s(&env, "ahash"), &owner);
-        let d = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk4"), &s(&env, "ahash"), &owner);
+        let c = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk3"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        let d = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk4"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         client.link_certificates(&c, &CertificateRelation::Sibling(d));
 
-        assert_eq!(client.get_linked_certificates(&c).get_unchecked(0), CertificateRelation::Sibling(d));
-        assert_eq!(client.get_linked_certificates(&d).get_unchecked(0), CertificateRelation::Sibling(c));
+        assert_eq!(
+            client.get_linked_certificates(&c).get_unchecked(0),
+            CertificateRelation::Sibling(d)
+        );
+        assert_eq!(
+            client.get_linked_certificates(&d).get_unchecked(0),
+            CertificateRelation::Sibling(c)
+        );
     }
 
     #[test]
@@ -405,10 +511,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let a = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk5"), &s(&env, "ahash"), &owner);
+        let a = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk5"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         assert_eq!(
-            client.try_link_certificates(&a, &CertificateRelation::Parent(a)).unwrap_err().unwrap(),
+            client
+                .try_link_certificates(&a, &CertificateRelation::Parent(a))
+                .unwrap_err()
+                .unwrap(),
             ProvenanceError::CircularReference
         );
     }
@@ -423,10 +537,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let a = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk6"), &s(&env, "ahash"), &owner);
+        let a = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk6"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         assert_eq!(
-            client.try_link_certificates(&a, &CertificateRelation::Parent(999u64)).unwrap_err().unwrap(),
+            client
+                .try_link_certificates(&a, &CertificateRelation::Parent(999u64))
+                .unwrap_err()
+                .unwrap(),
             ProvenanceError::CertificateNotFound
         );
     }
@@ -441,9 +563,24 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        let a = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk7"), &s(&env, "ahash"), &owner);
-        let b = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk8"), &s(&env, "ahash"), &owner);
-        let c = client.mint(&s(&env, "sid"), &s(&env, "mhash_lnk9"), &s(&env, "ahash"), &owner);
+        let a = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk7"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        let b = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk8"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        let c = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_lnk9"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         // chain: C -> parent B -> parent A
         client.link_certificates(&b, &CertificateRelation::Parent(a));
@@ -451,7 +588,10 @@ mod tests {
 
         // A -> parent C would close the loop A -> C -> B -> A
         assert_eq!(
-            client.try_link_certificates(&a, &CertificateRelation::Parent(c)).unwrap_err().unwrap(),
+            client
+                .try_link_certificates(&a, &CertificateRelation::Parent(c))
+                .unwrap_err()
+                .unwrap(),
             ProvenanceError::CircularReference
         );
     }
@@ -468,8 +608,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat1"), &s(&env, "ahash"), &owner);
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat2"), &s(&env, "ahash"), &owner);
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat2"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         let stats = client.get_certificate_stats();
         assert_eq!(stats.total_certificates, 2);
@@ -487,9 +637,24 @@ mod tests {
         let owner2 = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat3"), &s(&env, "ahash"), &owner1);
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat4"), &s(&env, "ahash"), &owner1);
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat5"), &s(&env, "ahash"), &owner2);
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat3"),
+            &s(&env, "ahash"),
+            &owner1,
+        );
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat4"),
+            &s(&env, "ahash"),
+            &owner1,
+        );
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat5"),
+            &s(&env, "ahash"),
+            &owner2,
+        );
 
         assert_eq!(client.get_creator_certificate_count(&owner1), 2);
         assert_eq!(client.get_creator_certificate_count(&owner2), 1);
@@ -506,7 +671,8 @@ mod tests {
         client.initialize(&oracle);
 
         let storage_refs = soroban_sdk::vec![&env, s(&env, "sid1"), s(&env, "sid2")];
-        let manifest_hashes = soroban_sdk::vec![&env, s(&env, "mhash_stat6"), s(&env, "mhash_stat7")];
+        let manifest_hashes =
+            soroban_sdk::vec![&env, s(&env, "mhash_stat6"), s(&env, "mhash_stat7")];
         let attestation_hashes = soroban_sdk::vec![&env, s(&env, "ah1"), s(&env, "ah2")];
         client.mint_batch(&storage_refs, &manifest_hashes, &attestation_hashes, &owner);
 
@@ -526,8 +692,18 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat8"), &s(&env, "ahash"), &owner);
-        client.mint(&s(&env, "sid"), &s(&env, "mhash_stat9"), &s(&env, "ahash"), &owner);
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat8"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_stat9"),
+            &s(&env, "ahash"),
+            &owner,
+        );
 
         let today = env.ledger().timestamp() / 86400;
         let series = client.get_minting_time_series(&today, &today);
@@ -557,9 +733,9 @@ mod tests {
             &s(&env, "ahash"),
             &owner1,
         );
-        assert!(client.transfer_certificate(&id, &owner2).is_ok());
+        client.transfer_certificate(&id, &owner2);
 
-        let cert = client.get_certificate(&id).unwrap();
+        let cert = client.get_certificate(&id);
         assert_eq!(cert.creator, owner2);
     }
 
@@ -600,11 +776,9 @@ mod tests {
             &s(&env, "ahash"),
             &owner,
         );
-        assert!(client
-            .update_metadata(&id, &s(&env, "Display Name"), &s(&env, "Description"))
-            .is_ok());
+        client.update_metadata(&id, &s(&env, "Display Name"), &s(&env, "Description"));
 
-        let metadata = client.get_metadata(&id).unwrap();
+        let metadata = client.get_metadata(&id);
         assert_eq!(metadata.display_name, s(&env, "Display Name"));
         assert_eq!(metadata.description, s(&env, "Description"));
         assert_eq!(metadata.version, 1);
@@ -627,14 +801,10 @@ mod tests {
             &owner,
         );
 
-        client
-            .update_metadata(&id, &s(&env, "v1"), &s(&env, "desc1"))
-            .ok();
-        client
-            .update_metadata(&id, &s(&env, "v2"), &s(&env, "desc2"))
-            .ok();
+        client.update_metadata(&id, &s(&env, "v1"), &s(&env, "desc1"));
+        client.update_metadata(&id, &s(&env, "v2"), &s(&env, "desc2"));
 
-        let metadata = client.get_metadata(&id).unwrap();
+        let metadata = client.get_metadata(&id);
         assert_eq!(metadata.version, 2);
         assert_eq!(metadata.display_name, s(&env, "v2"));
     }
@@ -749,9 +919,7 @@ mod tests {
         let attestation_hashes =
             soroban_sdk::vec![&env, s(&env, "ah1"), s(&env, "ah2"), s(&env, "ah3")];
 
-        let ids = client
-            .mint_batch(&storage_refs, &manifest_hashes, &attestation_hashes, &owner)
-            .unwrap();
+        let ids = client.mint_batch(&storage_refs, &manifest_hashes, &attestation_hashes, &owner);
 
         assert_eq!(ids.len(), 3);
         assert_eq!(ids.get_unchecked(0), 1);
@@ -807,5 +975,230 @@ mod tests {
             result.unwrap_err().unwrap(),
             ProvenanceError::DuplicateCertificate
         );
+    }
+
+    // --- Issue #452 --- Certificate Likes/Endorsements
+
+    #[test]
+    fn test_endorse_certificate() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        let endorser = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_end1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+
+        assert!(!client.has_endorsed(&id, &endorser));
+        let total = client.endorse_certificate(&id, &endorser);
+        assert_eq!(total, 1);
+        assert!(client.has_endorsed(&id, &endorser));
+        assert_eq!(client.get_endorsement_count(&id), 1);
+
+        let endorsers = client.get_endorsers(&id, &0, &10);
+        assert_eq!(endorsers.len(), 1);
+        assert_eq!(endorsers.get_unchecked(0), endorser);
+    }
+
+    #[test]
+    fn test_endorse_certificate_idempotent() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        let endorser = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_end2"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+
+        assert_eq!(client.endorse_certificate(&id, &endorser), 1);
+        assert_eq!(client.endorse_certificate(&id, &endorser), 1);
+        assert_eq!(client.get_endorsement_count(&id), 1);
+        assert_eq!(client.get_endorsers(&id, &0, &10).len(), 1);
+    }
+
+    #[test]
+    fn test_remove_endorsement() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        let endorser = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_end3"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        client.endorse_certificate(&id, &endorser);
+
+        let total = client.remove_endorsement(&id, &endorser);
+        assert_eq!(total, 0);
+        assert!(!client.has_endorsed(&id, &endorser));
+        assert_eq!(client.get_endorsement_count(&id), 0);
+        assert_eq!(client.get_endorsers(&id, &0, &10).len(), 0);
+    }
+
+    #[test]
+    fn test_remove_endorsement_noop_when_not_endorsed() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        let endorser = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_end4"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+
+        assert_eq!(client.remove_endorsement(&id, &endorser), 0);
+    }
+
+    #[test]
+    fn test_endorse_nonexistent_certificate() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let endorser = soroban_sdk::Address::generate(&env);
+
+        assert_eq!(
+            client
+                .try_endorse_certificate(&999u64, &endorser)
+                .unwrap_err()
+                .unwrap(),
+            ProvenanceError::CertificateNotFound
+        );
+    }
+
+    #[test]
+    fn test_get_endorsers_pagination() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_end5"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+
+        let mut endorsers = soroban_sdk::vec![&env];
+        for _ in 0..5 {
+            let endorser = soroban_sdk::Address::generate(&env);
+            client.endorse_certificate(&id, &endorser);
+            endorsers.push_back(endorser);
+        }
+
+        assert_eq!(client.get_endorsement_count(&id), 5);
+        let page = client.get_endorsers(&id, &1, &2);
+        assert_eq!(page.len(), 2);
+        assert_eq!(page.get_unchecked(0), endorsers.get_unchecked(1));
+        assert_eq!(page.get_unchecked(1), endorsers.get_unchecked(2));
+    }
+
+    // --- Issue #455 --- Certificate Views Counter
+
+    #[test]
+    fn test_view_count_increments_on_get() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let id = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_view1"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        assert_eq!(client.get_view_count(&id), 0);
+
+        client.get_certificate(&id);
+        assert_eq!(client.get_view_count(&id), 1);
+
+        client.get_certificate(&id);
+        client.get_certificate(&id);
+        assert_eq!(client.get_view_count(&id), 3);
+    }
+
+    #[test]
+    fn test_get_most_viewed_certificates() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let a = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_view2"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        let b = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_view3"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+        let c = client.mint(
+            &s(&env, "sid"),
+            &s(&env, "mhash_view4"),
+            &s(&env, "ahash"),
+            &owner,
+        );
+
+        // a: 1 view, b: 3 views, c: 2 views
+        client.get_certificate(&a);
+        client.get_certificate(&b);
+        client.get_certificate(&b);
+        client.get_certificate(&b);
+        client.get_certificate(&c);
+        client.get_certificate(&c);
+
+        let top = client.get_most_viewed_certificates(&2);
+        assert_eq!(top.len(), 2);
+        assert_eq!(top.get_unchecked(0), (b, 3));
+        assert_eq!(top.get_unchecked(1), (c, 2));
+
+        let all = client.get_most_viewed_certificates(&10);
+        assert_eq!(all.len(), 3);
+        assert_eq!(all.get_unchecked(2), (a, 1));
     }
 }
