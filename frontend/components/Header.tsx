@@ -26,6 +26,7 @@ export function Header() {
     { href: "/verify", label: "Verify" },
     { href: "/manifest", label: "Manifest" },
     { href: "/builder", label: "Builder" },
+    { href: "/certificates", label: "Certificates" },
     { href: "/transactions", label: "Transactions" },
     { href: "/tools", label: "Tools" },
   ];
