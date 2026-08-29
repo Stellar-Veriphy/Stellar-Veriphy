@@ -13,6 +13,9 @@
     "test:e2e": "pnpm --filter frontend test:e2e",
     "test:coverage": "pnpm -r --if-present run test:coverage",
     "test:mutation": "pnpm --filter @stellarveriphy/shared run test:mutation",
+    "test:load:frontend": "k6 run ./load-tests/frontend-load.js",
+    "test:load:contracts": "k6 run ./load-tests/contract-load.js",
+    "test:load:report": "node ./load-tests/report-generator.mjs ./load-tests/results/frontend-summary.json ./load-tests/results/frontend-report.html",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
