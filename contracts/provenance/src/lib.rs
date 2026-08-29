@@ -72,12 +72,17 @@ pub enum ProvenanceError {
     UnauthorizedRevocation = 7,
     InvalidExpiration = 8,
     CircularReference = 9,
+<<<<<<< HEAD
     CertificateLocked = 10,       // #184
     CollectionNotFound = 11,      // #185
     InvalidTagLength = 12,         // #450 — tag character limit exceeded
     MaxTagsExceeded = 13,          // #450 — too many tags per certificate
     CertificateLocked = 10,
     CollectionNotFound = 11,
+=======
+    CollectionNotFound = 10,
+    CertificateLocked = 11,
+>>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
 }
 
 // #171 — Revocation reason
@@ -1037,12 +1042,15 @@ impl ProvenanceContract {
         let mut results: Vec<(u64, ProvenanceCert)> = Vec::new(&env);
         let mut count = 0u32;
         let mut skipped = 0u32;
-
         let now = env.ledger().timestamp();
+
         let mut i = total_certs;
         while i > 0 && count < limit {
             if let Some(cert) = env.storage().persistent().get::<u64, ProvenanceCert>(&i) {
+<<<<<<< HEAD
                 // #177 — filter expired certificates out of default queries
+=======
+>>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
                 let expired = cert.expires_at.map_or(false, |ts| now > ts);
                 if !expired && cert.timestamp >= start_time && cert.timestamp <= end_time {
                     if skipped >= offset {
