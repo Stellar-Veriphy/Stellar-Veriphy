@@ -2012,6 +2012,60 @@ mod tests {
         BytesN::from_array(env, &[value; 32])
     }
 
+    #[cfg(test)]
+    mod property_tests {
+        use super::*;
+        use quickcheck::quickcheck;
+
+        fn hash_from_values(env: &Env, values: &[u8]) -> BytesN<32> {
+            let mut out = [0u8; 32];
+            for (idx, value) in values.iter().take(32).enumerate() {
+                out[idx] = *value;
+            }
+            BytesN::from_array(env, &out)
+        }
+
+        quickcheck! {
+            fn prop_duplicate_tee_hash_registration_is_idempotent(values: std::vec::Vec<u8>) -> bool {
+                let (env, _admin, client) = setup();
+                let tee_hash = hash_from_values(&env, &values);
+
+                client.add_tee_hash(&tee_hash);
+                client.add_tee_hash(&tee_hash);
+
+                client.is_tee_hash_approved(&tee_hash)
+                    && client.get_tee_hash_version(&tee_hash).version == 0u32
+            }
+
+            fn prop_duplicate_provider_registration_keeps_single_entry(values: std::vec::Vec<u8>) -> bool {
+                let (env, _admin, client) = setup();
+                let provider = hash_from_values(&env, &values);
+
+                client.add_provider(&provider);
+                client.add_provider(&provider);
+
+                client.is_provider(&provider) && client.get_provider_list().len() == 1
+            }
+
+            fn prop_provider_list_is_monotonic_for_unique_additions(values: std::vec::Vec<u8>) -> bool {
+                let (env, _admin, client) = setup();
+                let mut seen = 0usize;
+
+                for (index, value) in values.iter().take(12).enumerate() {
+                    let provider = hash_from_values(&env, &[*value, (index as u8), 0u8]);
+                    client.add_provider(&provider);
+                    let list = client.get_provider_list();
+                    if list.len() < seen + 1 {
+                        return false;
+                    }
+                    seen = list.len();
+                }
+
+                true
+            }
+        }
+    }
+
     // --- #22 / #23 tests ---
 
     #[test]
