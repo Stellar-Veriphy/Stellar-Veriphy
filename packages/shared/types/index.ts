@@ -482,3 +482,50 @@ export interface AnalyticsReport {
   userAnalytics: UserAnalytics;
   format: "pdf" | "csv" | "json";
 }
+
+// ---------------------------------------------------------------------------
+// Browser Extension (Issue #471)
+// ---------------------------------------------------------------------------
+
+/** Browser extension configuration. */
+export interface ExtensionConfig {
+  apiBase: string;
+  enableNotifications: boolean;
+  autoVerifyImages: boolean;
+  autoVerifyLinks: boolean;
+  certificateValidationEnabled: boolean;
+}
+
+/** Extension verification request. */
+export interface ExtensionVerificationRequest {
+  contentHash: string;
+  contentType: "image" | "link" | "page" | "file";
+  url?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Extension verification result. */
+export interface ExtensionVerificationResult {
+  contentHash: string;
+  isVerified: boolean;
+  certificateId?: string;
+  certificateData?: CertificateDetails;
+  validationStatus: "valid" | "invalid" | "expired" | "not_found";
+  timestamp: number;
+}
+
+/** Certificate validation result. */
+export interface CertificateValidation {
+  certificateId: string;
+  isValid: boolean;
+  creator: string;
+  createdAt: number;
+  expiresAt?: number;
+  trustScore: number;
+  validationDetails: {
+    signatureVerified: boolean;
+    chainVerified: boolean;
+    notRevoked: boolean;
+    timestampValid: boolean;
+  };
+}
