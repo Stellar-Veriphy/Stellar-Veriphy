@@ -41,8 +41,8 @@
 
 #![no_std]
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN,
-    Env, String, Symbol, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env,
+    String, Symbol, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -119,8 +119,8 @@ const SECONDS_PER_DAY: u64 = 86_400;
 const TEE_HASH_VALIDITY: u64 = 180 * SECONDS_PER_DAY; // #191
 const TEE_WARNING_PERIOD: u64 = 14 * SECONDS_PER_DAY; // #191
 const PROVIDER_GRACE_PERIOD: u64 = 30 * SECONDS_PER_DAY; // #190
-// Errors
-// ---------------------------------------------------------------------------
+                                                         // Errors
+                                                         // ---------------------------------------------------------------------------
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -138,6 +138,7 @@ pub enum Error {
     NotBlacklisted = 11,
     CapacityExceeded = 12,
     InvalidCapacity = 13,
+    GroupNotFound = 14,
 }
 
 // ---------------------------------------------------------------------------
@@ -157,29 +158,33 @@ pub enum DataKey {
     MultisigThreshold,
     MultisigAdmins,
     NextProposalId,
-    TeeHashVersionHistory,             // #187
-    ApplicationCount,                  // #189
+    TeeHashVersionHistory, // #187
+    ApplicationCount,      // #189
+    GroupCount,            // #454
     // ── per-TEE-hash (persistent storage) ────────────────────────────────
-    TeeHash(BytesN<32>),               // #23 — approved flag
-    TeeHashInfo(BytesN<32>),           // #191 — expiry / warning metadata
-    TeeHashMigration(BytesN<32>),      // #191 — migration state
-    TeeHashVersionInfo(BytesN<32>),    // #187 — versioning
-    TeeHashesByVersion(u32),           // #187 — index by version number
-    TeeHashCertRef(BytesN<32>),        // certificate reference on a TEE hash
+    TeeHash(BytesN<32>),            // #23 — approved flag
+    TeeHashInfo(BytesN<32>),        // #191 — expiry / warning metadata
+    TeeHashMigration(BytesN<32>),   // #191 — migration state
+    TeeHashVersionInfo(BytesN<32>), // #187 — versioning
+    TeeHashesByVersion(u32),        // #187 — index by version number
+    TeeHashCertRef(BytesN<32>),     // certificate reference on a TEE hash
     // ── per-provider (persistent storage) ────────────────────────────────
-    Provider(BytesN<32>),              // #21 — approved flag
-    ProviderInfo(BytesN<32>),          // #188 / #190 — extended info
-    ProviderList,                      // #186 / #188 — full list
-    ProviderReputation(BytesN<32>),    // #186
-    ProviderRegions(BytesN<32>),       // #192
-    ProviderCapacity(BytesN<32>),      // #193
+    Provider(BytesN<32>),                // #21 — approved flag
+    ProviderInfo(BytesN<32>),            // #188 / #190 — extended info
+    ProviderList,                        // #186 / #188 — full list
+    ProviderReputation(BytesN<32>),      // #186
+    ProviderRegions(BytesN<32>),         // #192
+    ProviderCapacity(BytesN<32>),        // #193
     ProviderSpecializations(BytesN<32>), // #194
-    ProviderBlacklist(BytesN<32>),     // #195
+    ProviderBlacklist(BytesN<32>),       // #195
+    ProviderGroups(BytesN<32>),          // #454 — reverse index: provider -> group ids
     // ── multisig governance ───────────────────────────────────────────────
     Proposal(u64),
     ProposalApprovals(u64),
     // ── provider applications ─────────────────────────────────────────────
-    Application(u64),                  // #189
+    Application(u64), // #189
+    // ── provider groups ────────────────────────────────────────────────────
+    ProviderGroup(u64), // #454
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +336,10 @@ pub enum ProviderStatus {
 pub struct ProviderInfo {
     pub tier: ServiceTier,
     pub status: ProviderStatus,
+    // #451 — Provider metadata for discovery and contact
+    pub name: String,
+    pub website: Option<String>,
+    pub description: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -365,6 +374,9 @@ pub struct TeeHashRecord {
     pub added_at: u64,
     pub expires_at: u64,
     pub rotated: bool,
+}
+
+// ---------------------------------------------------------------------------
 // Feature 3 – Attestation certificate references on TEE hash entries
 // ---------------------------------------------------------------------------
 
@@ -383,6 +395,19 @@ pub struct TeeHashCertRef {
     pub cert_uri: Option<String>,
     /// The TEE code hash this certificate covers.
     pub code_hash: BytesN<32>,
+}
+
+// ---------------------------------------------------------------------------
+// #454 – Provider groups (organizational grouping of registered providers)
+// ---------------------------------------------------------------------------
+
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct ProviderGroup {
+    pub name: String,
+    pub description: String,
+    pub created_at: u64,
+    pub members: Vec<BytesN<32>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -438,6 +463,9 @@ impl RegistryContract {
             .unwrap_or(ProviderInfo {
                 tier: ServiceTier::Basic,
                 status: ProviderStatus::Active,
+                name: String::from_str(env, ""),
+                website: None,
+                description: String::from_str(env, ""),
             })
     }
 
@@ -448,6 +476,13 @@ impl RegistryContract {
     /// Register an approved TEE code hash with a 180-day validity window.  #22 #23 #191
     pub fn add_tee_hash(env: Env, code_hash: BytesN<32>) {
         Self::require_admin(&env);
+        Self::add_tee_hash_internal(&env, code_hash);
+    }
+
+    // Shared storage-writing logic for `add_tee_hash`, factored out so
+    // `rotate_tee_hash` can register the replacement hash without asking the
+    // already-authorized admin to authorize a second time in the same call.
+    fn add_tee_hash_internal(env: &Env, code_hash: BytesN<32>) {
         env.storage()
             .persistent()
             .set(&DataKey::TeeHash(code_hash.clone()), &true);
@@ -460,15 +495,6 @@ impl RegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::TeeHashInfo(code_hash), &record);
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("Not initialized");
-        admin.require_auth();
-        env.storage()
-            .persistent()
-            .set(&DataKey::TeeHash(code_hash), &true);
     }
 
     /// Check whether a TEE code hash is approved, not rotated and not expired.  #22 #23 #191
@@ -527,14 +553,16 @@ impl RegistryContract {
             .persistent()
             .set(&DataKey::TeeHashMigration(old_hash.clone()), &new_hash);
 
-        Self::add_tee_hash(env.clone(), new_hash.clone());
+        Self::add_tee_hash_internal(&env, new_hash.clone());
         env.events()
             .publish((symbol_short!("tee_rot"),), (old_hash, new_hash));
     }
 
     /// Look up the replacement hash for a rotated TEE hash, if any.  #191
     pub fn get_tee_hash_migration(env: Env, old_hash: BytesN<32>) -> Option<BytesN<32>> {
-        env.storage().persistent().get(&DataKey::TeeHashMigration(old_hash))
+        env.storage()
+            .persistent()
+            .get(&DataKey::TeeHashMigration(old_hash))
     }
 
     // -----------------------------------------------------------------------
@@ -661,12 +689,13 @@ impl RegistryContract {
     /// Register a trusted oracle provider public key (admin-gated).  #21
     pub fn add_provider(env: Env, provider: BytesN<32>) {
         Self::require_admin(&env);
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("Not initialized");
-        admin.require_auth();
+        Self::add_provider_internal(&env, provider);
+    }
+
+    // Shared storage-writing logic for `add_provider`, factored out so
+    // `review_application` can register the applicant as a provider without
+    // asking the already-authorized admin to authorize a second time.
+    fn add_provider_internal(env: &Env, provider: BytesN<32>) {
         env.storage()
             .persistent()
             .set(&DataKey::Provider(provider.clone()), &true);
@@ -681,9 +710,22 @@ impl RegistryContract {
                 &ProviderInfo {
                     tier: ServiceTier::Basic,
                     status: ProviderStatus::Active,
+                    name: String::from_str(&env, ""),
+                    website: None,
+                    description: String::from_str(&env, ""),
                 },
             );
             let mut list: Vec<BytesN<32>> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::ProviderList)
+                .unwrap_or(Vec::new(env));
+            list.push_back(provider.clone());
+            env.storage()
+                .persistent()
+                .set(&DataKey::ProviderList, &list);
+        }
+
         // #186 — seed reputation tracking for newly registered providers
         if !env
             .storage()
@@ -699,19 +741,7 @@ impl RegistryContract {
             };
             env.storage()
                 .persistent()
-                .set(&DataKey::ProviderReputation(provider.clone()), &reputation);
-
-            let mut providers: Vec<BytesN<32>> = env
-                .storage()
-                .persistent()
-                .get(&DataKey::ProviderList)
-                .unwrap_or(Vec::new(&env));
-            list.push_back(provider);
-            env.storage().persistent().set(&DataKey::ProviderList, &list);
-            providers.push_back(provider);
-            env.storage()
-                .persistent()
-                .set(&DataKey::ProviderList, &providers);
+                .set(&DataKey::ProviderReputation(provider), &reputation);
         }
     }
 
@@ -725,7 +755,10 @@ impl RegistryContract {
         if !registered {
             return false;
         }
-        let info: Option<ProviderInfo> = env.storage().persistent().get(&DataKey::ProviderInfo(provider));
+        let info: Option<ProviderInfo> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider));
         match info {
             Some(info) => info.status != ProviderStatus::Removed,
             None => true,
@@ -744,7 +777,9 @@ impl RegistryContract {
 
     /// Fetch a provider's tier and lifecycle status.  #188 #190
     pub fn get_provider_info(env: Env, provider: BytesN<32>) -> Option<ProviderInfo> {
-        env.storage().persistent().get(&DataKey::ProviderInfo(provider))
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider))
     }
 
     /// List every registered provider whose tier matches.  #188
@@ -786,7 +821,10 @@ impl RegistryContract {
 
     /// Whether a provider may be assigned new requests right now.  #190
     pub fn can_accept_new_requests(env: Env, provider: BytesN<32>) -> bool {
-        let info: Option<ProviderInfo> = env.storage().persistent().get(&DataKey::ProviderInfo(provider));
+        let info: Option<ProviderInfo> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider));
         match info {
             Some(info) => info.status == ProviderStatus::Active,
             None => false,
@@ -845,7 +883,9 @@ impl RegistryContract {
 
     /// Fetch a stored application by id.  #189
     pub fn get_application(env: Env, application_id: u64) -> Option<ProviderApplication> {
-        env.storage().persistent().get(&DataKey::Application(application_id))
+        env.storage()
+            .persistent()
+            .get(&DataKey::Application(application_id))
     }
 
     /// Admin reviews an application. Approval registers the applicant's key
@@ -869,7 +909,7 @@ impl RegistryContract {
             .publish((symbol_short!("app_rev"), application_id), approve);
 
         if approve {
-            Self::add_provider(env, application.provider_key);
+            Self::add_provider_internal(&env, application.provider_key);
         }
     }
 
@@ -1591,6 +1631,85 @@ impl RegistryContract {
     }
 
     // -----------------------------------------------------------------------
+    // #451 – Provider metadata management
+    // -----------------------------------------------------------------------
+
+    /// Update provider metadata (name, website, description). Only the admin may call this.
+    pub fn set_provider_metadata(
+        env: Env,
+        provider: BytesN<32>,
+        name: String,
+        website: Option<String>,
+        description: String,
+    ) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Provider(provider.clone()))
+        {
+            return Err(Error::ProviderNotFound);
+        }
+
+        let mut info = Self::provider_info_or_default(&env, &provider);
+        info.name = name;
+        info.website = website;
+        info.description = description;
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderInfo(provider.clone()), &info);
+
+        env.events().publish((symbol_short!("metadata"),), provider);
+        Ok(())
+    }
+
+    /// Get provider metadata (name, website, description).
+    pub fn get_provider_metadata(
+        env: Env,
+        provider: BytesN<32>,
+    ) -> Result<(String, Option<String>, String), Error> {
+        let info: ProviderInfo = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderInfo(provider))
+            .ok_or(Error::ProviderNotFound)?;
+        Ok((info.name, info.website, info.description))
+    }
+
+    /// Get the display name of a provider.
+    pub fn get_provider_name(env: Env, provider: BytesN<32>) -> Result<String, Error> {
+        env.storage()
+            .persistent()
+            .get::<DataKey, ProviderInfo>(&DataKey::ProviderInfo(provider))
+            .map(|info| info.name)
+            .ok_or(Error::ProviderNotFound)
+    }
+
+    /// Get the website URL of a provider.
+    pub fn get_provider_website(env: Env, provider: BytesN<32>) -> Result<Option<String>, Error> {
+        env.storage()
+            .persistent()
+            .get::<DataKey, ProviderInfo>(&DataKey::ProviderInfo(provider))
+            .map(|info| info.website)
+            .ok_or(Error::ProviderNotFound)
+    }
+
+    /// Get the description of a provider.
+    pub fn get_provider_description(env: Env, provider: BytesN<32>) -> Result<String, Error> {
+        env.storage()
+            .persistent()
+            .get::<DataKey, ProviderInfo>(&DataKey::ProviderInfo(provider))
+            .map(|info| info.description)
+            .ok_or(Error::ProviderNotFound)
+    }
+
+    // -----------------------------------------------------------------------
     // Feature 3 – Attestation certificate references on TEE hash entries
     // -----------------------------------------------------------------------
 
@@ -1684,6 +1803,181 @@ impl RegistryContract {
         }
         Ok(true)
     }
+
+    // -----------------------------------------------------------------------
+    // #454 – Provider groups
+    // -----------------------------------------------------------------------
+
+    /// Create a new provider group for organizational purposes (admin-gated).
+    pub fn create_provider_group(
+        env: Env,
+        name: String,
+        description: String,
+    ) -> Result<u64, Error> {
+        Self::require_admin(&env);
+
+        let id: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupCount)
+            .unwrap_or(0u64)
+            + 1;
+        env.storage().instance().set(&DataKey::GroupCount, &id);
+
+        let group = ProviderGroup {
+            name,
+            description,
+            created_at: env.ledger().timestamp(),
+            members: Vec::new(&env),
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderGroup(id), &group);
+
+        env.events()
+            .publish((Symbol::new(&env, "group_created"),), id);
+        Ok(id)
+    }
+
+    /// Update a provider group's name and description (admin-gated). Members
+    /// and `created_at` are preserved.
+    pub fn update_provider_group(
+        env: Env,
+        group_id: u64,
+        name: String,
+        description: String,
+    ) -> Result<(), Error> {
+        Self::require_admin(&env);
+
+        let mut group: ProviderGroup = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderGroup(group_id))
+            .ok_or(Error::GroupNotFound)?;
+
+        group.name = name;
+        group.description = description;
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderGroup(group_id), &group);
+
+        Ok(())
+    }
+
+    /// Add a registered provider to a group (admin-gated). No-op if the
+    /// provider is already a member.
+    pub fn add_provider_to_group(
+        env: Env,
+        group_id: u64,
+        provider: BytesN<32>,
+    ) -> Result<(), Error> {
+        Self::require_admin(&env);
+
+        let mut group: ProviderGroup = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderGroup(group_id))
+            .ok_or(Error::GroupNotFound)?;
+
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Provider(provider.clone()))
+        {
+            return Err(Error::ProviderNotFound);
+        }
+
+        if !group.members.contains(&provider) {
+            group.members.push_back(provider.clone());
+            env.storage()
+                .persistent()
+                .set(&DataKey::ProviderGroup(group_id), &group);
+
+            let mut groups: Vec<u64> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::ProviderGroups(provider.clone()))
+                .unwrap_or(Vec::new(&env));
+            if !groups.contains(&group_id) {
+                groups.push_back(group_id);
+                env.storage()
+                    .persistent()
+                    .set(&DataKey::ProviderGroups(provider), &groups);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Remove a provider from a group (admin-gated). No-op if the provider
+    /// is not a member.
+    pub fn remove_provider_from_group(
+        env: Env,
+        group_id: u64,
+        provider: BytesN<32>,
+    ) -> Result<(), Error> {
+        Self::require_admin(&env);
+
+        let mut group: ProviderGroup = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderGroup(group_id))
+            .ok_or(Error::GroupNotFound)?;
+
+        let mut new_members: Vec<BytesN<32>> = Vec::new(&env);
+        for member in group.members.iter() {
+            if member != provider {
+                new_members.push_back(member);
+            }
+        }
+        group.members = new_members;
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderGroup(group_id), &group);
+
+        let groups: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderGroups(provider.clone()))
+            .unwrap_or(Vec::new(&env));
+        let mut new_groups: Vec<u64> = Vec::new(&env);
+        for g in groups.iter() {
+            if g != group_id {
+                new_groups.push_back(g);
+            }
+        }
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderGroups(provider), &new_groups);
+
+        Ok(())
+    }
+
+    /// Fetch a provider group's full metadata (name, description, members).
+    pub fn get_provider_group(env: Env, group_id: u64) -> Result<ProviderGroup, Error> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderGroup(group_id))
+            .ok_or(Error::GroupNotFound)
+    }
+
+    /// Query the provider keys belonging to a group.
+    pub fn get_group_members(env: Env, group_id: u64) -> Result<Vec<BytesN<32>>, Error> {
+        let group: ProviderGroup = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderGroup(group_id))
+            .ok_or(Error::GroupNotFound)?;
+        Ok(group.members)
+    }
+
+    /// Query all group ids a provider belongs to.
+    pub fn get_groups_for_provider(env: Env, provider: BytesN<32>) -> Vec<u64> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProviderGroups(provider))
+            .unwrap_or(Vec::new(&env))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1715,6 +2009,61 @@ mod tests {
 
     fn hash32_with_value(env: &Env, value: u8) -> BytesN<32> {
         BytesN::from_array(env, &[value; 32])
+    }
+
+    #[cfg(test)]
+    mod property_tests {
+        extern crate std;
+        use super::*;
+        use quickcheck::quickcheck;
+
+        fn hash_from_values(env: &Env, values: &[u8]) -> BytesN<32> {
+            let mut out = [0u8; 32];
+            for (idx, value) in values.iter().take(32).enumerate() {
+                out[idx] = *value;
+            }
+            BytesN::from_array(env, &out)
+        }
+
+        quickcheck! {
+            fn prop_duplicate_tee_hash_registration_is_idempotent(values: std::vec::Vec<u8>) -> bool {
+                let (env, _admin, client) = setup();
+                let tee_hash = hash_from_values(&env, &values);
+
+                client.add_tee_hash(&tee_hash);
+                client.add_tee_hash(&tee_hash);
+
+                client.is_tee_hash_approved(&tee_hash)
+            }
+
+            fn prop_duplicate_provider_registration_keeps_single_entry(values: std::vec::Vec<u8>) -> bool {
+                let (env, _admin, client) = setup();
+                let provider = hash_from_values(&env, &values);
+
+                client.add_provider(&provider);
+                client.add_provider(&provider);
+
+                client.is_provider(&provider)
+                    && client.get_providers_by_min_reputation(&0).len() == 1
+            }
+
+            fn prop_provider_list_is_monotonic_for_unique_additions(values: std::vec::Vec<u8>) -> bool {
+                let (env, _admin, client) = setup();
+                let mut seen = 0u32;
+
+                for (index, value) in values.iter().take(12).enumerate() {
+                    let provider = hash_from_values(&env, &[*value, (index as u8), 0u8]);
+                    client.add_provider(&provider);
+                    let list = client.get_providers_by_min_reputation(&0);
+                    if list.len() < seen + 1 {
+                        return false;
+                    }
+                    seen = list.len();
+                }
+
+                true
+            }
+        }
     }
 
     // --- #22 / #23 tests ---
@@ -1796,7 +2145,10 @@ mod tests {
         let p = BytesN::from_array(&env, &[3u8; 32]);
         client.add_provider(&p);
         client.set_provider_tier(&p, &ServiceTier::Premium);
-        assert_eq!(client.get_provider_info(&p).unwrap().tier, ServiceTier::Premium);
+        assert_eq!(
+            client.get_provider_info(&p).unwrap().tier,
+            ServiceTier::Premium
+        );
     }
 
     #[test]
@@ -1823,9 +2175,15 @@ mod tests {
             &provider_key,
             &String::from_str(&env, "metadata"),
         );
-        assert_eq!(client.get_application(&id).unwrap().status, ApplicationStatus::Pending);
+        assert_eq!(
+            client.get_application(&id).unwrap().status,
+            ApplicationStatus::Pending
+        );
         client.review_application(&id, &true);
-        assert_eq!(client.get_application(&id).unwrap().status, ApplicationStatus::Approved);
+        assert_eq!(
+            client.get_application(&id).unwrap().status,
+            ApplicationStatus::Approved
+        );
         assert!(client.is_provider(&provider_key));
     }
 
@@ -1847,7 +2205,8 @@ mod tests {
         let p = BytesN::from_array(&env, &[8u8; 32]);
         client.add_provider(&p);
         client.deactivate_provider(&p);
-        env.ledger().with_mut(|l| l.timestamp += PROVIDER_GRACE_PERIOD + 1);
+        env.ledger()
+            .with_mut(|l| l.timestamp += PROVIDER_GRACE_PERIOD + 1);
         client.finalize_removal(&p);
         assert!(!client.is_provider(&p));
     }
@@ -1859,7 +2218,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let h = hash32(&env);
         client.add_tee_hash(&h);
-        env.ledger().with_mut(|l| l.timestamp += TEE_HASH_VALIDITY + 1);
+        env.ledger()
+            .with_mut(|l| l.timestamp += TEE_HASH_VALIDITY + 1);
         assert!(!client.is_tee_hash_approved(&h));
     }
 
@@ -1873,6 +2233,8 @@ mod tests {
         assert!(!client.is_tee_hash_approved(&old));
         assert!(client.is_tee_hash_approved(&new));
         assert_eq!(client.get_tee_hash_migration(&old).unwrap(), new);
+    }
+
     // --- #163 tests ---
 
     #[test]
@@ -1959,11 +2321,9 @@ mod tests {
         let issuer = String::from_str(&env, "ACME CA");
         let valid_from = 1_000_000u64;
         let valid_until = 9_999_999u64;
-        client
-            .attach_cert_ref(&h, &issuer, &valid_from, &valid_until, &None)
-            .unwrap();
+        client.attach_cert_ref(&h, &issuer, &valid_from, &valid_until, &None);
 
-        let cert_ref = client.get_cert_ref(&h).unwrap();
+        let cert_ref = client.get_cert_ref(&h);
         assert_eq!(cert_ref.issuer, String::from_str(&env, "ACME CA"));
         assert_eq!(cert_ref.valid_from, valid_from);
         assert_eq!(cert_ref.valid_until, valid_until);
@@ -1977,17 +2337,15 @@ mod tests {
         client.add_tee_hash(&h);
 
         let uri = Some(String::from_str(&env, "ipfs://Qm1234567890"));
-        client
-            .attach_cert_ref(
-                &h,
-                &String::from_str(&env, "TEE Lab"),
-                &1000u64,
-                &5000u64,
-                &uri,
-            )
-            .unwrap();
+        client.attach_cert_ref(
+            &h,
+            &String::from_str(&env, "TEE Lab"),
+            &1000u64,
+            &5000u64,
+            &uri,
+        );
 
-        let cert_ref = client.get_cert_ref(&h).unwrap();
+        let cert_ref = client.get_cert_ref(&h);
         assert!(cert_ref.cert_uri.is_some());
     }
 
@@ -2020,9 +2378,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let h = hash32(&env);
         client.add_tee_hash(&h);
-        client
-            .attach_cert_ref(&h, &String::from_str(&env, "CA"), &1000u64, &9999u64, &None)
-            .unwrap();
+        client.attach_cert_ref(&h, &String::from_str(&env, "CA"), &1000u64, &9999u64, &None);
         let (approved, cert_ref) = client.get_tee_hash_with_cert(&h);
         assert!(approved);
         assert!(cert_ref.is_some());
@@ -2044,16 +2400,14 @@ mod tests {
         let h = hash32(&env);
         client.add_tee_hash(&h);
         // Ledger timestamp defaults to 0 in tests; expiry far in the future.
-        client
-            .attach_cert_ref(
-                &h,
-                &String::from_str(&env, "CA"),
-                &0u64,
-                &99_999_999u64,
-                &None,
-            )
-            .unwrap();
-        let result = client.validate_cert_expiration(&h).unwrap();
+        client.attach_cert_ref(
+            &h,
+            &String::from_str(&env, "CA"),
+            &0u64,
+            &99_999_999u64,
+            &None,
+        );
+        let result = client.validate_cert_expiration(&h);
         assert!(result);
     }
 
@@ -2063,7 +2417,7 @@ mod tests {
         let h = hash32(&env);
         client.add_tee_hash(&h);
         // No cert attached → Ok(false)
-        let result = client.validate_cert_expiration(&h).unwrap();
+        let result = client.validate_cert_expiration(&h);
         assert!(!result);
     }
 
@@ -2120,7 +2474,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let h = hash32_with_value(&env, 20);
         client.add_tee_hash_version(&h, &1u32);
-        let info = client.get_tee_hash_version(&h).unwrap();
+        let info = client.get_tee_hash_version(&h);
         assert_eq!(info.version, 1u32);
         assert!(!info.deprecated);
     }
@@ -2163,8 +2517,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let h = hash32_with_value(&env, 30);
         client.add_tee_hash_version(&h, &1u32);
-        client.deprecate_tee_hash(&h).unwrap();
-        let info = client.get_tee_hash_version(&h).unwrap();
+        client.deprecate_tee_hash(&h);
+        let info = client.get_tee_hash_version(&h);
         assert!(info.deprecated);
         assert!(info.deprecated_at.is_some());
     }
@@ -2186,7 +2540,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[40u8; 32]);
         client.add_provider(&p);
-        let rep = client.get_provider_reputation(&p).unwrap();
+        let rep = client.get_provider_reputation(&p);
         assert_eq!(rep.score, REPUTATION_MAX_SCORE / 2);
         assert_eq!(rep.total_verifications, 0);
     }
@@ -2196,8 +2550,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[41u8; 32]);
         client.add_provider(&p);
-        client.record_verification_result(&p, &true).unwrap();
-        let rep = client.get_provider_reputation(&p).unwrap();
+        client.record_verification_result(&p, &true);
+        let rep = client.get_provider_reputation(&p);
         assert_eq!(rep.successful_count, 1);
         assert_eq!(rep.total_verifications, 1);
         assert_eq!(rep.score, REPUTATION_MAX_SCORE);
@@ -2208,9 +2562,9 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[42u8; 32]);
         client.add_provider(&p);
-        client.record_verification_result(&p, &true).unwrap();
-        client.record_verification_result(&p, &false).unwrap();
-        let rep = client.get_provider_reputation(&p).unwrap();
+        client.record_verification_result(&p, &true);
+        client.record_verification_result(&p, &false);
+        let rep = client.get_provider_reputation(&p);
         assert_eq!(rep.score, REPUTATION_MAX_SCORE / 2);
     }
 
@@ -2221,7 +2575,7 @@ mod tests {
         let p2 = BytesN::from_array(&env, &[44u8; 32]);
         client.add_provider(&p1);
         client.add_provider(&p2);
-        client.record_verification_result(&p1, &true).unwrap();
+        client.record_verification_result(&p1, &true);
         // p2 has base score = REPUTATION_MAX_SCORE / 2
         let high_threshold = REPUTATION_MAX_SCORE - 1;
         let result = client.get_providers_by_min_reputation(&high_threshold);
@@ -2234,13 +2588,13 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[45u8; 32]);
         client.add_provider(&p);
-        let initial = client.get_provider_reputation(&p).unwrap().score;
+        let initial = client.get_provider_reputation(&p).score;
         // Advance time by 2 decay periods (60 days)
         env.ledger().with_mut(|l| {
             l.timestamp = 2 * REPUTATION_DECAY_PERIOD_SECS + 1;
         });
-        client.apply_reputation_decay(&p).unwrap();
-        let after = client.get_provider_reputation(&p).unwrap().score;
+        client.apply_reputation_decay(&p);
+        let after = client.get_provider_reputation(&p).score;
         assert!(after < initial);
     }
 
@@ -2249,11 +2603,13 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[46u8; 32]);
         client.add_provider(&p);
-        let initial = client.get_provider_reputation(&p).unwrap().score;
+        let initial = client.get_provider_reputation(&p).score;
         // Only 1 second has passed — less than one period
-        env.ledger().with_mut(|l| { l.timestamp = 1; });
-        client.apply_reputation_decay(&p).unwrap();
-        assert_eq!(client.get_provider_reputation(&p).unwrap().score, initial);
+        env.ledger().with_mut(|l| {
+            l.timestamp = 1;
+        });
+        client.apply_reputation_decay(&p);
+        assert_eq!(client.get_provider_reputation(&p).score, initial);
     }
 
     #[test]
@@ -2274,7 +2630,7 @@ mod tests {
         let p = BytesN::from_array(&env, &[50u8; 32]);
         client.add_provider(&p);
         let regions = soroban_sdk::vec![&env, Region::Europe, Region::NorthAmerica];
-        client.set_provider_regions(&p, &regions).unwrap();
+        client.set_provider_regions(&p, &regions);
         let stored = client.get_provider_regions(&p);
         assert_eq!(stored.len(), 2);
     }
@@ -2284,8 +2640,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[51u8; 32]);
         client.add_provider(&p);
-        client.add_provider_region(&p, &Region::Asia).unwrap();
-        client.add_provider_region(&p, &Region::Asia).unwrap(); // duplicate
+        client.add_provider_region(&p, &Region::Asia);
+        client.add_provider_region(&p, &Region::Asia); // duplicate
         assert_eq!(client.get_provider_regions(&p).len(), 1);
     }
 
@@ -2298,8 +2654,8 @@ mod tests {
         client.add_provider(&p2);
         let r1 = soroban_sdk::vec![&env, Region::Europe];
         let r2 = soroban_sdk::vec![&env, Region::Asia];
-        client.set_provider_regions(&p1, &r1).unwrap();
-        client.set_provider_regions(&p2, &r2).unwrap();
+        client.set_provider_regions(&p1, &r1);
+        client.set_provider_regions(&p2, &r2);
         let europe_providers = client.get_providers_by_region(&Region::Europe);
         assert_eq!(europe_providers.len(), 1);
         assert_eq!(europe_providers.get(0).unwrap(), p1);
@@ -2310,7 +2666,10 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[54u8; 32]);
         let regions = soroban_sdk::vec![&env, Region::Africa];
-        let err = client.try_set_provider_regions(&p, &regions).unwrap_err().unwrap();
+        let err = client
+            .try_set_provider_regions(&p, &regions)
+            .unwrap_err()
+            .unwrap();
         assert_eq!(err, Error::ProviderNotFound);
     }
 
@@ -2323,8 +2682,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[60u8; 32]);
         client.add_provider(&p);
-        client.set_provider_capacity(&p, &10u32).unwrap();
-        let cap = client.get_provider_capacity(&p).unwrap();
+        client.set_provider_capacity(&p, &10u32);
+        let cap = client.get_provider_capacity(&p);
         assert_eq!(cap.max_concurrent, 10);
         assert_eq!(cap.active_requests, 0);
     }
@@ -2334,7 +2693,10 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[61u8; 32]);
         client.add_provider(&p);
-        let err = client.try_set_provider_capacity(&p, &0u32).unwrap_err().unwrap();
+        let err = client
+            .try_set_provider_capacity(&p, &0u32)
+            .unwrap_err()
+            .unwrap();
         assert_eq!(err, Error::InvalidCapacity);
     }
 
@@ -2343,7 +2705,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[62u8; 32]);
         client.add_provider(&p);
-        client.set_provider_capacity(&p, &5u32).unwrap();
+        client.set_provider_capacity(&p, &5u32);
         assert!(client.has_capacity(&p));
     }
 
@@ -2352,12 +2714,12 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[63u8; 32]);
         client.add_provider(&p);
-        client.set_provider_capacity(&p, &3u32).unwrap();
-        client.increment_active_requests(&p).unwrap();
-        client.increment_active_requests(&p).unwrap();
-        assert_eq!(client.get_provider_capacity(&p).unwrap().active_requests, 2);
-        client.decrement_active_requests(&p).unwrap();
-        assert_eq!(client.get_provider_capacity(&p).unwrap().active_requests, 1);
+        client.set_provider_capacity(&p, &3u32);
+        client.increment_active_requests(&p);
+        client.increment_active_requests(&p);
+        assert_eq!(client.get_provider_capacity(&p).active_requests, 2);
+        client.decrement_active_requests(&p);
+        assert_eq!(client.get_provider_capacity(&p).active_requests, 1);
     }
 
     #[test]
@@ -2365,9 +2727,12 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[64u8; 32]);
         client.add_provider(&p);
-        client.set_provider_capacity(&p, &1u32).unwrap();
-        client.increment_active_requests(&p).unwrap();
-        let err = client.try_increment_active_requests(&p).unwrap_err().unwrap();
+        client.set_provider_capacity(&p, &1u32);
+        client.increment_active_requests(&p);
+        let err = client
+            .try_increment_active_requests(&p)
+            .unwrap_err()
+            .unwrap();
         assert_eq!(err, Error::CapacityExceeded);
     }
 
@@ -2389,7 +2754,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[70u8; 32]);
         client.add_provider(&p);
-        client.add_provider_specialization(&p, &Specialization::ImageVerification).unwrap();
+        client.add_provider_specialization(&p, &Specialization::ImageVerification);
         let specs = client.get_provider_specializations(&p);
         assert_eq!(specs.len(), 1);
         assert_eq!(specs.get(0).unwrap(), Specialization::ImageVerification);
@@ -2400,8 +2765,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[71u8; 32]);
         client.add_provider(&p);
-        client.add_provider_specialization(&p, &Specialization::VideoVerification).unwrap();
-        client.add_provider_specialization(&p, &Specialization::VideoVerification).unwrap();
+        client.add_provider_specialization(&p, &Specialization::VideoVerification);
+        client.add_provider_specialization(&p, &Specialization::VideoVerification);
         assert_eq!(client.get_provider_specializations(&p).len(), 1);
     }
 
@@ -2410,9 +2775,9 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[72u8; 32]);
         client.add_provider(&p);
-        client.add_provider_specialization(&p, &Specialization::AiDetection).unwrap();
-        client.add_provider_specialization(&p, &Specialization::DocumentVerification).unwrap();
-        client.remove_provider_specialization(&p, &Specialization::AiDetection).unwrap();
+        client.add_provider_specialization(&p, &Specialization::AiDetection);
+        client.add_provider_specialization(&p, &Specialization::DocumentVerification);
+        client.remove_provider_specialization(&p, &Specialization::AiDetection);
         let specs = client.get_provider_specializations(&p);
         assert_eq!(specs.len(), 1);
         assert_eq!(specs.get(0).unwrap(), Specialization::DocumentVerification);
@@ -2425,7 +2790,7 @@ mod tests {
         let p2 = BytesN::from_array(&env, &[74u8; 32]);
         client.add_provider(&p1);
         client.add_provider(&p2);
-        client.add_provider_specialization(&p1, &Specialization::AudioVerification).unwrap();
+        client.add_provider_specialization(&p1, &Specialization::AudioVerification);
         let providers = client.get_providers_by_specialization(&Specialization::AudioVerification);
         assert_eq!(providers.len(), 1);
         assert_eq!(providers.get(0).unwrap(), p1);
@@ -2437,7 +2802,8 @@ mod tests {
         let p = BytesN::from_array(&env, &[75u8; 32]);
         let err = client
             .try_add_provider_specialization(&p, &Specialization::ImageVerification)
-            .unwrap_err().unwrap();
+            .unwrap_err()
+            .unwrap();
         assert_eq!(err, Error::ProviderNotFound);
     }
 
@@ -2450,7 +2816,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[80u8; 32]);
         client.add_provider(&p);
-        client.blacklist_provider(&p, &1u32).unwrap();
+        client.blacklist_provider(&p, &1u32);
         assert!(client.is_blacklisted(&p));
     }
 
@@ -2459,8 +2825,8 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[81u8; 32]);
         client.add_provider(&p);
-        client.blacklist_provider(&p, &42u32).unwrap();
-        let entry = client.get_blacklist_entry(&p).unwrap();
+        client.blacklist_provider(&p, &42u32);
+        let entry = client.get_blacklist_entry(&p);
         assert_eq!(entry.reason_code, 42u32);
     }
 
@@ -2469,9 +2835,9 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[82u8; 32]);
         client.add_provider(&p);
-        client.blacklist_provider(&p, &1u32).unwrap();
+        client.blacklist_provider(&p, &1u32);
         assert!(client.is_blacklisted(&p));
-        client.whitelist_provider(&p).unwrap();
+        client.whitelist_provider(&p);
         assert!(!client.is_blacklisted(&p));
     }
 
@@ -2489,7 +2855,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[84u8; 32]);
         client.add_provider(&p);
-        assert!(client.is_provider_authorized(&p).unwrap());
+        assert!(client.is_provider_authorized(&p));
     }
 
     #[test]
@@ -2497,7 +2863,7 @@ mod tests {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[85u8; 32]);
         client.add_provider(&p);
-        client.blacklist_provider(&p, &1u32).unwrap();
+        client.blacklist_provider(&p, &1u32);
         let err = client.try_is_provider_authorized(&p).unwrap_err().unwrap();
         assert_eq!(err, Error::ProviderBlacklisted);
     }
@@ -2506,7 +2872,7 @@ mod tests {
     fn test_is_provider_authorized_unregistered_returns_false() {
         let (env, _admin, client) = setup();
         let p = BytesN::from_array(&env, &[86u8; 32]);
-        assert!(!client.is_provider_authorized(&p).unwrap());
+        assert!(!client.is_provider_authorized(&p));
     }
 
     #[test]
@@ -2525,7 +2891,7 @@ mod tests {
     #[test]
     fn test_reject_application() {
         let (env, _admin, client) = setup();
-        let applicant    = Address::generate(&env);
+        let applicant = Address::generate(&env);
         let provider_key = BytesN::from_array(&env, &[90u8; 32]);
         let id = client.submit_provider_application(
             &applicant,
@@ -2549,7 +2915,10 @@ mod tests {
         let h = BytesN::from_array(&env, &[1u8; 32]);
         let operation = ProposalOperation::AddTeeHash(h);
         // Timelock = 100 ledgers; current sequence starts at 0
-        let pid = client.try_propose_operation(&operation, &100u32).unwrap().unwrap();
+        let pid = client
+            .try_propose_operation(&operation, &100u32)
+            .unwrap()
+            .unwrap();
         client.try_approve_proposal(&pid).unwrap().unwrap();
         // Do NOT advance the ledger — should fail
         let err = client.try_execute_proposal(&pid).unwrap_err().unwrap();
@@ -2563,11 +2932,230 @@ mod tests {
     #[test]
     fn test_verify_and_mint_hash_mismatch_returns_failure() {
         let (env, _admin, client) = setup();
-        let content  = Bytes::from_slice(&env, b"real content");
+        let content = Bytes::from_slice(&env, b"real content");
         let bad_hash = BytesN::from_array(&env, &[0xFFu8; 32]);
-        let owner    = Address::generate(&env);
-        let result   = client.verify_and_mint(&content, &bad_hash, &owner);
+        let owner = Address::generate(&env);
+        let result = client.verify_and_mint(&content, &bad_hash, &owner);
         assert!(!result.success);
         assert_eq!(result.certificate_id, 0);
+    }
+
+    // -----------------------------------------------------------------------
+    // #454 – Provider groups
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_create_and_get_provider_group() {
+        let (env, _admin, client) = setup();
+        let id = client.create_provider_group(
+            &String::from_str(&env, "EU Verifiers"),
+            &String::from_str(&env, "Providers operating in the EU"),
+        );
+        assert_eq!(id, 1);
+
+        let group = client.get_provider_group(&id);
+        assert_eq!(group.name, String::from_str(&env, "EU Verifiers"));
+        assert_eq!(
+            group.description,
+            String::from_str(&env, "Providers operating in the EU")
+        );
+        assert_eq!(group.members.len(), 0);
+    }
+
+    #[test]
+    fn test_create_provider_group_non_admin_panics_result() {
+        let env = Env::default();
+        let cid = env.register_contract(None, RegistryContract);
+        let client = RegistryContractClient::new(&env, &cid);
+        let admin = Address::generate(&env);
+        let provenance = Address::generate(&env);
+        client.init(&admin, &provenance);
+
+        let result = client.try_create_provider_group(
+            &String::from_str(&env, "Name"),
+            &String::from_str(&env, "Desc"),
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_provider_group() {
+        let (env, _admin, client) = setup();
+        let id = client.create_provider_group(
+            &String::from_str(&env, "Old Name"),
+            &String::from_str(&env, "Old Desc"),
+        );
+        client.update_provider_group(
+            &id,
+            &String::from_str(&env, "New Name"),
+            &String::from_str(&env, "New Desc"),
+        );
+        let group = client.get_provider_group(&id);
+        assert_eq!(group.name, String::from_str(&env, "New Name"));
+        assert_eq!(group.description, String::from_str(&env, "New Desc"));
+    }
+
+    #[test]
+    fn test_update_nonexistent_group_fails() {
+        let (env, _admin, client) = setup();
+        let err = client
+            .try_update_provider_group(
+                &999u64,
+                &String::from_str(&env, "Name"),
+                &String::from_str(&env, "Desc"),
+            )
+            .unwrap_err()
+            .unwrap();
+        assert_eq!(err, Error::GroupNotFound);
+    }
+
+    #[test]
+    fn test_add_provider_to_group_and_query_members() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[100u8; 32]);
+        client.add_provider(&p);
+
+        let id = client.create_provider_group(
+            &String::from_str(&env, "Group"),
+            &String::from_str(&env, "Desc"),
+        );
+        client.add_provider_to_group(&id, &p);
+
+        let members = client.get_group_members(&id);
+        assert_eq!(members.len(), 1);
+        assert_eq!(members.get(0).unwrap(), p);
+    }
+
+    #[test]
+    fn test_add_provider_to_group_is_idempotent() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[101u8; 32]);
+        client.add_provider(&p);
+
+        let id = client.create_provider_group(
+            &String::from_str(&env, "Group"),
+            &String::from_str(&env, "Desc"),
+        );
+        client.add_provider_to_group(&id, &p);
+        client.add_provider_to_group(&id, &p); // duplicate
+
+        assert_eq!(client.get_group_members(&id).len(), 1);
+    }
+
+    #[test]
+    fn test_add_unregistered_provider_to_group_fails() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[102u8; 32]);
+
+        let id = client.create_provider_group(
+            &String::from_str(&env, "Group"),
+            &String::from_str(&env, "Desc"),
+        );
+        let err = client
+            .try_add_provider_to_group(&id, &p)
+            .unwrap_err()
+            .unwrap();
+        assert_eq!(err, Error::ProviderNotFound);
+    }
+
+    #[test]
+    fn test_add_provider_to_nonexistent_group_fails() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[103u8; 32]);
+        client.add_provider(&p);
+
+        let err = client
+            .try_add_provider_to_group(&999u64, &p)
+            .unwrap_err()
+            .unwrap();
+        assert_eq!(err, Error::GroupNotFound);
+    }
+
+    #[test]
+    fn test_remove_provider_from_group() {
+        let (env, _admin, client) = setup();
+        let p1 = BytesN::from_array(&env, &[104u8; 32]);
+        let p2 = BytesN::from_array(&env, &[105u8; 32]);
+        client.add_provider(&p1);
+        client.add_provider(&p2);
+
+        let id = client.create_provider_group(
+            &String::from_str(&env, "Group"),
+            &String::from_str(&env, "Desc"),
+        );
+        client.add_provider_to_group(&id, &p1);
+        client.add_provider_to_group(&id, &p2);
+        client.remove_provider_from_group(&id, &p1);
+
+        let members = client.get_group_members(&id);
+        assert_eq!(members.len(), 1);
+        assert_eq!(members.get(0).unwrap(), p2);
+    }
+
+    #[test]
+    fn test_remove_from_nonexistent_group_fails() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[106u8; 32]);
+        client.add_provider(&p);
+
+        let err = client
+            .try_remove_provider_from_group(&999u64, &p)
+            .unwrap_err()
+            .unwrap();
+        assert_eq!(err, Error::GroupNotFound);
+    }
+
+    #[test]
+    fn test_get_groups_for_provider() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[107u8; 32]);
+        client.add_provider(&p);
+
+        let g1 = client.create_provider_group(
+            &String::from_str(&env, "Group 1"),
+            &String::from_str(&env, "Desc"),
+        );
+        let g2 = client.create_provider_group(
+            &String::from_str(&env, "Group 2"),
+            &String::from_str(&env, "Desc"),
+        );
+        client.add_provider_to_group(&g1, &p);
+        client.add_provider_to_group(&g2, &p);
+
+        let groups = client.get_groups_for_provider(&p);
+        assert_eq!(groups.len(), 2);
+        assert!(groups.contains(&g1));
+        assert!(groups.contains(&g2));
+    }
+
+    #[test]
+    fn test_remove_provider_from_group_updates_reverse_index() {
+        let (env, _admin, client) = setup();
+        let p = BytesN::from_array(&env, &[108u8; 32]);
+        client.add_provider(&p);
+
+        let id = client.create_provider_group(
+            &String::from_str(&env, "Group"),
+            &String::from_str(&env, "Desc"),
+        );
+        client.add_provider_to_group(&id, &p);
+        assert_eq!(client.get_groups_for_provider(&p).len(), 1);
+
+        client.remove_provider_from_group(&id, &p);
+        assert_eq!(client.get_groups_for_provider(&p).len(), 0);
+    }
+
+    #[test]
+    fn test_get_provider_group_not_found() {
+        let (_env, _admin, client) = setup();
+        let err = client.try_get_provider_group(&999u64).unwrap_err().unwrap();
+        assert_eq!(err, Error::GroupNotFound);
+    }
+
+    #[test]
+    fn test_get_group_members_not_found() {
+        let (_env, _admin, client) = setup();
+        let err = client.try_get_group_members(&999u64).unwrap_err().unwrap();
+        assert_eq!(err, Error::GroupNotFound);
     }
 }

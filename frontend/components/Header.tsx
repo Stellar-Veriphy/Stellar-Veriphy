@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { MobileNav } from "@/components/MobileNav";
 import { NotificationBell } from "@/components/notifications";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -26,6 +27,7 @@ export function Header() {
     { href: "/verify", label: "Verify" },
     { href: "/manifest", label: "Manifest" },
     { href: "/builder", label: "Builder" },
+    { href: "/certificates", label: "Certificates" },
     { href: "/transactions", label: "Transactions" },
     { href: "/tools", label: "Tools" },
   ];

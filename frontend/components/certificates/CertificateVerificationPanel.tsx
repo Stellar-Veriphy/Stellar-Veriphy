@@ -13,9 +13,10 @@
  * rendering to sub-components.
  */
 
-import { useCallback,useState } from "react";
+import { useCallback, useState } from "react";
 
 import { CertificateCardSkeleton } from "@/components/ui/Skeleton";
+import { recordVerificationEvent } from "@/lib/verificationHistory";
 import type {
   CertificateLookupMethod,
   CertificateSearchResult,
@@ -81,6 +82,12 @@ export function CertificateVerificationPanel() {
     }
 
     if (!response.success || !response.data) {
+      recordVerificationEvent({
+        method,
+        query: value,
+        status: "not_found",
+        details: response.error,
+      });
       setLookupState({ status: "error", message: response.error ?? "Unknown error" });
       return;
     }
@@ -91,6 +98,13 @@ export function CertificateVerificationPanel() {
       // Single result
       const result = data as CertificateVerificationResult;
       setLookupState({ status: "loaded", result });
+      recordVerificationEvent({
+        method,
+        query: value,
+        certificateId: result.certificate.id,
+        status: result.isRevoked ? "revoked" : "verified",
+        details: result.statusLabel,
+      });
       // Populate mock history
       setHistoryEvents(
         generateMockHistory(
@@ -103,8 +117,15 @@ export function CertificateVerificationPanel() {
       // Multiple results (creator search)
       const searchResult = data as CertificateSearchResult;
       if (searchResult.certificates.length === 0) {
+        recordVerificationEvent({ method, query: value, status: "not_found" });
         setLookupState({ status: "error", message: "No certificates found for this creator" });
       } else {
+        recordVerificationEvent({
+          method,
+          query: value,
+          status: "verified",
+          details: `${searchResult.certificates.length} result(s)`,
+        });
         setLookupState({ status: "multiple", result: searchResult });
       }
     }
@@ -116,12 +137,26 @@ export function CertificateVerificationPanel() {
     setLookupState({ status: "verifying", certificateId: id });
     const response = await verifyCertificateAuthenticity(id);
     if (response.success && response.data) {
+      recordVerificationEvent({
+        method: "authenticity",
+        query: id,
+        certificateId: id,
+        status: response.data.authentic ? "verified" : "error",
+        details: response.data.details.join("; "),
+      });
       setLookupState({
         status: "verified",
         certificateId: id,
         details: response.data.details,
       });
     } else {
+      recordVerificationEvent({
+        method: "authenticity",
+        query: id,
+        certificateId: id,
+        status: "error",
+        details: response.error,
+      });
       setLookupState({ status: "error", message: response.error ?? "Verification failed" });
     }
   }, []);

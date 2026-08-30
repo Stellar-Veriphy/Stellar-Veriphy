@@ -1,0 +1,85 @@
+name: Load Testing
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  frontend-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Start frontend app
+        run: |
+          npm install
+          npm run build --workspace frontend
+          npm run start --workspace frontend > /tmp/stellarveriphy.log 2>&1 &
+          npx wait-on http://localhost:3000
+
+      - name: Run frontend load test
+        env:
+          BASE_URL: http://localhost:3000
+        run: |
+          mkdir -p load-tests/results
+          k6 run --summary-export=load-tests/results/frontend-summary.json ./load-tests/frontend-load.js
+
+      - name: Generate HTML report
+        run: |
+          node ./load-tests/report-generator.mjs ./load-tests/results/frontend-summary.json ./load-tests/results/frontend-report.html
+
+      - name: Upload load report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-load-report
+          path: |
+            load-tests/results/frontend-summary.json
+            load-tests/results/frontend-report.html
+          if-no-files-found: error
+
+  contract-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Start frontend app
+        run: |
+          npm install
+          npm run build --workspace frontend
+          npm run start --workspace frontend > /tmp/stellarveriphy-contract.log 2>&1 &
+          npx wait-on http://localhost:3000
+
+      - name: Run contract load test
+        env:
+          BASE_URL: http://localhost:3000
+        run: |
+          mkdir -p load-tests/results
+          k6 run --summary-export=load-tests/results/contract-summary.json ./load-tests/contract-load.js
+
+      - name: Generate HTML report
+        run: |
+          node ./load-tests/report-generator.mjs ./load-tests/results/contract-summary.json ./load-tests/results/contract-report.html
+
+      - name: Upload contract load report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-load-report
+          path: |
+            load-tests/results/contract-summary.json
+            load-tests/results/contract-report.html
+          if-no-files-found: error

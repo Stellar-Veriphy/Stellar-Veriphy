@@ -152,6 +152,12 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "comment"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
                         "symbol": "manifest_hash"
                       },
                       "val": {
@@ -214,7 +220,7 @@
             "key": {
               "vec": [
                 {
-                  "symbol": "RequestExpiry"
+                  "symbol": "RequestExpiresAtLedger"
                 },
                 {
                   "u64": 1
@@ -234,7 +240,7 @@
                 "key": {
                   "vec": [
                     {
-                      "symbol": "RequestExpiry"
+                      "symbol": "RequestExpiresAtLedger"
                     },
                     {
                       "u64": 1
@@ -353,7 +359,7 @@
                           ]
                         },
                         "val": {
-                          "u32": 10
+                          "u32": 20
                         }
                       },
                       {
@@ -689,6 +695,12 @@
             ],
             "data": {
               "map": [
+                {
+                  "key": {
+                    "symbol": "comment"
+                  },
+                  "val": "void"
+                },
                 {
                   "key": {
                     "symbol": "manifest_hash"

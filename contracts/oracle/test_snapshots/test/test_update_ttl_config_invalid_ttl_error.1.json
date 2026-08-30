@@ -61,7 +61,7 @@
                           ]
                         },
                         "val": {
-                          "u32": 10
+                          "u32": 20
                         }
                       },
                       {
@@ -235,30 +235,15 @@
               }
             ],
             "data": {
-              "map": [
+              "vec": [
                 {
-                  "key": {
-                    "symbol": "default_ttl"
-                  },
-                  "val": {
-                    "u32": 0
-                  }
+                  "u32": 0
                 },
                 {
-                  "key": {
-                    "symbol": "high_priority_ttl"
-                  },
-                  "val": {
-                    "u32": 100
-                  }
+                  "u32": 100
                 },
                 {
-                  "key": {
-                    "symbol": "low_priority_ttl"
-                  },
-                  "val": {
-                    "u32": 50
-                  }
+                  "u32": 50
                 }
               ]
             }
@@ -284,7 +269,7 @@
             ],
             "data": {
               "error": {
-                "contract": 20
+                "contract": 10
               }
             }
           }
@@ -305,7 +290,7 @@
               },
               {
                 "error": {
-                  "contract": 20
+                  "contract": 10
                 }
               }
             ],
@@ -330,7 +315,7 @@
               },
               {
                 "error": {
-                  "contract": 20
+                  "contract": 10
                 }
               }
             ],
@@ -345,32 +330,13 @@
                 {
                   "vec": [
                     {
-                      "map": [
-                        {
-                          "key": {
-                            "symbol": "default_ttl"
-                          },
-                          "val": {
-                            "u32": 0
-                          }
-                        },
-                        {
-                          "key": {
-                            "symbol": "high_priority_ttl"
-                          },
-                          "val": {
-                            "u32": 100
-                          }
-                        },
-                        {
-                          "key": {
-                            "symbol": "low_priority_ttl"
-                          },
-                          "val": {
-                            "u32": 50
-                          }
-                        }
-                      ]
+                      "u32": 0
+                    },
+                    {
+                      "u32": 100
+                    },
+                    {
+                      "u32": 50
                     }
                   ]
                 }

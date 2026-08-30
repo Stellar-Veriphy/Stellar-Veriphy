@@ -61,7 +61,7 @@
                           ]
                         },
                         "val": {
-                          "u32": 10
+                          "u32": 20
                         }
                       },
                       {
@@ -259,7 +259,7 @@
             ],
             "data": {
               "error": {
-                "contract": 21
+                "contract": 10
               }
             }
           }
@@ -280,7 +280,7 @@
               },
               {
                 "error": {
-                  "contract": 21
+                  "contract": 10
                 }
               }
             ],
@@ -305,7 +305,7 @@
               },
               {
                 "error": {
-                  "contract": 21
+                  "contract": 10
                 }
               }
             ],

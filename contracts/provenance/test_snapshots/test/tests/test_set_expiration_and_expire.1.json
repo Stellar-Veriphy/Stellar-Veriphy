@@ -138,7 +138,11 @@
                         "symbol": "revocation_reason"
                       },
                       "val": {
-                        "u32": 0
+                        "vec": [
+                          {
+                            "symbol": "None"
+                          }
+                        ]
                       }
                     },
                     {
@@ -161,6 +165,14 @@
                       },
                       "val": {
                         "string": "sid"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tags"
+                      },
+                      "val": {
+                        "vec": []
                       }
                     },
                     {

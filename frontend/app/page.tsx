@@ -8,7 +8,11 @@ import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-900 scroll-smooth">
+    <main
+      id="main-content"
+      className="min-h-screen bg-slate-900 scroll-smooth"
+      aria-label="Main content"
+    >
       <Header />
       <div className="pt-16">
         <HeroSection />

@@ -53,7 +53,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, symbol_short, Address,
-    Bytes, BytesN, Env, Map, String, Vec,
+    Bytes, BytesN, Env, String, Vec,
 };
 
 // #179 — bucket width for the minting time series / velocity stats
@@ -72,16 +72,26 @@ pub enum ProvenanceError {
     UnauthorizedRevocation = 7,
     InvalidExpiration = 8,
     CircularReference = 9,
+    CertificateLocked = 10,
+    CollectionNotFound = 11,
+    InvalidTagLength = 12,
+    MaxTagsExceeded = 13,
 }
 
 // #171 — Revocation reason
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
+// #16 / #171 — `None` stands in for "not revoked" so this type can be used
+// directly as a `ProvenanceCert` field. Embedding a custom #[contracttype]
+// enum inside `Option<_>` doesn't compile against this soroban_sdk version:
+// its `Option<T>` → ScVal conversion needs an infallible `Into<ScVal>`, but
+// the derive macro only ever generates a fallible `TryFrom`.
 pub enum RevocationReason {
-    FraudulentContent = 1,
-    LegalRequirement = 2,
-    CreatorRequest = 3,
-    ContractualViolation = 4,
+    None,
+    FraudulentContent,
+    LegalRequirement,
+    CreatorRequest,
+    ContractualViolation,
 }
 
 // #176 — Verification badge level
@@ -105,6 +115,7 @@ pub enum CertificateRelation {
 
 // #14 — String fields (was Bytes)
 #[contracttype]
+#[derive(Debug)]
 pub struct ProvenanceCert {
     pub storage_ref: String,
     pub manifest_hash: String,
@@ -112,13 +123,15 @@ pub struct ProvenanceCert {
     pub creator: Address,
     pub timestamp: u64,
     pub revoked: bool,
-    pub revocation_reason: Option<RevocationReason>,
+    pub revocation_reason: RevocationReason,
     pub revocation_timestamp: Option<u64>,
     // #177 — optional expiration
-    pub expires_at:       Option<u64>,
+    pub expires_at: Option<u64>,
     // #176 — verification thoroughness badge
     pub verification_level: VerificationLevel,
-    pub locked:           bool,
+    pub locked: bool,
+    // #450 — Certificate tags for categorization and discovery
+    pub tags: Vec<String>,
 }
 
 // #173 — Certificate metadata with version tracking
@@ -167,6 +180,8 @@ pub struct MediaProperties {
     pub duration_seconds: Option<u64>,
     pub file_size_bytes: Option<u64>,
     pub codec: Option<String>,
+}
+
 // #179 — Aggregate certificate statistics
 #[contracttype]
 pub struct CertificateStats {
@@ -180,6 +195,8 @@ pub struct TimeSeriesPoint {
     pub day: u64,
     pub period_start: u64,
     pub count: u64,
+}
+
 // #184 — Certificate immutability lock event
 #[contractevent]
 pub struct CertificateLockedEvent {
@@ -289,6 +306,26 @@ pub struct CertificatesLinked {
     pub relation: CertificateRelation,
 }
 
+// #452 — Certificate endorsed event
+#[contractevent]
+pub struct CertificateEndorsed {
+    #[topic]
+    pub certificate_id: u64,
+    #[topic]
+    pub endorser: Address,
+    pub total_endorsements: u64,
+}
+
+// #452 — Certificate endorsement removed event
+#[contractevent]
+pub struct EndorsementRemoved {
+    #[topic]
+    pub certificate_id: u64,
+    #[topic]
+    pub endorser: Address,
+    pub total_endorsements: u64,
+}
+
 // ---------------------------------------------------------------------------
 // Storage keys  — #439 typed DataKey replaces raw symbol_short! strings.
 // Using a typed enum prevents typos, enables exhaustive matching, and keeps
@@ -319,6 +356,10 @@ pub enum DataKey {
     MetadataHistory(u64),
     /// Media properties attached to a certificate.
     Media(u64),
+    /// #450 — Tags for a certificate (supports categorization and discovery)
+    Tags(u64),
+    /// #450 — Index mapping tag → certificate ids (supports query by tag)
+    TagIndex(String),
     // ── per-creator (persistent storage) ──────────────────────────────────
     /// How many certificates a creator has minted.
     CreatorCount(Address),
@@ -334,6 +375,16 @@ pub enum DataKey {
     // ── time-series stats (persistent storage) ────────────────────────────
     /// Daily minting count for a given day bucket (DAY_SECONDS granularity).
     DailyCount(u64),
+    // ── views (persistent storage) — #455 ──────────────────────────────────
+    /// Number of times a certificate has been viewed via `get_certificate`.
+    ViewCount(u64),
+    // ── endorsements (persistent storage) — #452 ───────────────────────────
+    /// Presence flag: whether `endorser` has endorsed a certificate.
+    Endorsement(u64, Address),
+    /// Total endorsement count for a certificate.
+    EndorsementCount(u64),
+    /// Ordered list of endorser addresses for a certificate.
+    EndorsementIndex(u64),
 }
 
 #[contract]
@@ -384,12 +435,12 @@ fn creates_cycle(env: &Env, start_id: u64, target_id: u64) -> bool {
         if current == target_id {
             return true;
         }
-        let key = (links_key, current);
+        let key = (links_key.clone(), current);
         let links: Vec<CertificateRelation> = env
             .storage()
             .persistent()
             .get(&key)
-            .unwrap_or(Vec::new());
+            .unwrap_or(Vec::new(&env));
 
         let mut next: Option<u64> = None;
         for relation in links.iter() {
@@ -470,11 +521,12 @@ impl ProvenanceContract {
             creator: to.clone(),
             timestamp: env.ledger().timestamp(),
             revoked: false,
-            revocation_reason: None,
+            revocation_reason: RevocationReason::None,
             revocation_timestamp: None,
             expires_at: None,
             verification_level,
             locked: false,
+            tags: Vec::new(&env), // #450 — initialize with empty tags
         };
         env.storage().persistent().set(&id, &cert);
 
@@ -489,12 +541,16 @@ impl ProvenanceContract {
         // #179 — creator / daily minting counters
         let creator_key = (symbol_short!("CCNT"), to.clone());
         let creator_count: u64 = env.storage().persistent().get(&creator_key).unwrap_or(0u64);
-        env.storage().persistent().set(&creator_key, &(creator_count + 1));
+        env.storage()
+            .persistent()
+            .set(&creator_key, &(creator_count + 1));
 
         let day = env.ledger().timestamp() / DAY_SECONDS;
         let daily_key = (symbol_short!("DAILY"), day);
         let daily_count: u64 = env.storage().persistent().get(&daily_key).unwrap_or(0u64);
-        env.storage().persistent().set(&daily_key, &(daily_count + 1));
+        env.storage()
+            .persistent()
+            .set(&daily_key, &(daily_count + 1));
 
         // #15 — emit typed event
         CertificateMinted {
@@ -502,17 +558,25 @@ impl ProvenanceContract {
             certificate_id: id,
             manifest_hash,
         }
-        .emit(&env);
+        .publish(&env);
 
         id
     }
 
     // #16 — returns Result instead of panicking
     pub fn get_certificate(env: Env, id: u64) -> Result<ProvenanceCert, ProvenanceError> {
-        env.storage()
+        let cert: ProvenanceCert = env
+            .storage()
             .persistent()
             .get(&id)
-            .ok_or(ProvenanceError::CertificateNotFound)
+            .ok_or(ProvenanceError::CertificateNotFound)?;
+
+        // #455 — record a view each time the certificate is fetched
+        let view_key = DataKey::ViewCount(id);
+        let views: u64 = env.storage().persistent().get(&view_key).unwrap_or(0u64) + 1;
+        env.storage().persistent().set(&view_key, &views);
+
+        Ok(cert)
     }
 
     /// #171 — Revoke a certificate. Only the oracle may call this.
@@ -535,17 +599,20 @@ impl ProvenanceContract {
             .ok_or(ProvenanceError::CertificateNotFound)?;
 
         cert.revoked = true;
-        cert.revocation_reason = Some(reason.clone());
+        cert.revocation_reason = reason.clone();
         cert.revocation_timestamp = Some(env.ledger().timestamp());
         let owner = cert.creator.clone();
 
         env.storage().persistent().set(&certificate_id, &cert);
 
         let reason_str = match reason {
+            RevocationReason::None => String::from_str(&env, "none"),
             RevocationReason::FraudulentContent => String::from_str(&env, "fraudulent_content"),
             RevocationReason::LegalRequirement => String::from_str(&env, "legal_requirement"),
             RevocationReason::CreatorRequest => String::from_str(&env, "creator_request"),
-            RevocationReason::ContractualViolation => String::from_str(&env, "contractual_violation"),
+            RevocationReason::ContractualViolation => {
+                String::from_str(&env, "contractual_violation")
+            }
         };
 
         CertificateRevoked {
@@ -553,7 +620,7 @@ impl ProvenanceContract {
             owner,
             reason: reason_str,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(())
     }
@@ -633,7 +700,7 @@ impl ProvenanceContract {
             renewed_by,
             new_expires_at,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(())
     }
@@ -659,7 +726,7 @@ impl ProvenanceContract {
                     owner: cert.creator,
                     expires_at,
                 }
-                .emit(&env);
+                .publish(&env);
                 return Ok(true);
             }
         }
@@ -695,7 +762,7 @@ impl ProvenanceContract {
             updated_by: oracle,
             new_level: level,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(())
     }
@@ -713,7 +780,7 @@ impl ProvenanceContract {
     }
 
     /// #176 — Query certificates matching a given verification level
-    pub fn get_certificates_by_verification_level(
+    pub fn get_certs_by_verification_level(
         env: Env,
         level: VerificationLevel,
         offset: u32,
@@ -722,7 +789,7 @@ impl ProvenanceContract {
         let cnt_key = symbol_short!("CERT_CNT");
         let total_certs: u64 = env.storage().persistent().get(&cnt_key).unwrap_or(0u64);
 
-        let mut results: Vec<(u64, ProvenanceCert)> = Vec::new();
+        let mut results: Vec<(u64, ProvenanceCert)> = Vec::new(&env);
         let mut count = 0u32;
         let mut skipped = 0u32;
 
@@ -786,12 +853,12 @@ impl ProvenanceContract {
 
         let links_key = symbol_short!("LINKS");
 
-        let key_a = (links_key, certificate_id);
+        let key_a = (links_key.clone(), certificate_id);
         let mut links_a: Vec<CertificateRelation> = env
             .storage()
             .persistent()
             .get(&key_a)
-            .unwrap_or(Vec::new());
+            .unwrap_or(Vec::new(&env));
         links_a.push_back(relation);
         env.storage().persistent().set(&key_a, &links_a);
 
@@ -800,7 +867,7 @@ impl ProvenanceContract {
             .storage()
             .persistent()
             .get(&key_b)
-            .unwrap_or(Vec::new());
+            .unwrap_or(Vec::new(&env));
         links_b.push_back(reciprocal_relation(relation, certificate_id));
         env.storage().persistent().set(&key_b, &links_b);
 
@@ -809,7 +876,7 @@ impl ProvenanceContract {
             related_id,
             relation,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(())
     }
@@ -828,7 +895,7 @@ impl ProvenanceContract {
             .storage()
             .persistent()
             .get(&(links_key, certificate_id))
-            .unwrap_or(Vec::new()))
+            .unwrap_or(Vec::new(&env)))
     }
 
     /// #172 — Transfer certificate ownership to a new address
@@ -872,7 +939,7 @@ impl ProvenanceContract {
             from: old_owner,
             to: new_owner,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(())
     }
@@ -936,7 +1003,7 @@ impl ProvenanceContract {
             updated_by: cert.creator,
             new_version: metadata.version,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(())
     }
@@ -967,16 +1034,11 @@ impl ProvenanceContract {
         let mut results: Vec<(u64, ProvenanceCert)> = Vec::new(&env);
         let mut count = 0u32;
         let mut skipped = 0u32;
-
         let now = env.ledger().timestamp();
+
         let mut i = total_certs;
         while i > 0 && count < limit {
             if let Some(cert) = env.storage().persistent().get::<u64, ProvenanceCert>(&i) {
-                if cert.timestamp >= start_time && cert.timestamp <= end_time {
-            if let Some(cert) = env.storage()
-                .persistent()
-                .get::<u64, ProvenanceCert>(&i)
-            {
                 // #177 — filter expired certificates out of default queries
                 let expired = cert.expires_at.map_or(false, |ts| now > ts);
                 if !expired && cert.timestamp >= start_time && cert.timestamp <= end_time {
@@ -1041,10 +1103,12 @@ impl ProvenanceContract {
                 creator: to.clone(),
                 timestamp: env.ledger().timestamp(),
                 revoked: false,
-                revocation_reason: None,
+                revocation_reason: RevocationReason::None,
                 revocation_timestamp: None,
                 expires_at: None,
                 verification_level,
+                locked: false,
+                tags: Vec::new(&env), // #450 — initialize with empty tags
             };
             env.storage().persistent().set(&id, &cert);
             env.storage().persistent().set(&mani_key, &id);
@@ -1078,7 +1142,7 @@ impl ProvenanceContract {
             certificate_ids: certificate_ids.clone(),
             count: certificate_ids.len() as u32,
         }
-        .emit(&env);
+        .publish(&env);
 
         Ok(certificate_ids)
     }
@@ -1358,6 +1422,10 @@ impl ProvenanceContract {
             codec,
         };
         env.storage().persistent().set(&media_key, &media);
+
+        Ok(())
+    }
+
     /// #179 — Aggregate certificate statistics: total minted, and minted today
     pub fn get_certificate_stats(env: Env) -> CertificateStats {
         let total_certificates: u64 = env
@@ -1389,15 +1457,14 @@ impl ProvenanceContract {
 
     /// #179 — Daily minting counts (a minting-velocity time series) for the
     /// inclusive day range [start_day, end_day], capped at 366 points.
-    pub fn get_minting_time_series(
-        env: Env,
-        start_day: u64,
-        end_day: u64,
-    ) -> Vec<TimeSeriesPoint> {
+    pub fn get_minting_time_series(env: Env, start_day: u64, end_day: u64) -> Vec<TimeSeriesPoint> {
         const MAX_POINTS: u64 = 366;
-        let day_count = end_day.saturating_sub(start_day).saturating_add(1).min(MAX_POINTS);
+        let day_count = end_day
+            .saturating_sub(start_day)
+            .saturating_add(1)
+            .min(MAX_POINTS);
 
-        let mut points: Vec<TimeSeriesPoint> = Vec::new();
+        let mut points: Vec<TimeSeriesPoint> = Vec::new(&env);
         for offset in 0..day_count {
             let day = start_day + offset;
             let count: u64 = env
@@ -1413,22 +1480,14 @@ impl ProvenanceContract {
         }
 
         points
+    }
+
     /// #185 — Create a new certificate collection/portfolio.
-    pub fn create_collection(
-        env: Env,
-        owner: Address,
-        name: String,
-        description: String,
-    ) -> u64 {
+    pub fn create_collection(env: Env, owner: Address, name: String, description: String) -> u64 {
         owner.require_auth();
 
         let cnt_key = symbol_short!("COLL_CNT");
-        let id: u64 = env
-            .storage()
-            .persistent()
-            .get(&cnt_key)
-            .unwrap_or(0u64)
-            + 1;
+        let id: u64 = env.storage().persistent().get(&cnt_key).unwrap_or(0u64) + 1;
         env.storage().persistent().set(&cnt_key, &id);
 
         let collection = Collection {
@@ -1437,7 +1496,9 @@ impl ProvenanceContract {
             description,
             created_at: env.ledger().timestamp(),
         };
-        env.storage().persistent().set(&(symbol_short!("COLL"), id), &collection);
+        env.storage()
+            .persistent()
+            .set(&(symbol_short!("COLL"), id), &collection);
 
         id
     }
@@ -1539,6 +1600,8 @@ impl ProvenanceContract {
         }
 
         results
+    }
+
     /// #185 — Query all certificate ids belonging to a collection.
     pub fn get_certificates_in_collection(env: Env, collection_id: u64) -> Vec<u64> {
         env.storage()
@@ -1558,7 +1621,8 @@ impl ProvenanceContract {
     /// #184 — Irreversibly lock a certificate, preventing any further
     /// modifications (transfers, metadata updates) even by its owner.
     pub fn lock_certificate(env: Env, certificate_id: u64) -> Result<(), ProvenanceError> {
-        let mut cert = env.storage()
+        let mut cert = env
+            .storage()
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
@@ -1573,10 +1637,440 @@ impl ProvenanceContract {
                 certificate_id,
                 locked_by: cert.creator,
             }
-            .emit(&env);
+            .publish(&env);
         }
 
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // #450 — Certificate tags management
+    // -----------------------------------------------------------------
+
+    const MAX_TAG_LENGTH: u32 = 50; // Maximum characters per tag
+    const MAX_TAGS_PER_CERTIFICATE: u32 = 20; // Maximum tags per certificate
+
+    /// #450 — Add a tag to a certificate. Tags are for categorization and discovery.
+    pub fn add_tag(env: Env, certificate_id: u64, tag: String) -> Result<(), ProvenanceError> {
+        let mut cert = env
+            .storage()
+            .persistent()
+            .get::<u64, ProvenanceCert>(&certificate_id)
+            .ok_or(ProvenanceError::CertificateNotFound)?;
+        cert.creator.require_auth();
+
+        if cert.locked {
+            return Err(ProvenanceError::CertificateLocked);
+        }
+
+        if tag.len() as u32 > Self::MAX_TAG_LENGTH {
+            return Err(ProvenanceError::InvalidTagLength);
+        }
+
+        if cert.tags.len() as u32 >= Self::MAX_TAGS_PER_CERTIFICATE {
+            return Err(ProvenanceError::MaxTagsExceeded);
+        }
+
+        // Check if tag already exists
+        for existing_tag in cert.tags.iter() {
+            if existing_tag == tag {
+                // Tag already present, just return OK
+                return Ok(());
+            }
+        }
+
+        // Add tag to certificate
+        cert.tags.push_back(tag.clone());
+        env.storage().persistent().set(&certificate_id, &cert);
+
+        // Update tag index for discovery
+        let tag_index_key = DataKey::TagIndex(tag.clone());
+        let mut cert_ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&tag_index_key)
+            .unwrap_or(Vec::new(&env));
+        if !cert_ids.contains(&certificate_id) {
+            cert_ids.push_back(certificate_id);
+            env.storage().persistent().set(&tag_index_key, &cert_ids);
+        }
+
+        env.events()
+            .publish((symbol_short!("tag_add"),), (certificate_id, tag));
+        Ok(())
+    }
+
+    /// #450 — Remove a tag from a certificate
+    pub fn remove_tag(env: Env, certificate_id: u64, tag: String) -> Result<(), ProvenanceError> {
+        let mut cert = env
+            .storage()
+            .persistent()
+            .get::<u64, ProvenanceCert>(&certificate_id)
+            .ok_or(ProvenanceError::CertificateNotFound)?;
+        cert.creator.require_auth();
+
+        if cert.locked {
+            return Err(ProvenanceError::CertificateLocked);
+        }
+
+        // Find and remove tag
+        let mut found = false;
+        let mut new_tags: Vec<String> = Vec::new(&env);
+        for existing_tag in cert.tags.iter() {
+            if existing_tag != tag {
+                new_tags.push_back(existing_tag);
+            } else {
+                found = true;
+            }
+        }
+
+        if !found {
+            return Ok(()); // Tag not found, return OK
+        }
+
+        cert.tags = new_tags;
+        env.storage().persistent().set(&certificate_id, &cert);
+
+        // Update tag index
+        let tag_index_key = DataKey::TagIndex(tag.clone());
+        let cert_ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&tag_index_key)
+            .unwrap_or(Vec::new(&env));
+        let mut new_cert_ids: Vec<u64> = Vec::new(&env);
+        for id in cert_ids.iter() {
+            if id != certificate_id {
+                new_cert_ids.push_back(id);
+            }
+        }
+        if new_cert_ids.len() > 0 {
+            env.storage()
+                .persistent()
+                .set(&tag_index_key, &new_cert_ids);
+        } else {
+            env.storage().persistent().remove(&tag_index_key);
+        }
+
+        env.events()
+            .publish((symbol_short!("tag_rm"),), (certificate_id, tag));
+        Ok(())
+    }
+
+    /// #450 — Get all tags for a certificate
+    pub fn get_tags(env: Env, certificate_id: u64) -> Result<Vec<String>, ProvenanceError> {
+        env.storage()
+            .persistent()
+            .get::<u64, ProvenanceCert>(&certificate_id)
+            .map(|cert| cert.tags)
+            .ok_or(ProvenanceError::CertificateNotFound)
+    }
+
+    /// #450 — Query certificates by tag
+    /// #450 — Query certificates by tag
+    pub fn get_certificates_by_tag(
+        env: Env,
+        tag: String,
+        offset: u32,
+        limit: u32,
+    ) -> Vec<(u64, ProvenanceCert)> {
+        let tag_index_key = DataKey::TagIndex(tag);
+        let cert_ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&tag_index_key)
+            .unwrap_or(Vec::new(&env));
+
+        let mut results: Vec<(u64, ProvenanceCert)> = Vec::new(&env);
+        let mut count = 0u32;
+        let mut skipped = 0u32;
+
+        for i in 0..cert_ids.len() {
+            if count >= limit {
+                break;
+            }
+            if skipped < offset {
+                skipped += 1;
+                continue;
+            }
+            let id = cert_ids.get_unchecked(i);
+            if let Some(cert) = env.storage().persistent().get::<u64, ProvenanceCert>(&id) {
+                results.push_back((id, cert));
+                count += 1;
+            }
+        }
+
+        results
+    }
+
+    /// #450 — Replace all tags for a certificate (bulk update)
+    pub fn set_tags(
+        env: Env,
+        certificate_id: u64,
+        new_tags: Vec<String>,
+    ) -> Result<(), ProvenanceError> {
+        let mut cert = env
+            .storage()
+            .persistent()
+            .get::<u64, ProvenanceCert>(&certificate_id)
+            .ok_or(ProvenanceError::CertificateNotFound)?;
+        cert.creator.require_auth();
+
+        if cert.locked {
+            return Err(ProvenanceError::CertificateLocked);
+        }
+
+        if new_tags.len() as u32 > Self::MAX_TAGS_PER_CERTIFICATE {
+            return Err(ProvenanceError::MaxTagsExceeded);
+        }
+
+        // Validate all tags
+        for tag in new_tags.iter() {
+            if tag.len() as u32 > Self::MAX_TAG_LENGTH {
+                return Err(ProvenanceError::InvalidTagLength);
+            }
+        }
+
+        // Remove old tags from index
+        for old_tag in cert.tags.iter() {
+            let tag_index_key = DataKey::TagIndex(old_tag.clone());
+            let cert_ids: Vec<u64> = env
+                .storage()
+                .persistent()
+                .get(&tag_index_key)
+                .unwrap_or(Vec::new(&env));
+            let mut new_cert_ids: Vec<u64> = Vec::new(&env);
+            for id in cert_ids.iter() {
+                if id != certificate_id {
+                    new_cert_ids.push_back(id);
+                }
+            }
+            if new_cert_ids.len() > 0 {
+                env.storage()
+                    .persistent()
+                    .set(&tag_index_key, &new_cert_ids);
+            } else {
+                env.storage().persistent().remove(&tag_index_key);
+            }
+        }
+
+        // Set new tags
+        cert.tags = new_tags.clone();
+        env.storage().persistent().set(&certificate_id, &cert);
+
+        // Add new tags to index
+        for new_tag in new_tags.iter() {
+            let tag_index_key = DataKey::TagIndex(new_tag.clone());
+            let mut cert_ids: Vec<u64> = env
+                .storage()
+                .persistent()
+                .get(&tag_index_key)
+                .unwrap_or(Vec::new(&env));
+            if !cert_ids.contains(&certificate_id) {
+                cert_ids.push_back(certificate_id);
+                env.storage().persistent().set(&tag_index_key, &cert_ids);
+            }
+        }
+
+        env.events()
+            .publish((symbol_short!("tag_set"),), certificate_id);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // #452 — Certificate endorsements (likes)
+    // -----------------------------------------------------------------
+
+    /// #452 — Endorse (like) a certificate. Idempotent: endorsing twice from
+    /// the same address is a no-op that returns the current total.
+    pub fn endorse_certificate(
+        env: Env,
+        certificate_id: u64,
+        endorser: Address,
+    ) -> Result<u64, ProvenanceError> {
+        endorser.require_auth();
+
+        if !env.storage().persistent().has(&certificate_id) {
+            return Err(ProvenanceError::CertificateNotFound);
+        }
+
+        let endorsement_key = DataKey::Endorsement(certificate_id, endorser.clone());
+        let count_key = DataKey::EndorsementCount(certificate_id);
+
+        if env.storage().persistent().has(&endorsement_key) {
+            return Ok(env.storage().persistent().get(&count_key).unwrap_or(0u64));
+        }
+
+        env.storage().persistent().set(&endorsement_key, &true);
+
+        let index_key = DataKey::EndorsementIndex(certificate_id);
+        let mut endorsers: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&index_key)
+            .unwrap_or(Vec::new(&env));
+        endorsers.push_back(endorser.clone());
+        env.storage().persistent().set(&index_key, &endorsers);
+
+        let new_count: u64 = env.storage().persistent().get(&count_key).unwrap_or(0u64) + 1;
+        env.storage().persistent().set(&count_key, &new_count);
+
+        CertificateEndorsed {
+            certificate_id,
+            endorser,
+            total_endorsements: new_count,
+        }
+        .publish(&env);
+
+        Ok(new_count)
+    }
+
+    /// #452 — Remove a previously recorded endorsement. A no-op (returning
+    /// the current total) if the address had not endorsed the certificate.
+    pub fn remove_endorsement(
+        env: Env,
+        certificate_id: u64,
+        endorser: Address,
+    ) -> Result<u64, ProvenanceError> {
+        endorser.require_auth();
+
+        if !env.storage().persistent().has(&certificate_id) {
+            return Err(ProvenanceError::CertificateNotFound);
+        }
+
+        let endorsement_key = DataKey::Endorsement(certificate_id, endorser.clone());
+        let count_key = DataKey::EndorsementCount(certificate_id);
+
+        if !env.storage().persistent().has(&endorsement_key) {
+            return Ok(env.storage().persistent().get(&count_key).unwrap_or(0u64));
+        }
+
+        env.storage().persistent().remove(&endorsement_key);
+
+        let index_key = DataKey::EndorsementIndex(certificate_id);
+        let endorsers: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&index_key)
+            .unwrap_or(Vec::new(&env));
+        let mut updated: Vec<Address> = Vec::new(&env);
+        for addr in endorsers.iter() {
+            if addr != endorser {
+                updated.push_back(addr);
+            }
+        }
+        env.storage().persistent().set(&index_key, &updated);
+
+        let new_count: u64 = env
+            .storage()
+            .persistent()
+            .get(&count_key)
+            .unwrap_or(0u64)
+            .saturating_sub(1);
+        env.storage().persistent().set(&count_key, &new_count);
+
+        EndorsementRemoved {
+            certificate_id,
+            endorser,
+            total_endorsements: new_count,
+        }
+        .publish(&env);
+
+        Ok(new_count)
+    }
+
+    /// #452 — Total endorsement count for a certificate.
+    pub fn get_endorsement_count(env: Env, certificate_id: u64) -> u64 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::EndorsementCount(certificate_id))
+            .unwrap_or(0u64)
+    }
+
+    /// #452 — Whether `endorser` currently endorses a certificate.
+    pub fn has_endorsed(env: Env, certificate_id: u64, endorser: Address) -> bool {
+        env.storage()
+            .persistent()
+            .has(&DataKey::Endorsement(certificate_id, endorser))
+    }
+
+    /// #452 — Paginated list of endorser addresses for a certificate, in
+    /// endorsement order.
+    pub fn get_endorsers(env: Env, certificate_id: u64, offset: u32, limit: u32) -> Vec<Address> {
+        let endorsers: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::EndorsementIndex(certificate_id))
+            .unwrap_or(Vec::new(&env));
+
+        let mut results: Vec<Address> = Vec::new(&env);
+        let mut count = 0u32;
+        let mut skipped = 0u32;
+
+        for addr in endorsers.iter() {
+            if count >= limit {
+                break;
+            }
+            if skipped < offset {
+                skipped += 1;
+                continue;
+            }
+            results.push_back(addr);
+            count += 1;
+        }
+
+        results
+    }
+
+    // -----------------------------------------------------------------
+    // #455 — Certificate view counter
+    // -----------------------------------------------------------------
+
+    /// #455 — Current view count for a certificate (incremented by
+    /// `get_certificate`).
+    pub fn get_view_count(env: Env, certificate_id: u64) -> u64 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ViewCount(certificate_id))
+            .unwrap_or(0u64)
+    }
+
+    /// #455 — Certificates ranked by view count, most-viewed first, capped
+    /// at `limit` entries.
+    pub fn get_most_viewed_certificates(env: Env, limit: u32) -> Vec<(u64, u64)> {
+        let cnt_key = symbol_short!("CERT_CNT");
+        let total_certs: u64 = env.storage().persistent().get(&cnt_key).unwrap_or(0u64);
+
+        let mut all: Vec<(u64, u64)> = Vec::new(&env);
+        let mut i = 1u64;
+        while i <= total_certs {
+            let views: u64 = env
+                .storage()
+                .persistent()
+                .get(&DataKey::ViewCount(i))
+                .unwrap_or(0u64);
+            all.push_back((i, views));
+            i += 1;
+        }
+
+        let mut results: Vec<(u64, u64)> = Vec::new(&env);
+        let take = limit.min(all.len());
+        for _ in 0..take {
+            let mut best_idx: u32 = 0;
+            let mut best_views: u64 = 0;
+            for idx in 0..all.len() {
+                let (_, views) = all.get_unchecked(idx);
+                if views >= best_views {
+                    best_views = views;
+                    best_idx = idx;
+                }
+            }
+            let (id, views) = all.get_unchecked(best_idx);
+            results.push_back((id, views));
+            all.remove(best_idx);
+        }
+
+        results
     }
 }
 

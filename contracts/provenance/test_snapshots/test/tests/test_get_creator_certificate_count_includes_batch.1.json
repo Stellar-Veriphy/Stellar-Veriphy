@@ -135,7 +135,11 @@
                         "symbol": "revocation_reason"
                       },
                       "val": {
-                        "u32": 0
+                        "vec": [
+                          {
+                            "symbol": "None"
+                          }
+                        ]
                       }
                     },
                     {
@@ -158,6 +162,14 @@
                       },
                       "val": {
                         "string": "sid1"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tags"
+                      },
+                      "val": {
+                        "vec": []
                       }
                     },
                     {
@@ -251,7 +263,11 @@
                         "symbol": "revocation_reason"
                       },
                       "val": {
-                        "u32": 0
+                        "vec": [
+                          {
+                            "symbol": "None"
+                          }
+                        ]
                       }
                     },
                     {
@@ -274,6 +290,14 @@
                       },
                       "val": {
                         "string": "sid2"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tags"
+                      },
+                      "val": {
+                        "vec": []
                       }
                     },
                     {

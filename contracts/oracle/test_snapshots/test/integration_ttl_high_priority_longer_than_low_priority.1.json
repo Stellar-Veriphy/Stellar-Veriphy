@@ -185,6 +185,12 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "comment"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
                         "symbol": "manifest_hash"
                       },
                       "val": {
@@ -279,6 +285,12 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "comment"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
                         "symbol": "manifest_hash"
                       },
                       "val": {
@@ -341,7 +353,7 @@
             "key": {
               "vec": [
                 {
-                  "symbol": "RequestExpiry"
+                  "symbol": "RequestExpiresAtLedger"
                 },
                 {
                   "u64": 1
@@ -361,7 +373,7 @@
                 "key": {
                   "vec": [
                     {
-                      "symbol": "RequestExpiry"
+                      "symbol": "RequestExpiresAtLedger"
                     },
                     {
                       "u64": 1
@@ -386,7 +398,7 @@
             "key": {
               "vec": [
                 {
-                  "symbol": "RequestExpiry"
+                  "symbol": "RequestExpiresAtLedger"
                 },
                 {
                   "u64": 2
@@ -406,7 +418,7 @@
                 "key": {
                   "vec": [
                     {
-                      "symbol": "RequestExpiry"
+                      "symbol": "RequestExpiresAtLedger"
                     },
                     {
                       "u64": 2
@@ -528,7 +540,7 @@
                           ]
                         },
                         "val": {
-                          "u32": 10
+                          "u32": 20
                         }
                       },
                       {
