@@ -362,10 +362,10 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "b9"
+                  "bytes": "01"
                 },
                 {
-                  "bytes": "b9"
+                  "bytes": "01"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
@@ -462,10 +462,10 @@
                 {
                   "vec": [
                     {
-                      "bytes": "b9"
+                      "bytes": "01"
                     },
                     {
-                      "bytes": "b9"
+                      "bytes": "01"
                     },
                     {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"

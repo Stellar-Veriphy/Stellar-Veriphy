@@ -45,8 +45,8 @@ export default function VerificationHistoryPage() {
 
   const applyDateFilter = () => {
     refresh({
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      ...(startDate && { startDate: new Date(startDate) }),
+      ...(endDate && { endDate: new Date(endDate) }),
     });
   };
 

@@ -20,10 +20,10 @@
                   "string": "storage-revocation"
                 },
                 {
-                  "string": "manifest-revocation-177"
+                  "string": "manifest-revocation-1"
                 },
                 {
-                  "string": "attestation-revocation-177"
+                  "string": "attestation-revocation-1"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -50,7 +50,7 @@
                 {
                   "vec": [
                     {
-                      "symbol": "LegalRequirement"
+                      "symbol": "FraudulentContent"
                     }
                   ]
                 }
@@ -101,7 +101,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-revocation-177"
+                        "string": "attestation-revocation-1"
                       }
                     },
                     {
@@ -131,7 +131,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-revocation-177"
+                        "string": "manifest-revocation-1"
                       }
                     },
                     {
@@ -141,7 +141,7 @@
                       "val": {
                         "vec": [
                           {
-                            "symbol": "LegalRequirement"
+                            "symbol": "FraudulentContent"
                           }
                         ]
                       }
@@ -543,7 +543,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-revocation-177"
+                  "string": "manifest-revocation-1"
                 }
               ]
             },
@@ -563,7 +563,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-revocation-177"
+                      "string": "manifest-revocation-1"
                     }
                   ]
                 },

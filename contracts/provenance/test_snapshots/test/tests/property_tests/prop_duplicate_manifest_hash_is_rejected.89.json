@@ -17,13 +17,13 @@
               "function_name": "mint",
               "args": [
                 {
-                  "string": "storage-5"
+                  "string": "storage-123"
                 },
                 {
-                  "string": "manifest-5"
+                  "string": "manifest-123"
                 },
                 {
-                  "string": "attestation-5"
+                  "string": "attestation-123"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -75,7 +75,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5"
+                        "string": "attestation-123"
                       }
                     },
                     {
@@ -105,7 +105,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5"
+                        "string": "manifest-123"
                       }
                     },
                     {
@@ -139,7 +139,7 @@
                         "symbol": "storage_ref"
                       },
                       "val": {
-                        "string": "storage-5"
+                        "string": "storage-123"
                       }
                     },
                     {
@@ -515,7 +515,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5"
+                  "string": "manifest-123"
                 }
               ]
             },
@@ -535,7 +535,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5"
+                      "string": "manifest-123"
                     }
                   ]
                 },

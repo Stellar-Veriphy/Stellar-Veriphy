@@ -13,7 +13,7 @@ interface Action {
   onClick?: () => void;
 }
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   illustration: IllustrationType;
   heading: string;
   body: string;

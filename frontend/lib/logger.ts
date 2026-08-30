@@ -85,8 +85,8 @@ export interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
-  context?: LogContext;
-  tags?: string[];
+  context?: LogContext | undefined;
+  tags?: string[] | undefined;
 }
 
 // ============================================================================

@@ -111,8 +111,8 @@ export default function SettingsPage() {
       return;
     }
     const json = await createBackup({
-      categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-      passphrase: encrypt ? passphrase : undefined,
+      ...(selectedCategories.length > 0 && { categories: selectedCategories }),
+      ...(encrypt && { passphrase }),
     });
     downloadBackup(json);
     setStatusMessage("Backup downloaded.");

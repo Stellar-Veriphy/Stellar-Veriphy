@@ -15,7 +15,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -35,7 +35,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -55,7 +55,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -75,7 +75,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -95,7 +95,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -115,7 +115,127 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "add_provider",
+              "args": [
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "add_provider",
+              "args": [
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "add_provider",
+              "args": [
+                {
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "add_provider",
+              "args": [
+                {
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "add_provider",
+              "args": [
+                {
+                  "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "add_provider",
+              "args": [
+                {
+                  "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -146,7 +266,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -166,7 +286,7 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -191,7 +311,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -211,7 +331,7 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -236,7 +356,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -256,7 +376,7 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -281,7 +401,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -301,7 +421,7 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -326,7 +446,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -346,7 +466,7 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -371,7 +491,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -391,7 +511,277 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "bool": true
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "Provider"
+                },
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "Provider"
+                    },
+                    {
+                      "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "bool": true
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "Provider"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "Provider"
+                    },
+                    {
+                      "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "bool": true
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "Provider"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "Provider"
+                    },
+                    {
+                      "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "bool": true
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "Provider"
+                },
+                {
+                  "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "Provider"
+                    },
+                    {
+                      "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "bool": true
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "Provider"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "Provider"
+                    },
+                    {
+                      "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "bool": true
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "Provider"
+                },
+                {
+                  "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "Provider"
+                    },
+                    {
+                      "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -416,7 +806,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -436,7 +826,7 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -508,7 +898,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -528,7 +918,7 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -600,7 +990,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -620,7 +1010,7 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -692,7 +1082,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -712,7 +1102,7 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -784,7 +1174,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -804,7 +1194,7 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -876,7 +1266,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -896,7 +1286,559 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "name"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "status"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Active"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tier"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Basic"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "website"
+                      },
+                      "val": "void"
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderInfo"
+                },
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderInfo"
+                    },
+                    {
+                      "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "name"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "status"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Active"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tier"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Basic"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "website"
+                      },
+                      "val": "void"
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderInfo"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderInfo"
+                    },
+                    {
+                      "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "name"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "status"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Active"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tier"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Basic"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "website"
+                      },
+                      "val": "void"
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderInfo"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderInfo"
+                    },
+                    {
+                      "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "name"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "status"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Active"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tier"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Basic"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "website"
+                      },
+                      "val": "void"
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderInfo"
+                },
+                {
+                  "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderInfo"
+                    },
+                    {
+                      "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "name"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "status"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Active"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tier"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Basic"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "website"
+                      },
+                      "val": "void"
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderInfo"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderInfo"
+                    },
+                    {
+                      "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "name"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "status"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Active"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tier"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "Basic"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "website"
+                      },
+                      "val": "void"
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderInfo"
+                },
+                {
+                  "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderInfo"
+                    },
+                    {
+                      "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -990,22 +1932,40 @@
                 "val": {
                   "vec": [
                     {
-                      "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                     },
                     {
-                      "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                     },
                     {
-                      "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
                     },
                     {
-                      "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                     },
                     {
-                      "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
                     },
                     {
-                      "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                    },
+                    {
+                      "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                    },
+                    {
+                      "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                    },
+                    {
+                      "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+                    },
+                    {
+                      "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
+                    },
+                    {
+                      "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                    },
+                    {
+                      "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 }
@@ -1026,7 +1986,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -1046,7 +2006,7 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -1112,7 +2072,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -1132,7 +2092,7 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -1198,7 +2158,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -1218,7 +2178,7 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -1284,7 +2244,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -1304,7 +2264,7 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -1370,7 +2330,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -1390,7 +2350,7 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -1456,7 +2416,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             },
@@ -1476,7 +2436,523 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                      "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "failed_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "last_updated"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "score"
+                      },
+                      "val": {
+                        "u32": 500
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "successful_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_verifications"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderReputation"
+                },
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderReputation"
+                    },
+                    {
+                      "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "failed_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "last_updated"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "score"
+                      },
+                      "val": {
+                        "u32": 500
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "successful_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_verifications"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderReputation"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderReputation"
+                    },
+                    {
+                      "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "failed_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "last_updated"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "score"
+                      },
+                      "val": {
+                        "u32": 500
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "successful_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_verifications"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderReputation"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderReputation"
+                    },
+                    {
+                      "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "failed_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "last_updated"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "score"
+                      },
+                      "val": {
+                        "u32": 500
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "successful_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_verifications"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderReputation"
+                },
+                {
+                  "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderReputation"
+                    },
+                    {
+                      "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "failed_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "last_updated"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "score"
+                      },
+                      "val": {
+                        "u32": 500
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "successful_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_verifications"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderReputation"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderReputation"
+                    },
+                    {
+                      "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "map": [
+                    {
+                      "key": {
+                        "symbol": "failed_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "last_updated"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "score"
+                      },
+                      "val": {
+                        "u32": 500
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "successful_count"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_verifications"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
+                  "symbol": "ProviderReputation"
+                },
+                {
+                  "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "ProviderReputation"
+                    },
+                    {
+                      "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
                     }
                   ]
                 },
@@ -1635,6 +3111,39 @@
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
             "key": {
               "ledger_key_nonce": {
+                "nonce": 115220454072064130
+              }
+            },
+            "durability": "temporary"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "ledger_key_nonce": {
+                    "nonce": 115220454072064130
+                  }
+                },
+                "durability": "temporary",
+                "val": "void"
+              }
+            },
+            "ext": "v0"
+          },
+          6311999
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
+              "ledger_key_nonce": {
                 "nonce": 801925984706572462
               }
             },
@@ -1701,6 +3210,39 @@
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
             "key": {
               "ledger_key_nonce": {
+                "nonce": 1194852393571756375
+              }
+            },
+            "durability": "temporary"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "ledger_key_nonce": {
+                    "nonce": 1194852393571756375
+                  }
+                },
+                "durability": "temporary",
+                "val": "void"
+              }
+            },
+            "ext": "v0"
+          },
+          6311999
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
+              "ledger_key_nonce": {
                 "nonce": 2032731177588607455
               }
             },
@@ -1717,6 +3259,39 @@
                 "key": {
                   "ledger_key_nonce": {
                     "nonce": 2032731177588607455
+                  }
+                },
+                "durability": "temporary",
+                "val": "void"
+              }
+            },
+            "ext": "v0"
+          },
+          6311999
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
+              "ledger_key_nonce": {
+                "nonce": 3126073502131104533
+              }
+            },
+            "durability": "temporary"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "ledger_key_nonce": {
+                    "nonce": 3126073502131104533
                   }
                 },
                 "durability": "temporary",
@@ -1829,6 +3404,105 @@
       ],
       [
         {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
+              "ledger_key_nonce": {
+                "nonce": 5806905060045992000
+              }
+            },
+            "durability": "temporary"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "ledger_key_nonce": {
+                    "nonce": 5806905060045992000
+                  }
+                },
+                "durability": "temporary",
+                "val": "void"
+              }
+            },
+            "ext": "v0"
+          },
+          6311999
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
+              "ledger_key_nonce": {
+                "nonce": 6277191135259896685
+              }
+            },
+            "durability": "temporary"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "ledger_key_nonce": {
+                    "nonce": 6277191135259896685
+                  }
+                },
+                "durability": "temporary",
+                "val": "void"
+              }
+            },
+            "ext": "v0"
+          },
+          6311999
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
+              "ledger_key_nonce": {
+                "nonce": 8370022561469687789
+              }
+            },
+            "durability": "temporary"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "ledger_key_nonce": {
+                    "nonce": 8370022561469687789
+                  }
+                },
+                "durability": "temporary",
+                "val": "void"
+              }
+            },
+            "ext": "v0"
+          },
+          6311999
+        ]
+      ],
+      [
+        {
           "contract_code": {
             "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           }
@@ -1924,7 +3598,7 @@
               }
             ],
             "data": {
-              "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+              "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
             }
           }
         }
@@ -1996,7 +3670,7 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -2024,7 +3698,7 @@
               }
             ],
             "data": {
-              "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+              "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
             }
           }
         }
@@ -2096,10 +3770,10 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -2127,7 +3801,7 @@
               }
             ],
             "data": {
-              "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+              "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
             }
           }
         }
@@ -2199,13 +3873,13 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -2233,7 +3907,7 @@
               }
             ],
             "data": {
-              "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+              "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
             }
           }
         }
@@ -2305,16 +3979,16 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -2342,7 +4016,7 @@
               }
             ],
             "data": {
-              "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+              "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
             }
           }
         }
@@ -2414,19 +4088,19 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }
@@ -2454,7 +4128,7 @@
               }
             ],
             "data": {
-              "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+              "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
             }
           }
         }
@@ -2526,22 +4200,775 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "0100000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "9c01000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "4802000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "e203000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "bc04000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
                 },
                 {
-                  "bytes": "7405000000000000000000000000000000000000000000000000000000000000"
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": {
+              "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": "void"
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "u32": 0
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": {
+              "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": "void"
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "u32": 0
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": {
+              "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": "void"
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "u32": 0
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": {
+              "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": "void"
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "u32": 0
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": {
+              "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": "void"
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "u32": 0
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": {
+              "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "add_provider"
+              }
+            ],
+            "data": "void"
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "u32": 0
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "get_providers_by_min_reputation"
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "bytes": "7c00000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "6e01000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f402000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "4303000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "af04000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "1905000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5906000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "8907000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "5e08000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "0109000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "f50a000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "bytes": "b10b000000000000000000000000000000000000000000000000000000000000"
                 }
               ]
             }

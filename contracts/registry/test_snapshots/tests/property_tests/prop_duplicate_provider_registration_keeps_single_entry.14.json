@@ -15,7 +15,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                  "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                 }
               ]
             }
@@ -34,7 +34,7 @@
               "function_name": "add_provider",
               "args": [
                 {
-                  "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                  "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                 }
               ]
             }
@@ -66,7 +66,7 @@
                   "symbol": "Provider"
                 },
                 {
-                  "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                  "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                 }
               ]
             },
@@ -86,7 +86,7 @@
                       "symbol": "Provider"
                     },
                     {
-                      "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                      "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                     }
                   ]
                 },
@@ -111,7 +111,7 @@
                   "symbol": "ProviderInfo"
                 },
                 {
-                  "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                  "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                 }
               ]
             },
@@ -131,7 +131,7 @@
                       "symbol": "ProviderInfo"
                     },
                     {
-                      "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                      "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                     }
                   ]
                 },
@@ -225,7 +225,7 @@
                 "val": {
                   "vec": [
                     {
-                      "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                      "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                     }
                   ]
                 }
@@ -246,7 +246,7 @@
                   "symbol": "ProviderReputation"
                 },
                 {
-                  "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                  "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                 }
               ]
             },
@@ -266,7 +266,7 @@
                       "symbol": "ProviderReputation"
                     },
                     {
-                      "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                      "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                     }
                   ]
                 },
@@ -582,7 +582,7 @@
               }
             ],
             "data": {
-              "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+              "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
             }
           }
         }
@@ -629,7 +629,7 @@
               }
             ],
             "data": {
-              "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+              "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
             }
           }
         }
@@ -676,7 +676,7 @@
               }
             ],
             "data": {
-              "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+              "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
             }
           }
         }
@@ -750,7 +750,7 @@
             "data": {
               "vec": [
                 {
-                  "bytes": "f8b699ce6185142bd901119e5a1a5fd077ab603f85633e76ff2c000000000000"
+                  "bytes": "018500880bf13ea78f62ff07a5ff0800670155de632852d594071230a8cde5c2"
                 }
               ]
             }

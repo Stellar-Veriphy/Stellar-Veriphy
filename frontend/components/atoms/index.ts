@@ -22,6 +22,6 @@ export { HelpIcon } from "../ui/HelpIcon";
 export { LiveRegion } from "../ui/LiveRegion";
 export { Skeleton } from "../ui/Skeleton";
 export { Spinner } from "../ui/Spinner";
-export { Badge, type BadgeProps } from "../ui/StatusBadge";
+export { StatusBadge as Badge, type StatusBadgeProps as BadgeProps } from "../ui/StatusBadge";
 export { Tabs, type TabsProps } from "../ui/Tabs";
 export { Tooltip, type TooltipProps } from "../ui/Tooltip";

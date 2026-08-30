@@ -68,9 +68,9 @@ function watermarkCoords(pos: WatermarkPosition): {
     middle: "middle",
     bottom: "bottom",
   };
-  const hKey = pos === "center" ? "center" : h;
-  const vKey = pos === "center" ? "middle" : v;
-  return { x: xMap[hKey], y: yMap[vKey], align: alignMap[hKey], baseline: baselineMap[vKey] };
+  const hKey: string = pos === "center" ? "center" : (h ?? pos);
+  const vKey: string = pos === "center" ? "middle" : (v ?? "middle");
+  return { x: xMap[hKey]!, y: yMap[vKey]!, align: alignMap[hKey]!, baseline: baselineMap[vKey]! };
 }
 
 function drawCertificate(ctx: CanvasRenderingContext2D, certificateId: string) {

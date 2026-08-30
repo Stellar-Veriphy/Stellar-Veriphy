@@ -8,7 +8,7 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { cn } from "@/utils/cn";
 
 interface OnboardingScreen {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string | undefined }>;
   title: string;
   description: string;
 }
@@ -87,6 +87,7 @@ export function OnboardingFlow() {
   const total = SCREENS.length;
   const isLast = step === total - 1;
   const screen = SCREENS[step];
+  if (!screen) return null;
   const Icon = screen.icon;
 
   const handleNext = () => {

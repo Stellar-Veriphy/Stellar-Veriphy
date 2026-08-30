@@ -20,38 +20,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-0"
+                  "string": "manifest-18446744073709551615-0"
                 },
                 {
-                  "string": "attestation-5840135512706632469-0"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-1"
-                },
-                {
-                  "string": "attestation-5840135512706632469-1"
+                  "string": "attestation-18446744073709551615-0"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -76,38 +48,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-2"
+                  "string": "manifest-18446744073709551615-1"
                 },
                 {
-                  "string": "attestation-5840135512706632469-2"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-3"
-                },
-                {
-                  "string": "attestation-5840135512706632469-3"
+                  "string": "attestation-18446744073709551615-1"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -132,38 +76,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-4"
+                  "string": "manifest-18446744073709551615-2"
                 },
                 {
-                  "string": "attestation-5840135512706632469-4"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-5"
-                },
-                {
-                  "string": "attestation-5840135512706632469-5"
+                  "string": "attestation-18446744073709551615-2"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -188,38 +104,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-6"
+                  "string": "manifest-18446744073709551615-3"
                 },
                 {
-                  "string": "attestation-5840135512706632469-6"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-7"
-                },
-                {
-                  "string": "attestation-5840135512706632469-7"
+                  "string": "attestation-18446744073709551615-3"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -244,38 +132,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-8"
+                  "string": "manifest-18446744073709551615-4"
                 },
                 {
-                  "string": "attestation-5840135512706632469-8"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-9"
-                },
-                {
-                  "string": "attestation-5840135512706632469-9"
+                  "string": "attestation-18446744073709551615-4"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -300,38 +160,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-10"
+                  "string": "manifest-18446744073709551615-5"
                 },
                 {
-                  "string": "attestation-5840135512706632469-10"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-11"
-                },
-                {
-                  "string": "attestation-5840135512706632469-11"
+                  "string": "attestation-18446744073709551615-5"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -356,38 +188,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-12"
+                  "string": "manifest-18446744073709551615-6"
                 },
                 {
-                  "string": "attestation-5840135512706632469-12"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mint",
-              "args": [
-                {
-                  "string": "storage-ref"
-                },
-                {
-                  "string": "manifest-5840135512706632469-13"
-                },
-                {
-                  "string": "attestation-5840135512706632469-13"
+                  "string": "attestation-18446744073709551615-6"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -412,10 +216,10 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-14"
+                  "string": "manifest-18446744073709551615-7"
                 },
                 {
-                  "string": "attestation-5840135512706632469-14"
+                  "string": "attestation-18446744073709551615-7"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -440,10 +244,206 @@
                   "string": "storage-ref"
                 },
                 {
-                  "string": "manifest-5840135512706632469-15"
+                  "string": "manifest-18446744073709551615-8"
                 },
                 {
-                  "string": "attestation-5840135512706632469-15"
+                  "string": "attestation-18446744073709551615-8"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-9"
+                },
+                {
+                  "string": "attestation-18446744073709551615-9"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-10"
+                },
+                {
+                  "string": "attestation-18446744073709551615-10"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-11"
+                },
+                {
+                  "string": "attestation-18446744073709551615-11"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-12"
+                },
+                {
+                  "string": "attestation-18446744073709551615-12"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-13"
+                },
+                {
+                  "string": "attestation-18446744073709551615-13"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-14"
+                },
+                {
+                  "string": "attestation-18446744073709551615-14"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "mint",
+              "args": [
+                {
+                  "string": "storage-ref"
+                },
+                {
+                  "string": "manifest-18446744073709551615-15"
+                },
+                {
+                  "string": "attestation-18446744073709551615-15"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -494,7 +494,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-0"
+                        "string": "attestation-18446744073709551615-0"
                       }
                     },
                     {
@@ -524,7 +524,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-0"
+                        "string": "manifest-18446744073709551615-0"
                       }
                     },
                     {
@@ -622,7 +622,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-1"
+                        "string": "attestation-18446744073709551615-1"
                       }
                     },
                     {
@@ -652,7 +652,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-1"
+                        "string": "manifest-18446744073709551615-1"
                       }
                     },
                     {
@@ -750,7 +750,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-2"
+                        "string": "attestation-18446744073709551615-2"
                       }
                     },
                     {
@@ -780,7 +780,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-2"
+                        "string": "manifest-18446744073709551615-2"
                       }
                     },
                     {
@@ -878,7 +878,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-3"
+                        "string": "attestation-18446744073709551615-3"
                       }
                     },
                     {
@@ -908,7 +908,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-3"
+                        "string": "manifest-18446744073709551615-3"
                       }
                     },
                     {
@@ -1006,7 +1006,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-4"
+                        "string": "attestation-18446744073709551615-4"
                       }
                     },
                     {
@@ -1036,7 +1036,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-4"
+                        "string": "manifest-18446744073709551615-4"
                       }
                     },
                     {
@@ -1134,7 +1134,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-5"
+                        "string": "attestation-18446744073709551615-5"
                       }
                     },
                     {
@@ -1164,7 +1164,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-5"
+                        "string": "manifest-18446744073709551615-5"
                       }
                     },
                     {
@@ -1262,7 +1262,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-6"
+                        "string": "attestation-18446744073709551615-6"
                       }
                     },
                     {
@@ -1292,7 +1292,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-6"
+                        "string": "manifest-18446744073709551615-6"
                       }
                     },
                     {
@@ -1390,7 +1390,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-7"
+                        "string": "attestation-18446744073709551615-7"
                       }
                     },
                     {
@@ -1420,7 +1420,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-7"
+                        "string": "manifest-18446744073709551615-7"
                       }
                     },
                     {
@@ -1518,7 +1518,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-8"
+                        "string": "attestation-18446744073709551615-8"
                       }
                     },
                     {
@@ -1548,7 +1548,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-8"
+                        "string": "manifest-18446744073709551615-8"
                       }
                     },
                     {
@@ -1646,7 +1646,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-9"
+                        "string": "attestation-18446744073709551615-9"
                       }
                     },
                     {
@@ -1676,7 +1676,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-9"
+                        "string": "manifest-18446744073709551615-9"
                       }
                     },
                     {
@@ -1774,7 +1774,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-10"
+                        "string": "attestation-18446744073709551615-10"
                       }
                     },
                     {
@@ -1804,7 +1804,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-10"
+                        "string": "manifest-18446744073709551615-10"
                       }
                     },
                     {
@@ -1902,7 +1902,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-11"
+                        "string": "attestation-18446744073709551615-11"
                       }
                     },
                     {
@@ -1932,7 +1932,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-11"
+                        "string": "manifest-18446744073709551615-11"
                       }
                     },
                     {
@@ -2030,7 +2030,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-12"
+                        "string": "attestation-18446744073709551615-12"
                       }
                     },
                     {
@@ -2060,7 +2060,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-12"
+                        "string": "manifest-18446744073709551615-12"
                       }
                     },
                     {
@@ -2158,7 +2158,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-13"
+                        "string": "attestation-18446744073709551615-13"
                       }
                     },
                     {
@@ -2188,7 +2188,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-13"
+                        "string": "manifest-18446744073709551615-13"
                       }
                     },
                     {
@@ -2286,7 +2286,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-14"
+                        "string": "attestation-18446744073709551615-14"
                       }
                     },
                     {
@@ -2316,7 +2316,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-14"
+                        "string": "manifest-18446744073709551615-14"
                       }
                     },
                     {
@@ -2414,7 +2414,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-5840135512706632469-15"
+                        "string": "attestation-18446744073709551615-15"
                       }
                     },
                     {
@@ -2444,7 +2444,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-5840135512706632469-15"
+                        "string": "manifest-18446744073709551615-15"
                       }
                     },
                     {
@@ -4834,7 +4834,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-0"
+                  "string": "manifest-18446744073709551615-0"
                 }
               ]
             },
@@ -4854,7 +4854,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-0"
+                      "string": "manifest-18446744073709551615-0"
                     }
                   ]
                 },
@@ -4879,7 +4879,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-1"
+                  "string": "manifest-18446744073709551615-1"
                 }
               ]
             },
@@ -4899,7 +4899,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-1"
+                      "string": "manifest-18446744073709551615-1"
                     }
                   ]
                 },
@@ -4924,7 +4924,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-10"
+                  "string": "manifest-18446744073709551615-10"
                 }
               ]
             },
@@ -4944,7 +4944,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-10"
+                      "string": "manifest-18446744073709551615-10"
                     }
                   ]
                 },
@@ -4969,7 +4969,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-11"
+                  "string": "manifest-18446744073709551615-11"
                 }
               ]
             },
@@ -4989,7 +4989,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-11"
+                      "string": "manifest-18446744073709551615-11"
                     }
                   ]
                 },
@@ -5014,7 +5014,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-12"
+                  "string": "manifest-18446744073709551615-12"
                 }
               ]
             },
@@ -5034,7 +5034,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-12"
+                      "string": "manifest-18446744073709551615-12"
                     }
                   ]
                 },
@@ -5059,7 +5059,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-13"
+                  "string": "manifest-18446744073709551615-13"
                 }
               ]
             },
@@ -5079,7 +5079,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-13"
+                      "string": "manifest-18446744073709551615-13"
                     }
                   ]
                 },
@@ -5104,7 +5104,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-14"
+                  "string": "manifest-18446744073709551615-14"
                 }
               ]
             },
@@ -5124,7 +5124,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-14"
+                      "string": "manifest-18446744073709551615-14"
                     }
                   ]
                 },
@@ -5149,7 +5149,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-15"
+                  "string": "manifest-18446744073709551615-15"
                 }
               ]
             },
@@ -5169,7 +5169,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-15"
+                      "string": "manifest-18446744073709551615-15"
                     }
                   ]
                 },
@@ -5194,7 +5194,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-2"
+                  "string": "manifest-18446744073709551615-2"
                 }
               ]
             },
@@ -5214,7 +5214,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-2"
+                      "string": "manifest-18446744073709551615-2"
                     }
                   ]
                 },
@@ -5239,7 +5239,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-3"
+                  "string": "manifest-18446744073709551615-3"
                 }
               ]
             },
@@ -5259,7 +5259,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-3"
+                      "string": "manifest-18446744073709551615-3"
                     }
                   ]
                 },
@@ -5284,7 +5284,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-4"
+                  "string": "manifest-18446744073709551615-4"
                 }
               ]
             },
@@ -5304,7 +5304,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-4"
+                      "string": "manifest-18446744073709551615-4"
                     }
                   ]
                 },
@@ -5329,7 +5329,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-5"
+                  "string": "manifest-18446744073709551615-5"
                 }
               ]
             },
@@ -5349,7 +5349,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-5"
+                      "string": "manifest-18446744073709551615-5"
                     }
                   ]
                 },
@@ -5374,7 +5374,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-6"
+                  "string": "manifest-18446744073709551615-6"
                 }
               ]
             },
@@ -5394,7 +5394,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-6"
+                      "string": "manifest-18446744073709551615-6"
                     }
                   ]
                 },
@@ -5419,7 +5419,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-7"
+                  "string": "manifest-18446744073709551615-7"
                 }
               ]
             },
@@ -5439,7 +5439,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-7"
+                      "string": "manifest-18446744073709551615-7"
                     }
                   ]
                 },
@@ -5464,7 +5464,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-8"
+                  "string": "manifest-18446744073709551615-8"
                 }
               ]
             },
@@ -5484,7 +5484,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-8"
+                      "string": "manifest-18446744073709551615-8"
                     }
                   ]
                 },
@@ -5509,7 +5509,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-5840135512706632469-9"
+                  "string": "manifest-18446744073709551615-9"
                 }
               ]
             },
@@ -5529,7 +5529,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-5840135512706632469-9"
+                      "string": "manifest-18446744073709551615-9"
                     }
                   ]
                 },
@@ -6146,7 +6146,7 @@
                 "u64": "16"
               },
               {
-                "string": "manifest-5840135512706632469-15"
+                "string": "manifest-18446744073709551615-15"
               }
             ],
             "data": {

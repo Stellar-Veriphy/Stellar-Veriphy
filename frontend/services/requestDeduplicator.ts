@@ -246,7 +246,7 @@ export const globalDeduplicator = new RequestDeduplicator({
 export function createDedupFunction<Args extends unknown[], T>(
   fn: (...args: Args) => Promise<T>,
   keyGen: (...args: Args) => string,
-  deduplicator: RequestDeduplicator<T> = globalDeduplicator
+  deduplicator: RequestDeduplicator<T> = globalDeduplicator as unknown as RequestDeduplicator<T>
 ): (...args: Args) => Promise<T> {
   return (...args: Args): Promise<T> => {
     const key = keyGen(...args);

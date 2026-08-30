@@ -38,7 +38,7 @@ const COLORS = [
 ];
 
 const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
-  if (active && payload && payload.length) {
+  if (active && payload && payload.length && payload[0]) {
     const data = payload[0];
     return (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">

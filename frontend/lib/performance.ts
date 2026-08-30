@@ -74,7 +74,7 @@ export interface ApiMetric {
   endpoint: string;
   duration: number;
   timestamp: number;
-  status?: number;
+  status?: number | undefined;
   error?: boolean;
 }
 
@@ -85,7 +85,7 @@ export interface RenderMetric {
   component: string;
   renderTime: number;
   timestamp: number;
-  props?: Record<string, unknown>;
+  props?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -113,10 +113,10 @@ class PerformanceTracker {
   private enableWebVitals = true;
   private enableApiTracking = true;
   private enableRenderTracking = true;
-  private onMetric?: (metric: PerformanceMetric) => void;
-  private onWebVitals?: (vitals: WebVitals) => void;
-  private onApiMetric?: (metric: ApiMetric) => void;
-  private onRenderMetric?: (metric: RenderMetric) => void;
+  private onMetric?: ((metric: PerformanceMetric) => void) | undefined;
+  private onWebVitals?: ((vitals: WebVitals) => void) | undefined;
+  private onApiMetric?: ((metric: ApiMetric) => void) | undefined;
+  private onRenderMetric?: ((metric: RenderMetric) => void) | undefined;
   private metrics: PerformanceMetric[] = [];
   private apiMetrics: ApiMetric[] = [];
   private renderMetrics: RenderMetric[] = [];
@@ -156,8 +156,11 @@ class PerformanceTracker {
       try {
         const lcpObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
-          const lastEntry = entries[entries.length - 1];
-          this.webVitals.LCP = lastEntry.renderTime || lastEntry.loadTime;
+          const lastEntry = entries[entries.length - 1] as
+            (PerformanceEntry & { renderTime?: number; loadTime?: number }) | undefined;
+          if (!lastEntry) return;
+          const lcp = lastEntry.renderTime || lastEntry.loadTime;
+          if (lcp !== undefined) this.webVitals.LCP = lcp;
           this.reportWebVitals();
         });
         lcpObserver.observe({ entryTypes: ["largest-contentful-paint"] });
@@ -206,7 +209,7 @@ class PerformanceTracker {
         }
 
         const fcpEntries = window.performance.getEntriesByName("first-contentful-paint");
-        if (fcpEntries.length > 0) {
+        if (fcpEntries.length > 0 && fcpEntries[0]) {
           this.webVitals.FCP = fcpEntries[0].startTime;
         }
 

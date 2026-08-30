@@ -20,10 +20,10 @@
                   "string": "storage-revocation"
                 },
                 {
-                  "string": "manifest-revocation-68"
+                  "string": "manifest-revocation-193"
                 },
                 {
-                  "string": "attestation-revocation-68"
+                  "string": "attestation-revocation-193"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -101,7 +101,7 @@
                         "symbol": "attestation_hash"
                       },
                       "val": {
-                        "string": "attestation-revocation-68"
+                        "string": "attestation-revocation-193"
                       }
                     },
                     {
@@ -131,7 +131,7 @@
                         "symbol": "manifest_hash"
                       },
                       "val": {
-                        "string": "manifest-revocation-68"
+                        "string": "manifest-revocation-193"
                       }
                     },
                     {
@@ -543,7 +543,7 @@
                   "symbol": "MANI"
                 },
                 {
-                  "string": "manifest-revocation-68"
+                  "string": "manifest-revocation-193"
                 }
               ]
             },
@@ -563,7 +563,7 @@
                       "symbol": "MANI"
                     },
                     {
-                      "string": "manifest-revocation-68"
+                      "string": "manifest-revocation-193"
                     }
                   ]
                 },

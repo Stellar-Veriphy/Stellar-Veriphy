@@ -102,7 +102,7 @@ export function BarChart({
               fill={bar.fill}
               name={bar.name || bar.dataKey}
               radius={[4, 4, 0, 0]}
-              stackId={stacked ? "stack" : undefined}
+              {...(stacked ? { stackId: "stack" } : {})}
               isAnimationActive={!prefersReducedMotion}
               animationDuration={prefersReducedMotion ? 0 : 750}
             />

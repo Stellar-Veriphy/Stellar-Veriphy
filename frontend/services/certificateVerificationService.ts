@@ -62,13 +62,13 @@ export interface CertificateVerificationResult {
 }
 
 export interface CertificateSearchFilters {
-  creator?: string;
-  verificationLevel?: string;
+  creator?: string | undefined;
+  verificationLevel?: string | undefined;
   /** Filter by derived status label (Active / Revoked / Expired / Locked). */
-  status?: string;
-  contentType?: string;
-  startTime?: number;
-  endTime?: number;
+  status?: string | undefined;
+  contentType?: string | undefined;
+  startTime?: number | undefined;
+  endTime?: number | undefined;
   offset?: number;
   limit?: number;
 }

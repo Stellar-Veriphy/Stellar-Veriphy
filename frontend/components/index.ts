@@ -39,11 +39,11 @@ export * from "./templates";
 export * as utils from "./utils";
 
 // Legacy landing page components (can be reorganized into atoms/molecules)
-export { About } from "./About";
-export { CallToAction } from "./CallToAction";
-export { Ecosystem } from "./Ecosystem";
+export { default as About } from "./About";
+export { default as CallToAction } from "./CallToAction";
+export { default as Ecosystem } from "./Ecosystem";
 export { HeroSection } from "./HeroSection";
-export { HowItWorks } from "./HowItWorks";
+export { default as HowItWorks } from "./HowItWorks";
 
 // Legacy utilities (to be migrated into utils)
 export { APIKeyManagement } from "./APIKeyManagement";
