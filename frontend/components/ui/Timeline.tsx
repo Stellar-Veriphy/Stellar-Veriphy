@@ -45,14 +45,7 @@ import { cn } from "@/utils/cn";
 // Types & Context
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TimelineColor =
-  | "blue"
-  | "emerald"
-  | "amber"
-  | "red"
-  | "violet"
-  | "cyan"
-  | "gray";
+export type TimelineColor = "blue" | "emerald" | "amber" | "red" | "violet" | "cyan" | "gray";
 
 const colorMap: Record<
   TimelineColor,
@@ -151,11 +144,7 @@ export function Timeline({ alternate = false, className, children }: TimelinePro
     <TimelineContext.Provider value={{ alternate }}>
       <ol
         aria-label="Timeline"
-        className={cn(
-          "relative",
-          alternate ? "flex flex-col" : "flex flex-col",
-          className
-        )}
+        className={cn("relative", alternate ? "flex flex-col" : "flex flex-col", className)}
       >
         {items.map((child, index) =>
           React.isValidElement(child)
@@ -231,19 +220,21 @@ export function TimelineItem({
       <li className={cn("relative flex gap-0 items-stretch", className)}>
         {/* Left content */}
         <div className="flex-1 flex justify-end pr-6 pb-8">
-          {!isRight && <AlternateContent
-            title={title}
-            timestamp={timestamp}
-            badge={badge}
-            details={details}
-            detailsId={detailsId}
-            expanded={expanded}
-            onToggle={() => setExpanded((v) => !v)}
-            colors={colors}
-            alignRight
-          >
-            {children}
-          </AlternateContent>}
+          {!isRight && (
+            <AlternateContent
+              title={title}
+              timestamp={timestamp}
+              badge={badge}
+              details={details}
+              detailsId={detailsId}
+              expanded={expanded}
+              onToggle={() => setExpanded((v) => !v)}
+              colors={colors}
+              alignRight
+            >
+              {children}
+            </AlternateContent>
+          )}
         </div>
 
         {/* Centre marker */}
@@ -252,7 +243,9 @@ export function TimelineItem({
             className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center ring-4 z-10 shrink-0",
               colors.iconBg,
-              colors.dot.includes("ring") ? colors.dot.split(" ").slice(1).join(" ") : "ring-white dark:ring-gray-900"
+              colors.dot.includes("ring")
+                ? colors.dot.split(" ").slice(1).join(" ")
+                : "ring-white dark:ring-gray-900"
             )}
             aria-hidden="true"
           >
@@ -269,19 +262,21 @@ export function TimelineItem({
 
         {/* Right content */}
         <div className="flex-1 pl-6 pb-8">
-          {isRight && <AlternateContent
-            title={title}
-            timestamp={timestamp}
-            badge={badge}
-            details={details}
-            detailsId={detailsId}
-            expanded={expanded}
-            onToggle={() => setExpanded((v) => !v)}
-            colors={colors}
-            alignRight={false}
-          >
-            {children}
-          </AlternateContent>}
+          {isRight && (
+            <AlternateContent
+              title={title}
+              timestamp={timestamp}
+              badge={badge}
+              details={details}
+              detailsId={detailsId}
+              expanded={expanded}
+              onToggle={() => setExpanded((v) => !v)}
+              colors={colors}
+              alignRight={false}
+            >
+              {children}
+            </AlternateContent>
+          )}
         </div>
       </li>
     );
@@ -311,10 +306,7 @@ export function TimelineItem({
         </div>
         {/* Vertical connector */}
         {!isLast && (
-          <div
-            className="flex-1 w-0.5 bg-gray-200 dark:bg-gray-700 mt-2"
-            aria-hidden="true"
-          />
+          <div className="flex-1 w-0.5 bg-gray-200 dark:bg-gray-700 mt-2" aria-hidden="true" />
         )}
       </div>
 
@@ -368,7 +360,10 @@ export function TimelineItem({
               )}
             >
               <svg
-                className={cn("w-3.5 h-3.5 transition-transform duration-150", expanded && "rotate-180")}
+                className={cn(
+                  "w-3.5 h-3.5 transition-transform duration-150",
+                  expanded && "rotate-180"
+                )}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -399,9 +394,9 @@ export function TimelineItem({
 
 interface AlternateContentProps {
   title: string;
-  timestamp?: number | string | Date;
-  badge?: string;
-  details?: string;
+  timestamp?: number | string | Date | undefined;
+  badge?: string | undefined;
+  details?: string | undefined;
   detailsId: string;
   expanded: boolean;
   onToggle: () => void;
@@ -436,9 +431,7 @@ function AlternateContent({
           {formatTimestamp(timestamp)}
         </time>
       )}
-      {children && (
-        <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">{children}</div>
-      )}
+      {children && <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">{children}</div>}
       {details && (
         <div className={cn("mt-2", alignRight && "flex flex-col items-end")}>
           <button
@@ -453,7 +446,10 @@ function AlternateContent({
             )}
           >
             <svg
-              className={cn("w-3.5 h-3.5 transition-transform duration-150", expanded && "rotate-180")}
+              className={cn(
+                "w-3.5 h-3.5 transition-transform duration-150",
+                expanded && "rotate-180"
+              )}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

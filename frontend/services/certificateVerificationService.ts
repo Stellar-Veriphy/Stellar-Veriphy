@@ -62,13 +62,13 @@ export interface CertificateVerificationResult {
 }
 
 export interface CertificateSearchFilters {
-  creator?: string;
-  verificationLevel?: string;
+  creator?: string | undefined;
+  verificationLevel?: string | undefined;
   /** Filter by derived status label (Active / Revoked / Expired / Locked). */
-  status?: string;
-  contentType?: string;
-  startTime?: number;
-  endTime?: number;
+  status?: string | undefined;
+  contentType?: string | undefined;
+  startTime?: number | undefined;
+  endTime?: number | undefined;
   offset?: number;
   limit?: number;
 }
@@ -326,7 +326,11 @@ export async function searchCertificates(
     const total = allCerts.length;
     const sliced = allCerts.slice(offset, offset + limit).map((c) => {
       const derived = buildVerificationResult(c, c.id);
-      return { ...c, statusLabel: derived.statusLabel, verificationLevel: derived.verificationLevel };
+      return {
+        ...c,
+        statusLabel: derived.statusLabel,
+        verificationLevel: derived.verificationLevel,
+      };
     });
 
     return {

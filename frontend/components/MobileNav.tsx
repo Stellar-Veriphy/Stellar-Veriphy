@@ -1,11 +1,12 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
 import { NotificationBell } from "@/components/notifications";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useWallet } from "@/context/WalletContext";
 
 interface NavLink {
@@ -276,11 +277,9 @@ export function MobileNav({ links, quickActions = [] }: MobileNavProps) {
                     <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
                     <ThemeToggle />
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Notifications
-                    </span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Notifications</span>
                     <NotificationBell />
                   </div>
 

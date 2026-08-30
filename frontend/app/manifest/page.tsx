@@ -3,7 +3,7 @@
 import { ContentManifest } from "@stellarveriphy/shared/types";
 import { useEffect, useState } from "react";
 
-import { KeyValueBuilder } from "@/components/KeyValueBuilder";
+import { KeyValueBuilder, type MetadataValue } from "@/components/KeyValueBuilder";
 import { ManifestPreview } from "@/components/ManifestPreview";
 import { AutoSaveIndicator } from "@/components/ui/AutoSaveIndicator";
 import { FormInput } from "@/components/ui/FormInput";
@@ -104,7 +104,7 @@ export default function ManifestPage() {
     }
   };
 
-  const handleMetadataChange = (metadata: Record<string, string | number | boolean>) => {
+  const handleMetadataChange = (metadata: Record<string, MetadataValue>) => {
     setManifest((prev) => ({ ...prev, metadata }));
   };
 

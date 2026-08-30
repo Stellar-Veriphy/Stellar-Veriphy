@@ -10,12 +10,12 @@
 
 import { useState } from "react";
 
-import { Header } from "@/components/Header";
 import { CertificateFilterPanel } from "@/components/certificates/CertificateFilterPanel";
 import {
   type CertificateStatus,
   CertificateStatusBadge,
 } from "@/components/certificates/CertificateStatusBadge";
+import { Header } from "@/components/Header";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { useCertificateSearch } from "@/hooks/useCertificateQueries";
 import type { CertificateSearchFilters } from "@/services/certificateVerificationService";
@@ -87,8 +87,8 @@ export default function CertificatesPage() {
         <div className="space-y-3">
           <h1 className="text-4xl font-semibold">Certificate Explorer</h1>
           <p className="max-w-3xl text-lg text-slate-300">
-            Filter certificates by status, creator, verification level, and date range. Save
-            filter combinations as presets and export matching results.
+            Filter certificates by status, creator, verification level, and date range. Save filter
+            combinations as presets and export matching results.
           </p>
         </div>
 
@@ -164,7 +164,9 @@ export default function CertificatesPage() {
               <button
                 type="button"
                 disabled={offset === 0}
-                onClick={() => setFilters((f) => ({ ...f, offset: Math.max(0, offset - PAGE_SIZE) }))}
+                onClick={() =>
+                  setFilters((f) => ({ ...f, offset: Math.max(0, offset - PAGE_SIZE) }))
+                }
                 className="rounded-lg border border-slate-700 px-3 py-1.5 disabled:opacity-50"
               >
                 Previous

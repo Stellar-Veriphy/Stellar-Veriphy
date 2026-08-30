@@ -14,8 +14,9 @@
  * when the project is partially implemented.
  */
 
-import { expect, type Page, test } from "@playwright/test";
 import path from "node:path";
+
+import { expect, type Page, test } from "@playwright/test";
 
 const FIXTURE_PATH = path.join(__dirname, "fixtures", "sample.json");
 const SHA256_PATTERN = /[a-f0-9]{64}/i;
@@ -91,7 +92,10 @@ async function chooseStandardMode(page: Page): Promise<void> {
     return;
   }
 
-  const anyMode = page.locator("button").filter({ hasText: /standard|advanced/i }).first();
+  const anyMode = page
+    .locator("button")
+    .filter({ hasText: /standard|advanced/i })
+    .first();
   if (await anyMode.isVisible({ timeout: 3_000 }).catch(() => false)) {
     await anyMode.click();
     return;
@@ -138,9 +142,7 @@ test.describe("Complete verification workflow", () => {
     const contentHash = await waitForHashDisplay(page);
     expect(contentHash).toMatch(SHA256_PATTERN);
 
-    const continueBtn = page
-      .locator('button:has-text("Continue")')
-      .first();
+    const continueBtn = page.locator('button:has-text("Continue")').first();
     await expect(continueBtn).toBeVisible({ timeout: 15_000 });
     await continueBtn.click();
 
@@ -158,7 +160,9 @@ test.describe("Complete verification workflow", () => {
       await page.waitForLoadState("networkidle");
     }
 
-    await expect(page.locator("text=/Review Verification|Review your verification|Verify/i").first()).toBeVisible({
+    await expect(
+      page.locator("text=/Review Verification|Review your verification|Verify/i").first()
+    ).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.locator(`text=${contentHash}`).first()).toBeVisible({ timeout: 10_000 });
@@ -204,7 +208,9 @@ test.describe("Complete verification workflow", () => {
       return;
     }
 
-    await expect(page.locator("text=/Please upload a \\.json or \\.xml file|unsupported file/i").first()).toBeHidden({
+    await expect(
+      page.locator("text=/Please upload a \\.json or \\.xml file|unsupported file/i").first()
+    ).toBeHidden({
       timeout: 3_000,
     });
   });

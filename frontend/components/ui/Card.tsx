@@ -57,12 +57,9 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const cardVariantClasses: Record<CardVariant, string> = {
-  default:
-    "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm",
-  elevated:
-    "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md",
-  outlined:
-    "bg-transparent border border-gray-300 dark:border-gray-600 shadow-none",
+  default: "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm",
+  elevated: "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md",
+  outlined: "bg-transparent border border-gray-300 dark:border-gray-600 shadow-none",
   ghost: "bg-gray-50 dark:bg-gray-800/50 border border-transparent shadow-none",
 };
 
@@ -118,7 +115,11 @@ export const CardHeader = React.memo(function CardHeader({
   );
 });
 
-export const CardBody = React.memo(function CardBody({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export const CardBody = React.memo(function CardBody({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("space-y-3", className)} {...props}>
       {children}
@@ -357,10 +358,7 @@ export interface StatCardProps {
   onClick?: () => void;
 }
 
-const accentMap: Record<
-  NonNullable<StatCardProps["accentColor"]>,
-  { bg: string; text: string }
-> = {
+const accentMap: Record<NonNullable<StatCardProps["accentColor"]>, { bg: string; text: string }> = {
   blue: { bg: "bg-blue-50 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" },
   emerald: {
     bg: "bg-emerald-50 dark:bg-emerald-900/30",
@@ -433,9 +431,7 @@ export const StatCard = React.memo(function StatCard({
                   <svg
                     className={cn(
                       "w-3 h-3",
-                      trendPositive
-                        ? "text-emerald-500 rotate-0"
-                        : "text-red-500 rotate-180"
+                      trendPositive ? "text-emerald-500 rotate-0" : "text-red-500 rotate-180"
                     )}
                     fill="currentColor"
                     viewBox="0 0 24 24"
@@ -446,7 +442,9 @@ export const StatCard = React.memo(function StatCard({
                   <span
                     className={cn(
                       "text-xs font-medium",
-                      trendPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                      trendPositive
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-600 dark:text-red-400"
                     )}
                   >
                     {trendPositive ? "+" : ""}

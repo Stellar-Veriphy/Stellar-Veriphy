@@ -27,9 +27,11 @@
     "fast-xml-parser": "4.4.1",
     "framer-motion": "^10.18.0",
     "geist": "^1.7.1",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.263.1",
     "next": "15.0.0",
     "prismjs": "^1.30.0",
+    "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.54.2",
@@ -50,13 +52,11 @@
     "@types/jest": "29.5.14",
     "@types/node": "^20",
     "@types/prismjs": "^1.26.6",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-<<<<<<< HEAD
     "@types/swagger-ui-react": "^4.19.0",
-=======
     "axe-core": "^4.10.0",
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
     "eslint": "9.27.0",
     "eslint-config-next": "15.0.0",
     "eslint-plugin-simple-import-sort": "^14.0.0",

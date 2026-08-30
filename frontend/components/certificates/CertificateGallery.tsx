@@ -16,7 +16,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { type CertificateDetails, searchCertificates } from "@/services/certificateVerificationService";
+import {
+  type CertificateDetails,
+  searchCertificates,
+} from "@/services/certificateVerificationService";
 
 const PAGE_SIZE = 9;
 
@@ -58,23 +61,28 @@ export function CertificateGallery({ className = "" }: CertificateGalleryProps) 
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [selected, setSelected] = useState<CertificateDetails | null>(null);
 
-  const loadPage = useCallback(async (nextOffset: number) => {
-    setLoading(true);
-    try {
-      const res = await searchCertificates({
-        creator: creatorFilter || undefined,
-        offset: nextOffset,
-        limit: PAGE_SIZE,
-      });
-      if (res.success && res.data) {
-        setItems((prev) => (nextOffset === 0 ? res.data!.certificates : [...prev, ...res.data!.certificates]));
-        setTotal(res.data.total);
-        setOffset(nextOffset + res.data.certificates.length);
+  const loadPage = useCallback(
+    async (nextOffset: number) => {
+      setLoading(true);
+      try {
+        const res = await searchCertificates({
+          creator: creatorFilter || undefined,
+          offset: nextOffset,
+          limit: PAGE_SIZE,
+        });
+        if (res.success && res.data) {
+          setItems((prev) =>
+            nextOffset === 0 ? res.data!.certificates : [...prev, ...res.data!.certificates]
+          );
+          setTotal(res.data.total);
+          setOffset(nextOffset + res.data.certificates.length);
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [creatorFilter]);
+    },
+    [creatorFilter]
+  );
 
   // Reload from scratch whenever the filter changes.
   useEffect(() => {
@@ -94,7 +102,9 @@ export function CertificateGallery({ className = "" }: CertificateGalleryProps) 
 
   const sorted = useMemo(() => {
     const copy = [...items];
-    copy.sort((a, b) => (sortOrder === "newest" ? b.timestamp - a.timestamp : a.timestamp - b.timestamp));
+    copy.sort((a, b) =>
+      sortOrder === "newest" ? b.timestamp - a.timestamp : a.timestamp - b.timestamp
+    );
     return copy;
   }, [items, sortOrder]);
 
@@ -142,7 +152,9 @@ export function CertificateGallery({ className = "" }: CertificateGalleryProps) 
                 <p className="truncate text-xs font-medium text-gray-800 dark:text-gray-200">
                   {cert.creator.slice(0, 8)}…{cert.creator.slice(-4)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(cert.timestamp)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(cert.timestamp)}
+                </p>
               </div>
             </button>
           );
@@ -150,7 +162,9 @@ export function CertificateGallery({ className = "" }: CertificateGalleryProps) 
       </div>
 
       {items.length === 0 && !loading && (
-        <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">No certificates found.</p>
+        <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+          No certificates found.
+        </p>
       )}
 
       {/* Infinite scroll sentinel */}
@@ -186,11 +200,15 @@ export function CertificateGallery({ className = "" }: CertificateGalleryProps) 
             <dl className="space-y-2 text-sm">
               <div>
                 <dt className="text-gray-500 dark:text-gray-400">Creator</dt>
-                <dd className="break-all font-mono text-gray-800 dark:text-gray-200">{selected.creator}</dd>
+                <dd className="break-all font-mono text-gray-800 dark:text-gray-200">
+                  {selected.creator}
+                </dd>
               </div>
               <div>
                 <dt className="text-gray-500 dark:text-gray-400">Storage reference</dt>
-                <dd className="break-all font-mono text-gray-800 dark:text-gray-200">{selected.storageRef}</dd>
+                <dd className="break-all font-mono text-gray-800 dark:text-gray-200">
+                  {selected.storageRef}
+                </dd>
               </div>
               <div>
                 <dt className="text-gray-500 dark:text-gray-400">Manifest hash</dt>
@@ -200,7 +218,9 @@ export function CertificateGallery({ className = "" }: CertificateGalleryProps) 
               </div>
               <div>
                 <dt className="text-gray-500 dark:text-gray-400">Created</dt>
-                <dd className="text-gray-800 dark:text-gray-200">{formatDate(selected.timestamp)}</dd>
+                <dd className="text-gray-800 dark:text-gray-200">
+                  {formatDate(selected.timestamp)}
+                </dd>
               </div>
             </dl>
           </div>

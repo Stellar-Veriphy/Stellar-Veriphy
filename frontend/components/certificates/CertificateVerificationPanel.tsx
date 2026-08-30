@@ -13,7 +13,7 @@
  * rendering to sub-components.
  */
 
-import { useCallback,useState } from "react";
+import { useCallback, useState } from "react";
 
 import { CertificateCardSkeleton } from "@/components/ui/Skeleton";
 import { recordVerificationEvent } from "@/lib/verificationHistory";

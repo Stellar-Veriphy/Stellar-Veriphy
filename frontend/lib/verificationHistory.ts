@@ -20,9 +20,9 @@ export interface VerificationHistoryEntry {
   timestamp: string; // ISO 8601
   method: "id" | "code" | "creator" | "authenticity";
   query: string;
-  certificateId?: string;
+  certificateId?: string | undefined;
   status: VerificationHistoryStatus;
-  details?: string;
+  details?: string | undefined;
 }
 
 function createId(): string {
