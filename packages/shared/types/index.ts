@@ -357,3 +357,48 @@ export interface VerificationNotification {
   read: boolean;
   createdAt: number;
 }
+
+// ---------------------------------------------------------------------------
+// Content Versioning (Issue #469)
+// ---------------------------------------------------------------------------
+
+/** A version of verified content. */
+export interface ContentVersion {
+  id: string;
+  certificateId?: string;
+  versionNumber: number;
+  contentHash: string;
+  manifestHash: string;
+  creator: string;
+  createdAt: number;
+  changeLog?: string;
+  previousVersionId?: string;
+  nextVersionId?: string;
+  isCurrentVersion: boolean;
+}
+
+/** Version history for a piece of content. */
+export interface VersionHistory {
+  id: string;
+  contentHash: string;
+  contentTitle?: string;
+  versions: ContentVersion[];
+  totalVersions: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Comparison between two versions. */
+export interface VersionComparison {
+  versionA: ContentVersion;
+  versionB: ContentVersion;
+  differences: VersionDifference[];
+}
+
+/** Detailed difference between two versions. */
+export interface VersionDifference {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+  changeType: "added" | "removed" | "modified";
+}
