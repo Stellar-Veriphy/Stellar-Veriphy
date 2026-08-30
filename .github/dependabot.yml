@@ -1,0 +1,140 @@
+version: 2
+updates:
+  # npm dependencies in root package.json and monorepo packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  # npm dependencies in frontend
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps-frontend)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  # Cargo dependencies in contracts
+  - package-ecosystem: "cargo"
+    directory: "/contracts/oracle"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "contracts"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps-contracts)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  - package-ecosystem: "cargo"
+    directory: "/contracts/provenance"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "contracts"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps-contracts)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  - package-ecosystem: "cargo"
+    directory: "/contracts/registry"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "contracts"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps-contracts)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "infrastructure"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps-docker)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "03:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "HexStar"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "infrastructure"
+      - "maintenance"
+    commit-message:
+      prefix: "chore(deps-github-actions)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
