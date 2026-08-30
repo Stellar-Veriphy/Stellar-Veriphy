@@ -8,7 +8,7 @@
 # ============================================================================
 # Stage 1: Contract Builder
 # ============================================================================
-FROM rust:1.75-slim as contract-builder
+FROM rust:1.98-slim as contract-builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
