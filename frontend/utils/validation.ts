@@ -196,8 +196,6 @@ export function downloadJSON(data: object, filename: string) {
  * @param data     - Any JSON-serialisable object.
  * @param filename - The suggested download file name (e.g. `"manifest.xml"`).
  */
-export function downloadXML(data: object, filename: string) {
-  const xml = objectToXml(data as Record<string, unknown>);
 export function downloadXML(data: SerializableObject, filename: string) {
   const xml = objectToXml(data);
   const blob = new Blob([xml], { type: "application/xml" });
@@ -220,7 +218,6 @@ export function downloadXML(data: SerializableObject, filename: string) {
  * @param rootName - Root element tag name (default: `"root"`).
  * @returns Full XML document string.
  */
-function objectToXml(obj: Record<string, unknown>, rootName = "root"): string {
 function objectToXml(obj: SerializableObject, rootName = "root"): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += `<${rootName}>\n`;
@@ -244,7 +241,6 @@ function objectToXml(obj: SerializableObject, rootName = "root"): string {
  * @param indent - Current indentation depth (multiples of two spaces).
  * @returns XML fragment string (no declaration or root wrapper).
  */
-function objectToXmlContent(obj: Record<string, unknown>, indent: number): string {
 function objectToXmlContent(obj: SerializableObject, indent: number): string {
   const spaces = "  ".repeat(indent);
   let xml = "";
@@ -256,15 +252,12 @@ function objectToXmlContent(obj: SerializableObject, indent: number): string {
     } else if (typeof value === "object" && !Array.isArray(value)) {
       xml += `${spaces}<${tagName}>\n`;
       xml += objectToXmlContent(value as Record<string, unknown>, indent + 1);
-      xml += objectToXmlContent(value as SerializableObject, indent + 1);
       xml += `${spaces}</${tagName}>\n`;
     } else if (Array.isArray(value)) {
       (value as SerializableValue[]).forEach((item) => {
         xml += `${spaces}<item>\n`;
-        if (typeof item === "object" && item !== null) {
+        if (typeof item === "object" && item !== null && !Array.isArray(item)) {
           xml += objectToXmlContent(item as Record<string, unknown>, indent + 1);
-        if (item !== null && item !== undefined && typeof item === "object" && !Array.isArray(item)) {
-          xml += objectToXmlContent(item as SerializableObject, indent + 1);
         } else {
           xml += `${"  ".repeat(indent + 1)}${String(item)}\n`;
         }

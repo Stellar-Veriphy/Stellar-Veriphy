@@ -18,6 +18,7 @@
     "test:load:report": "node ./load-tests/report-generator.mjs ./load-tests/results/frontend-summary.json ./load-tests/results/frontend-report.html",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "release": "semantic-release",
     "prepare": "husky"
   },
   "keywords": [
@@ -42,8 +43,12 @@
     ]
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "semantic-release": "^25.0.9"
   }
 }
