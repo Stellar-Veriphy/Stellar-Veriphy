@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node lib/error-tracking/source-map-upload.js",
     "build:analyze": "ANALYZE=true next build",
     "build:check-size": "size-limit",
     "start": "next start",
