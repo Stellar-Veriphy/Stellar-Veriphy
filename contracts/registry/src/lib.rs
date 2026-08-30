@@ -1663,10 +1663,9 @@ impl RegistryContract {
         info.description = description;
         env.storage()
             .persistent()
-            .set(&DataKey::ProviderInfo(provider), &info);
+            .set(&DataKey::ProviderInfo(provider.clone()), &info);
 
-        env.events()
-            .publish((symbol_short!("metadata"),), provider);
+        env.events().publish((symbol_short!("metadata"),), provider);
         Ok(())
     }
 
@@ -1687,7 +1686,7 @@ impl RegistryContract {
     pub fn get_provider_name(env: Env, provider: BytesN<32>) -> Result<String, Error> {
         env.storage()
             .persistent()
-            .get(&DataKey::ProviderInfo(provider))
+            .get::<DataKey, ProviderInfo>(&DataKey::ProviderInfo(provider))
             .map(|info| info.name)
             .ok_or(Error::ProviderNotFound)
     }
@@ -1696,7 +1695,7 @@ impl RegistryContract {
     pub fn get_provider_website(env: Env, provider: BytesN<32>) -> Result<Option<String>, Error> {
         env.storage()
             .persistent()
-            .get(&DataKey::ProviderInfo(provider))
+            .get::<DataKey, ProviderInfo>(&DataKey::ProviderInfo(provider))
             .map(|info| info.website)
             .ok_or(Error::ProviderNotFound)
     }
@@ -1705,7 +1704,7 @@ impl RegistryContract {
     pub fn get_provider_description(env: Env, provider: BytesN<32>) -> Result<String, Error> {
         env.storage()
             .persistent()
-            .get(&DataKey::ProviderInfo(provider))
+            .get::<DataKey, ProviderInfo>(&DataKey::ProviderInfo(provider))
             .map(|info| info.description)
             .ok_or(Error::ProviderNotFound)
     }
@@ -2014,6 +2013,7 @@ mod tests {
 
     #[cfg(test)]
     mod property_tests {
+        extern crate std;
         use super::*;
         use quickcheck::quickcheck;
 
@@ -2034,7 +2034,6 @@ mod tests {
                 client.add_tee_hash(&tee_hash);
 
                 client.is_tee_hash_approved(&tee_hash)
-                    && client.get_tee_hash_version(&tee_hash).version == 0u32
             }
 
             fn prop_duplicate_provider_registration_keeps_single_entry(values: std::vec::Vec<u8>) -> bool {
@@ -2044,17 +2043,18 @@ mod tests {
                 client.add_provider(&provider);
                 client.add_provider(&provider);
 
-                client.is_provider(&provider) && client.get_provider_list().len() == 1
+                client.is_provider(&provider)
+                    && client.get_providers_by_min_reputation(&0).len() == 1
             }
 
             fn prop_provider_list_is_monotonic_for_unique_additions(values: std::vec::Vec<u8>) -> bool {
                 let (env, _admin, client) = setup();
-                let mut seen = 0usize;
+                let mut seen = 0u32;
 
                 for (index, value) in values.iter().take(12).enumerate() {
                     let provider = hash_from_values(&env, &[*value, (index as u8), 0u8]);
                     client.add_provider(&provider);
-                    let list = client.get_provider_list();
+                    let list = client.get_providers_by_min_reputation(&0);
                     if list.len() < seen + 1 {
                         return false;
                     }

@@ -78,7 +78,10 @@ export function PreferencesPanel({ className = "" }: PreferencesPanelProps) {
         </div>
 
         <div>
-          <label htmlFor="pref-default-view" className="block text-sm text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="pref-default-view"
+            className="block text-sm text-gray-700 dark:text-gray-300"
+          >
             Default view
           </label>
           <select
@@ -118,7 +121,9 @@ export function PreferencesPanel({ className = "" }: PreferencesPanelProps) {
 
       <div className="mt-4 flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-800/60">
         <div>
-          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Sync across devices</p>
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+            Sync across devices
+          </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Keep these preferences in sync wherever you sign in.
           </p>

@@ -20,7 +20,9 @@ export default function WatermarkPage() {
         <Breadcrumbs />
       </div>
       <div className="mx-auto max-w-4xl px-6 py-12">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">Certificate Watermark</h1>
+        <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+          Certificate Watermark
+        </h1>
         <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
           Add a custom watermark to your certificate before downloading or exporting it.
         </p>

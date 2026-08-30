@@ -58,8 +58,8 @@
 
 #![no_std]
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, vec, Address, Bytes, BytesN, Env, Symbol,
-    Vec,
+    contract, contracterror, contractimpl, contracttype, vec, Address, Bytes, BytesN, Env, String,
+    Symbol, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -279,14 +279,11 @@ pub enum DisputeResolution {
 pub struct VerificationRequest {
     pub storage_ref: Bytes,
     pub manifest_hash: Bytes,
-    pub requester:     Address,
-    pub state:         RequestState,
-    pub priority:      Priority,
-    // #449 — Optional comments/notes for context during verification
-    pub comment:       Option<String>,
     pub requester: Address,
     pub state: RequestState,
     pub priority: Priority,
+    // #449 — Optional comments/notes for context during verification
+    pub comment: Option<String>,
 }
 
 #[contracttype]
@@ -377,41 +374,6 @@ pub struct SLACompliance {
     pub success_rate_ok: bool,
     /// Overall compliance percentage (0–100): fraction of targets met × 100.
     pub compliance_percent: u32,
-    pub suspended:          bool,
-}
-
-/// Event emitted when an SLA violation is detected.
-#[contractevent]
-pub struct SLAViolationEvent {
-    #[topic]
-    pub provider:    Address,
-    pub metric:      Symbol,
-    pub actual:      u32,
-    pub target:      u32,
-}
-
-/// Event emitted when a provider is auto-suspended for falling below threshold.
-#[contractevent]
-pub struct ProviderAutoSuspendedEvent {
-    #[topic]
-    pub provider:           Address,
-    pub compliance_percent: u32,
-}
-
-/// #449 — Event emitted when a comment is added/updated on a verification request.
-#[contractevent]
-pub struct RequestCommentEvent {
-    #[topic]
-    pub request_id: u64,
-    #[topic]
-    pub requester: Address,
-    pub comment: String,
-    pub timestamp: u64,
-}
-
-pub struct ProviderStakeInfo {
-    pub amount:                    u128,
-    pub withdrawal_cooldown_until: u32,
     pub suspended: bool,
 }
 
@@ -1426,6 +1388,7 @@ impl OracleContract {
                 requester: requester.clone(),
                 state: RequestState::Pending,
                 priority: priority.clone(),
+                comment: None,
             };
 
             env.storage().temporary().set(&DataKey::Request(id), &req);
@@ -1985,6 +1948,7 @@ impl OracleContract {
             requester: requester.clone(),
             state: RequestState::Pending,
             priority,
+            comment: None,
         };
 
         env.storage().temporary().set(&DataKey::Request(id), &req);
@@ -2052,11 +2016,7 @@ impl OracleContract {
 
     /// #449 — Add or update a comment on a verification request.
     /// The requester must authenticate and the request must exist and be in Pending state.
-    pub fn add_request_comment(
-        env: Env,
-        request_id: u64,
-        comment: String,
-    ) -> Result<(), Error> {
+    pub fn add_request_comment(env: Env, request_id: u64, comment: String) -> Result<(), Error> {
         let mut request: VerificationRequest = env
             .storage()
             .temporary()
@@ -2070,24 +2030,24 @@ impl OracleContract {
         }
 
         request.comment = Some(comment.clone());
-        env.storage().temporary().set(&DataKey::Request(request_id), &request);
+        env.storage()
+            .temporary()
+            .set(&DataKey::Request(request_id), &request);
 
-        RequestCommentEvent {
-            request_id,
-            requester: request.requester.clone(),
-            comment,
-            timestamp: env.ledger().timestamp(),
-        }
-        .emit(&env);
+        env.events().publish(
+            (
+                Symbol::new(&env, "request_comment"),
+                request_id,
+                request.requester.clone(),
+            ),
+            (comment, env.ledger().timestamp()),
+        );
 
         Ok(())
     }
 
     /// #449 — Retrieve the comment on a verification request, if any.
-    pub fn get_request_comment(
-        env: Env,
-        request_id: u64,
-    ) -> Result<Option<String>, Error> {
+    pub fn get_request_comment(env: Env, request_id: u64) -> Result<Option<String>, Error> {
         let request: VerificationRequest = env
             .storage()
             .temporary()
@@ -2099,10 +2059,7 @@ impl OracleContract {
 
     /// #449 — Clear/remove a comment from a verification request.
     /// The requester must authenticate.
-    pub fn remove_request_comment(
-        env: Env,
-        request_id: u64,
-    ) -> Result<(), Error> {
+    pub fn remove_request_comment(env: Env, request_id: u64) -> Result<(), Error> {
         let mut request: VerificationRequest = env
             .storage()
             .temporary()
@@ -2112,7 +2069,9 @@ impl OracleContract {
         request.requester.require_auth();
 
         request.comment = None;
-        env.storage().temporary().set(&DataKey::Request(request_id), &request);
+        env.storage()
+            .temporary()
+            .set(&DataKey::Request(request_id), &request);
 
         env.events()
             .publish((Symbol::new(&env, "comment_removed"),), request_id);
@@ -2121,11 +2080,7 @@ impl OracleContract {
     }
 
     /// #449 — Query all pending requests that have comments (supports discovery).
-    pub fn get_requests_with_comments(
-        env: Env,
-        offset: u32,
-        limit: u32,
-    ) -> Vec<RequestWithId> {
+    pub fn get_requests_with_comments(env: Env, offset: u32, limit: u32) -> Vec<RequestWithId> {
         let all_requests: Vec<RequestWithId> = env
             .storage()
             .temporary()

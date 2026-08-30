@@ -2,6 +2,7 @@
 mod tests {
     extern crate std;
     use std::format;
+    use std::string::ToString;
 
     use crate::{
         CertificateRelation, ProvenanceContract, ProvenanceContractClient, ProvenanceError,
@@ -1136,7 +1137,6 @@ mod tests {
         );
     }
 
-<<<<<<< HEAD
     // --- Issue #452 --- Certificate Likes/Endorsements
 
     #[test]
@@ -1258,10 +1258,6 @@ mod tests {
 
     #[test]
     fn test_get_endorsers_pagination() {
-=======
-    #[test]
-    fn test_stress_batch_mint_at_max_capacity() {
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
         let env = Env::default();
         env.mock_all_auths();
         let cid = env.register_contract(None, ProvenanceContract);
@@ -1270,7 +1266,6 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-<<<<<<< HEAD
         let id = client.mint(
             &s(&env, "sid"),
             &s(&env, "mhash_end5"),
@@ -1296,31 +1291,6 @@ mod tests {
 
     #[test]
     fn test_view_count_increments_on_get() {
-=======
-        let mut storage_refs = soroban_sdk::Vec::new(&env);
-        let mut manifest_hashes = soroban_sdk::Vec::new(&env);
-        let mut attestation_hashes = soroban_sdk::Vec::new(&env);
-
-        for i in 0..50u32 {
-            let suffix = i.to_string();
-            storage_refs.push_back(s(&env, &format!("stress-sid-{}", suffix)));
-            manifest_hashes.push_back(s(&env, &format!("stress-manifest-{}", suffix)));
-            attestation_hashes.push_back(s(&env, &format!("stress-att-{}", suffix)));
-        }
-
-        let ids = client
-            .mint_batch(&storage_refs, &manifest_hashes, &attestation_hashes, &owner)
-            .unwrap();
-
-        assert_eq!(ids.len(), 50);
-        assert_eq!(ids.get_unchecked(0), 1);
-        assert_eq!(ids.get_unchecked(49), 50);
-        assert_eq!(client.get_creator_certificate_count(&owner), 50);
-    }
-
-    #[test]
-    fn test_stress_storage_and_index_growth() {
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
         let env = Env::default();
         env.mock_all_auths();
         let cid = env.register_contract(None, ProvenanceContract);
@@ -1329,7 +1299,6 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-<<<<<<< HEAD
         let id = client.mint(
             &s(&env, "sid"),
             &s(&env, "mhash_view1"),
@@ -1348,26 +1317,6 @@ mod tests {
 
     #[test]
     fn test_get_most_viewed_certificates() {
-=======
-        for i in 0..200u32 {
-            let suffix = i.to_string();
-            client.mint(
-                &s(&env, &format!("stress-store-{}", suffix)),
-                &s(&env, &format!("stress-manifest-{}", suffix)),
-                &s(&env, &format!("stress-att-{}", suffix)),
-                &owner,
-            );
-        }
-
-        assert_eq!(client.get_creator_certificate_count(&owner), 200);
-        let stats = client.get_certificate_stats();
-        assert_eq!(stats.total_certificates, 200);
-        assert_eq!(stats.certificates_today, 200);
-    }
-
-    #[test]
-    fn test_stress_time_range_and_history_queries() {
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
         let env = Env::default();
         env.mock_all_auths();
         let cid = env.register_contract(None, ProvenanceContract);
@@ -1376,7 +1325,6 @@ mod tests {
         let owner = soroban_sdk::Address::generate(&env);
         client.initialize(&oracle);
 
-<<<<<<< HEAD
         let a = client.mint(
             &s(&env, "sid"),
             &s(&env, "mhash_view2"),
@@ -1412,7 +1360,73 @@ mod tests {
         let all = client.get_most_viewed_certificates(&10);
         assert_eq!(all.len(), 3);
         assert_eq!(all.get_unchecked(2), (a, 1));
-=======
+    }
+
+    #[test]
+    fn test_stress_batch_mint_at_max_capacity() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        let mut storage_refs = soroban_sdk::Vec::new(&env);
+        let mut manifest_hashes = soroban_sdk::Vec::new(&env);
+        let mut attestation_hashes = soroban_sdk::Vec::new(&env);
+
+        for i in 0..50u32 {
+            let suffix = i.to_string();
+            storage_refs.push_back(s(&env, &format!("stress-sid-{}", suffix)));
+            manifest_hashes.push_back(s(&env, &format!("stress-manifest-{}", suffix)));
+            attestation_hashes.push_back(s(&env, &format!("stress-att-{}", suffix)));
+        }
+
+        let ids = client.mint_batch(&storage_refs, &manifest_hashes, &attestation_hashes, &owner);
+
+        assert_eq!(ids.len(), 50);
+        assert_eq!(ids.get_unchecked(0), 1);
+        assert_eq!(ids.get_unchecked(49), 50);
+        assert_eq!(client.get_creator_certificate_count(&owner), 50);
+    }
+
+    #[test]
+    fn test_stress_storage_and_index_growth() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
+        for i in 0..200u32 {
+            let suffix = i.to_string();
+            client.mint(
+                &s(&env, &format!("stress-store-{}", suffix)),
+                &s(&env, &format!("stress-manifest-{}", suffix)),
+                &s(&env, &format!("stress-att-{}", suffix)),
+                &owner,
+            );
+        }
+
+        assert_eq!(client.get_creator_certificate_count(&owner), 200);
+        let stats = client.get_certificate_stats();
+        assert_eq!(stats.total_certificates, 200);
+        assert_eq!(stats.certificates_today, 200);
+    }
+
+    #[test]
+    fn test_stress_time_range_and_history_queries() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let oracle = soroban_sdk::Address::generate(&env);
+        let owner = soroban_sdk::Address::generate(&env);
+        client.initialize(&oracle);
+
         for i in 0..75u32 {
             let suffix = i.to_string();
             let id = client.mint(
@@ -1481,6 +1495,5 @@ mod tests {
         assert_eq!(page_a.len(), 10);
         let page_b = client.get_certificates_by_creator(&owner_b, &0, &10);
         assert_eq!(page_b.len(), 10);
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
     }
 }

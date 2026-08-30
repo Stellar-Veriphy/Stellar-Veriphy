@@ -14,6 +14,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Header } from "@/components/Header";
+import { EmailNotificationSettings } from "@/components/notifications";
+import { PreferencesPanel } from "@/components/preferences";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { usePWA } from "@/hooks/usePWA";
 import {
@@ -60,7 +62,9 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (registration) {
-      void registration.pushManager.getSubscription().then((sub) => setPushSubscribed(Boolean(sub)));
+      void registration.pushManager
+        .getSubscription()
+        .then((sub) => setPushSubscribed(Boolean(sub)));
     }
   }, [registration]);
 
@@ -104,8 +108,8 @@ export default function SettingsPage() {
       return;
     }
     const json = await createBackup({
-      categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-      passphrase: encrypt ? passphrase : undefined,
+      ...(selectedCategories.length > 0 && { categories: selectedCategories }),
+      ...(encrypt && { passphrase }),
     });
     downloadBackup(json);
     setStatusMessage("Backup downloaded.");
@@ -115,7 +119,9 @@ export default function SettingsPage() {
     try {
       const text = await file.text();
       const { importedKeys } = await importBackup(text, importPassphrase || undefined);
-      setStatusMessage(`Imported ${importedKeys} item(s) from backup. Reload the app to see changes.`);
+      setStatusMessage(
+        `Imported ${importedKeys} item(s) from backup. Reload the app to see changes.`
+      );
     } catch (err) {
       setStatusMessage(err instanceof Error ? err.message : "Failed to import backup.");
     }
@@ -131,10 +137,20 @@ export default function SettingsPage() {
         <div className="space-y-3">
           <h1 className="text-4xl font-semibold">App Settings</h1>
           <p className="max-w-3xl text-lg text-slate-300">
-            Install StellarVeriphy on your device, manage notifications and offline storage, and
-            back up your locally stored data.
+            Manage your preferences and notifications, install StellarVeriphy on your device, manage
+            offline storage, and back up your locally stored data.
           </p>
         </div>
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
+          <h2 className="text-2xl font-semibold text-white">Preferences</h2>
+          <PreferencesPanel />
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
+          <h2 className="text-2xl font-semibold text-white">Email notifications</h2>
+          <EmailNotificationSettings />
+        </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
           <h2 className="text-2xl font-semibold text-white">App &amp; notifications</h2>
@@ -145,7 +161,7 @@ export default function SettingsPage() {
               <p className="text-sm text-slate-400">
                 {isInstalled
                   ? "Installed — you're running the app in standalone mode."
-                  : "Not installed. Use your browser's \"Install app\" / \"Add to Home Screen\" option."}
+                  : 'Not installed. Use your browser\'s "Install app" / "Add to Home Screen" option.'}
               </p>
             </div>
           </div>
@@ -171,7 +187,9 @@ export default function SettingsPage() {
             <div>
               <p className="font-medium text-slate-100">Offline cache</p>
               <p className="text-sm text-slate-400">
-                {cacheSize === null ? "Calculating…" : `${formatBytes(cacheSize)} cached for offline use`}
+                {cacheSize === null
+                  ? "Calculating…"
+                  : `${formatBytes(cacheSize)} cached for offline use`}
               </p>
             </div>
             <button
@@ -209,7 +227,11 @@ export default function SettingsPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input type="checkbox" checked={encrypt} onChange={(e) => setEncrypt(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={encrypt}
+                onChange={(e) => setEncrypt(e.target.checked)}
+              />
               Encrypt backup
             </label>
             {encrypt && (

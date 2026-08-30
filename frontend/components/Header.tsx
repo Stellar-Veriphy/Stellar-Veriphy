@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { MobileNav } from "@/components/MobileNav";
 import { NotificationBell } from "@/components/notifications";
 import { ThemeToggle } from "@/components/ThemeToggle";

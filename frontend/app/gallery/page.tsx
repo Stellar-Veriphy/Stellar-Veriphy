@@ -16,7 +16,9 @@ export default function GalleryPage() {
         <Breadcrumbs />
       </div>
       <div className="mx-auto max-w-6xl px-6 py-12">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Certificate Gallery</h1>
+        <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
+          Certificate Gallery
+        </h1>
         <CertificateGallery />
       </div>
     </main>

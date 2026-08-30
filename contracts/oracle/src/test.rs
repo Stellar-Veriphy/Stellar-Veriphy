@@ -54,16 +54,9 @@ mod reject_registry {
 
 #[cfg(test)]
 mod property_tests {
+    extern crate std;
     use super::*;
     use quickcheck::quickcheck;
-
-    fn bytes_from_seed(env: &Env, values: &[u8]) -> BytesN<32> {
-        let mut out = [0u8; 32];
-        for (i, value) in values.iter().take(32).enumerate() {
-            out[i] = *value;
-        }
-        BytesN::from_array(env, &out)
-    }
 
     quickcheck! {
         fn prop_request_ids_are_monotonic(priority_bytes: std::vec::Vec<u8>) -> bool {
@@ -96,12 +89,12 @@ mod property_tests {
             true
         }
 
-        fn prop_duplicate_provider_registration_is_idempotent(values: std::vec::Vec<u8>) -> bool {
+        fn prop_duplicate_provider_registration_is_idempotent(_values: std::vec::Vec<u8>) -> bool {
             let env = make_env();
             env.mock_all_auths();
             let (cid, ..) = setup_oracle(&env);
             let client = OracleContractClient::new(&env, &cid);
-            let provider = bytes_from_seed(&env, &values);
+            let provider = Address::generate(&env);
 
             client.add_provider(&provider);
             client.add_provider(&provider);

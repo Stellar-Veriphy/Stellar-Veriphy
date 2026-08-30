@@ -13,12 +13,12 @@ import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import {
-  type VerificationHistoryEntry,
   clearVerificationHistory,
   exportVerificationHistory,
   getVerificationHistory,
   isHistoryTrackingEnabled,
   setHistoryTrackingEnabled,
+  type VerificationHistoryEntry,
 } from "@/lib/verificationHistory";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -45,8 +45,8 @@ export default function VerificationHistoryPage() {
 
   const applyDateFilter = () => {
     refresh({
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      ...(startDate && { startDate: new Date(startDate) }),
+      ...(endDate && { endDate: new Date(endDate) }),
     });
   };
 
