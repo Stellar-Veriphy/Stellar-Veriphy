@@ -29,7 +29,7 @@
     "clsx": "2.1.1",
     "fast-xml-parser": "4.4.1",
     "framer-motion": "^10.18.0",
-    "geist": "^1.7.1",
+    "geist": "^1.7.2",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.263.1",
     "next": "15.0.0",
