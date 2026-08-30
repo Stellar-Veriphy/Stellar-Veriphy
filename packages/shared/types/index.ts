@@ -272,3 +272,88 @@ export type ApiData<R extends ApiResponse<unknown>> = R extends { success: true;
 
 /** Makes the listed keys required while keeping the rest as-is. */
 export type RequireFields<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+
+// ---------------------------------------------------------------------------
+// Collaborative Verification (Issue #468)
+// ---------------------------------------------------------------------------
+
+/** User role in a verification team. */
+export type TeamRole = "owner" | "editor" | "reviewer" | "viewer";
+
+/** Permission levels for collaborative features. */
+export type Permission =
+  | "view_verification"
+  | "edit_verification"
+  | "approve_verification"
+  | "manage_team"
+  | "export_data";
+
+/** Member of a verification team. */
+export interface TeamMember {
+  publicKey: string;
+  role: TeamRole;
+  addedAt: number;
+  permissions: Permission[];
+}
+
+/** Verification team for collaborative work. */
+export interface VerificationTeam {
+  id: string;
+  name: string;
+  description?: string;
+  owner: string;
+  members: TeamMember[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Shared verification document with edit tracking. */
+export interface SharedVerificationDocument {
+  id: string;
+  teamId: string;
+  certificateId?: string;
+  title: string;
+  description?: string;
+  contentHash: string;
+  manifestHash: string;
+  status: "draft" | "in_review" | "approved" | "rejected";
+  createdBy: string;
+  createdAt: number;
+  lastModifiedBy: string;
+  lastModifiedAt: number;
+  editors: string[];
+}
+
+/** Workflow step for verification authorization. */
+export interface WorkflowStep {
+  id: string;
+  documentId: string;
+  stepNumber: number;
+  approverRole: TeamRole;
+  status: "pending" | "approved" | "rejected";
+  approvedBy?: string;
+  approvedAt?: number;
+  comment?: string;
+}
+
+/** Audit log entry tracking user actions. */
+export interface AuditLogEntry {
+  id: string;
+  entityType: "team" | "document" | "workflow" | "verification";
+  entityId: string;
+  action: string;
+  actor: string;
+  details?: Record<string, unknown>;
+  timestamp: number;
+}
+
+/** Notification for team members about verification activities. */
+export interface VerificationNotification {
+  id: string;
+  recipientPublicKey: string;
+  type: "team_invite" | "document_shared" | "approval_requested" | "verification_complete";
+  relatedEntityId: string;
+  message: string;
+  read: boolean;
+  createdAt: number;
+}
