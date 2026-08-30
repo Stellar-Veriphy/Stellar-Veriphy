@@ -9,4 +9,5 @@ target/
 coverage/
 test-results/
 reports/
+.bundle-reports/
 .stryker-tmp/
