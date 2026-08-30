@@ -72,17 +72,10 @@ pub enum ProvenanceError {
     UnauthorizedRevocation = 7,
     InvalidExpiration = 8,
     CircularReference = 9,
-<<<<<<< HEAD
-    CertificateLocked = 10,       // #184
-    CollectionNotFound = 11,      // #185
-    InvalidTagLength = 12,         // #450 — tag character limit exceeded
-    MaxTagsExceeded = 13,          // #450 — too many tags per certificate
     CertificateLocked = 10,
     CollectionNotFound = 11,
-=======
-    CollectionNotFound = 10,
-    CertificateLocked = 11,
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
+    InvalidTagLength = 12,
+    MaxTagsExceeded = 13,
 }
 
 // #171 — Revocation reason
@@ -136,10 +129,9 @@ pub struct ProvenanceCert {
     pub expires_at: Option<u64>,
     // #176 — verification thoroughness badge
     pub verification_level: VerificationLevel,
-    pub locked:           bool,
+    pub locked: bool,
     // #450 — Certificate tags for categorization and discovery
     pub tags: Vec<String>,
-    pub locked: bool,
 }
 
 // #173 — Certificate metadata with version tracking
@@ -534,7 +526,7 @@ impl ProvenanceContract {
             expires_at: None,
             verification_level,
             locked: false,
-            tags: Vec::new(&env),  // #450 — initialize with empty tags
+            tags: Vec::new(&env), // #450 — initialize with empty tags
         };
         env.storage().persistent().set(&id, &cert);
 
@@ -1047,10 +1039,7 @@ impl ProvenanceContract {
         let mut i = total_certs;
         while i > 0 && count < limit {
             if let Some(cert) = env.storage().persistent().get::<u64, ProvenanceCert>(&i) {
-<<<<<<< HEAD
                 // #177 — filter expired certificates out of default queries
-=======
->>>>>>> 2c3790c (feat(accounts): add batch effects endpoint)
                 let expired = cert.expires_at.map_or(false, |ts| now > ts);
                 if !expired && cert.timestamp >= start_time && cert.timestamp <= end_time {
                     if skipped >= offset {
@@ -1119,7 +1108,7 @@ impl ProvenanceContract {
                 expires_at: None,
                 verification_level,
                 locked: false,
-                tags: Vec::new(&env),  // #450 — initialize with empty tags
+                tags: Vec::new(&env), // #450 — initialize with empty tags
             };
             env.storage().persistent().set(&id, &cert);
             env.storage().persistent().set(&mani_key, &id);
@@ -1658,15 +1647,11 @@ impl ProvenanceContract {
     // #450 — Certificate tags management
     // -----------------------------------------------------------------
 
-    const MAX_TAG_LENGTH: u32 = 50;  // Maximum characters per tag
-    const MAX_TAGS_PER_CERTIFICATE: u32 = 20;  // Maximum tags per certificate
+    const MAX_TAG_LENGTH: u32 = 50; // Maximum characters per tag
+    const MAX_TAGS_PER_CERTIFICATE: u32 = 20; // Maximum tags per certificate
 
     /// #450 — Add a tag to a certificate. Tags are for categorization and discovery.
-    pub fn add_tag(
-        env: Env,
-        certificate_id: u64,
-        tag: String,
-    ) -> Result<(), ProvenanceError> {
+    pub fn add_tag(env: Env, certificate_id: u64, tag: String) -> Result<(), ProvenanceError> {
         let mut cert = env
             .storage()
             .persistent()
@@ -1716,11 +1701,7 @@ impl ProvenanceContract {
     }
 
     /// #450 — Remove a tag from a certificate
-    pub fn remove_tag(
-        env: Env,
-        certificate_id: u64,
-        tag: String,
-    ) -> Result<(), ProvenanceError> {
+    pub fn remove_tag(env: Env, certificate_id: u64, tag: String) -> Result<(), ProvenanceError> {
         let mut cert = env
             .storage()
             .persistent()
@@ -1744,7 +1725,7 @@ impl ProvenanceContract {
         }
 
         if !found {
-            return Ok(());  // Tag not found, return OK
+            return Ok(()); // Tag not found, return OK
         }
 
         cert.tags = new_tags;
@@ -1764,7 +1745,9 @@ impl ProvenanceContract {
             }
         }
         if new_cert_ids.len() > 0 {
-            env.storage().persistent().set(&tag_index_key, &new_cert_ids);
+            env.storage()
+                .persistent()
+                .set(&tag_index_key, &new_cert_ids);
         } else {
             env.storage().persistent().remove(&tag_index_key);
         }
@@ -1784,6 +1767,7 @@ impl ProvenanceContract {
     }
 
     /// #450 — Query certificates by tag
+    /// #450 — Query certificates by tag
     pub fn get_certificates_by_tag(
         env: Env,
         tag: String,
@@ -1802,6 +1786,98 @@ impl ProvenanceContract {
         let mut skipped = 0u32;
 
         for i in 0..cert_ids.len() {
+            if count >= limit {
+                break;
+            }
+            if skipped < offset {
+                skipped += 1;
+                continue;
+            }
+            let id = cert_ids.get_unchecked(i);
+            if let Some(cert) = env.storage().persistent().get::<u64, ProvenanceCert>(&id) {
+                results.push_back((id, cert));
+                count += 1;
+            }
+        }
+
+        results
+    }
+
+    /// #450 — Replace all tags for a certificate (bulk update)
+    pub fn set_tags(
+        env: Env,
+        certificate_id: u64,
+        new_tags: Vec<String>,
+    ) -> Result<(), ProvenanceError> {
+        let mut cert = env
+            .storage()
+            .persistent()
+            .get::<u64, ProvenanceCert>(&certificate_id)
+            .ok_or(ProvenanceError::CertificateNotFound)?;
+        cert.creator.require_auth();
+
+        if cert.locked {
+            return Err(ProvenanceError::CertificateLocked);
+        }
+
+        if new_tags.len() as u32 > Self::MAX_TAGS_PER_CERTIFICATE {
+            return Err(ProvenanceError::MaxTagsExceeded);
+        }
+
+        // Validate all tags
+        for tag in new_tags.iter() {
+            if tag.len() as u32 > Self::MAX_TAG_LENGTH {
+                return Err(ProvenanceError::InvalidTagLength);
+            }
+        }
+
+        // Remove old tags from index
+        for old_tag in cert.tags.iter() {
+            let tag_index_key = DataKey::TagIndex(old_tag.clone());
+            let cert_ids: Vec<u64> = env
+                .storage()
+                .persistent()
+                .get(&tag_index_key)
+                .unwrap_or(Vec::new(&env));
+            let mut new_cert_ids: Vec<u64> = Vec::new(&env);
+            for id in cert_ids.iter() {
+                if id != certificate_id {
+                    new_cert_ids.push_back(id);
+                }
+            }
+            if new_cert_ids.len() > 0 {
+                env.storage()
+                    .persistent()
+                    .set(&tag_index_key, &new_cert_ids);
+            } else {
+                env.storage().persistent().remove(&tag_index_key);
+            }
+        }
+
+        // Set new tags
+        cert.tags = new_tags.clone();
+        env.storage().persistent().set(&certificate_id, &cert);
+
+        // Add new tags to index
+        for new_tag in new_tags.iter() {
+            let tag_index_key = DataKey::TagIndex(new_tag.clone());
+            let mut cert_ids: Vec<u64> = env
+                .storage()
+                .persistent()
+                .get(&tag_index_key)
+                .unwrap_or(Vec::new(&env));
+            if !cert_ids.contains(&certificate_id) {
+                cert_ids.push_back(certificate_id);
+                env.storage().persistent().set(&tag_index_key, &cert_ids);
+            }
+        }
+
+        env.events()
+            .publish((symbol_short!("tag_set"),), certificate_id);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
     // #452 — Certificate endorsements (likes)
     // -----------------------------------------------------------------
 
@@ -1939,11 +2015,6 @@ impl ProvenanceContract {
                 skipped += 1;
                 continue;
             }
-            let id = cert_ids.get_unchecked(i);
-            if let Some(cert) = env.storage().persistent().get::<u64, ProvenanceCert>(&id) {
-                results.push_back((id, cert));
-                count += 1;
-            }
             results.push_back(addr);
             count += 1;
         }
@@ -1951,76 +2022,6 @@ impl ProvenanceContract {
         results
     }
 
-    /// #450 — Replace all tags for a certificate (bulk update)
-    pub fn set_tags(
-        env: Env,
-        certificate_id: u64,
-        new_tags: Vec<String>,
-    ) -> Result<(), ProvenanceError> {
-        let mut cert = env
-            .storage()
-            .persistent()
-            .get::<u64, ProvenanceCert>(&certificate_id)
-            .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
-
-        if cert.locked {
-            return Err(ProvenanceError::CertificateLocked);
-        }
-
-        if new_tags.len() as u32 > Self::MAX_TAGS_PER_CERTIFICATE {
-            return Err(ProvenanceError::MaxTagsExceeded);
-        }
-
-        // Validate all tags
-        for tag in new_tags.iter() {
-            if tag.len() as u32 > Self::MAX_TAG_LENGTH {
-                return Err(ProvenanceError::InvalidTagLength);
-            }
-        }
-
-        // Remove old tags from index
-        for old_tag in cert.tags.iter() {
-            let tag_index_key = DataKey::TagIndex(old_tag.clone());
-            let cert_ids: Vec<u64> = env
-                .storage()
-                .persistent()
-                .get(&tag_index_key)
-                .unwrap_or(Vec::new(&env));
-            let mut new_cert_ids: Vec<u64> = Vec::new(&env);
-            for id in cert_ids.iter() {
-                if id != certificate_id {
-                    new_cert_ids.push_back(id);
-                }
-            }
-            if new_cert_ids.len() > 0 {
-                env.storage().persistent().set(&tag_index_key, &new_cert_ids);
-            } else {
-                env.storage().persistent().remove(&tag_index_key);
-            }
-        }
-
-        // Set new tags
-        cert.tags = new_tags.clone();
-        env.storage().persistent().set(&certificate_id, &cert);
-
-        // Add new tags to index
-        for new_tag in new_tags.iter() {
-            let tag_index_key = DataKey::TagIndex(new_tag.clone());
-            let mut cert_ids: Vec<u64> = env
-                .storage()
-                .persistent()
-                .get(&tag_index_key)
-                .unwrap_or(Vec::new(&env));
-            if !cert_ids.contains(&certificate_id) {
-                cert_ids.push_back(certificate_id);
-                env.storage().persistent().set(&tag_index_key, &cert_ids);
-            }
-        }
-
-        env.events()
-            .publish((symbol_short!("tag_set"),), certificate_id);
-        Ok(())
     // -----------------------------------------------------------------
     // #455 — Certificate view counter
     // -----------------------------------------------------------------

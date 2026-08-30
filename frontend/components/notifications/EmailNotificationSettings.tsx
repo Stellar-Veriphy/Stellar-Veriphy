@@ -87,7 +87,10 @@ export function EmailNotificationSettings({ className = "" }: EmailNotificationS
       </label>
 
       <div className="mt-4">
-        <label htmlFor="email-notif-address" className="block text-sm text-gray-700 dark:text-gray-300">
+        <label
+          htmlFor="email-notif-address"
+          className="block text-sm text-gray-700 dark:text-gray-300"
+        >
           Email address
         </label>
         <input

@@ -15,7 +15,8 @@ import { readAllLocalData } from "./localData";
 export type BackupCategory = "settings" | "drafts" | "certificates" | "auditLog" | "apiKeys";
 
 const CATEGORY_KEY_PATTERNS: Record<BackupCategory, RegExp> = {
-  settings: /^(theme|stellarproof-theme|sv-keyboard-shortcuts|sv-onboarding-completed|sv-tutorial-seen|stellar-veriphy-notification|sv_consent_ack)/i,
+  settings:
+    /^(theme|stellarproof-theme|sv-keyboard-shortcuts|sv-onboarding-completed|sv-tutorial-seen|stellar-veriphy-notification|sv_consent_ack)/i,
   drafts: /^(autosave|draft|manifest)/i,
   certificates: /^(sv_recent_searches|sv_verification_history|sv_certificate_filter_presets)/i,
   auditLog: /^sv_audit_events/i,
@@ -126,7 +127,10 @@ export async function createBackup(options: {
   return JSON.stringify(payload, null, 2);
 }
 
-export function downloadBackup(json: string, filename = `stellarveriphy-backup-${Date.now()}.json`): void {
+export function downloadBackup(
+  json: string,
+  filename = `stellarveriphy-backup-${Date.now()}.json`
+): void {
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

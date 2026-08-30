@@ -133,7 +133,9 @@ async function dispatch(
 }
 
 /** Sends a "verification complete" notification if the subscriber opted in. */
-export async function sendVerificationCompleteEmail(certificateId: string): Promise<SentEmailRecord | null> {
+export async function sendVerificationCompleteEmail(
+  certificateId: string
+): Promise<SentEmailRecord | null> {
   const prefs = getEmailPreferences();
   if (!prefs.optedIn || !prefs.notifyOnVerificationComplete || !prefs.email) return null;
   return dispatch(prefs.email, "verification_complete", { certificateId });

@@ -5,9 +5,19 @@
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
     "build:frontend": "pnpm --filter frontend build",
+    "build:frontend:analyze": "pnpm --filter frontend run build:analyze",
     "build:contracts": "cd contracts/oracle && stellar contract build && cd ../provenance && stellar contract build && cd ../registry && stellar contract build",
     "docs:contracts": "cargo doc --manifest-path contracts/oracle/Cargo.toml --no-deps && cargo doc --manifest-path contracts/provenance/Cargo.toml --no-deps && cargo doc --manifest-path contracts/registry/Cargo.toml --no-deps",
     "check:frontend": "pnpm --filter frontend lint",
+    "check:bundle": "pnpm --filter frontend run build:check-size",
+    "bundle:analyze": "pnpm --filter frontend run bundle:analyze",
+    "setup": "bash scripts/setup.sh",
+    "clean": "bash scripts/clean.sh",
+    "reset-db": "bash scripts/reset-db.sh",
+    "generate-mock-data": "node scripts/generate-mock-data.mjs",
+    "deploy:check": "bash scripts/deploy-helper.sh staging check-only",
+    "deploy:staging": "bash scripts/deploy-helper.sh staging",
+    "deploy:production": "bash scripts/deploy-helper.sh production",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test",
     "test:e2e": "pnpm --filter frontend test:e2e",
@@ -18,6 +28,7 @@
     "test:load:report": "node ./load-tests/report-generator.mjs ./load-tests/results/frontend-summary.json ./load-tests/results/frontend-report.html",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "release": "semantic-release",
     "prepare": "husky"
   },
   "keywords": [
@@ -42,8 +53,12 @@
     ]
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "semantic-release": "^25.0.9"
   }
 }

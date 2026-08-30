@@ -88,39 +88,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SkipToContentLink />
         <ReactQueryProvider>
           <ThemeProvider>
-        <ThemeProvider>
-          <WalletProvider>
-            <NotificationProvider>
-              <WizardProvider>
-                <HelpProvider>
-                  <KeyboardShortcutsProvider>
-                    <ToastProvider>
-                      {children}
-                      <ScrollToTop />
-                      <HelpSearchOverlay />
-                      <TutorialOverlay />
-                      <PWAInstallPrompt />
-                      <PWAUpdatePrompt />
-                      <ConsentBanner />
-                      <OnboardingFlow />
-                    </ToastProvider>
-                  </KeyboardShortcutsProvider>
-                </HelpProvider>
-              </WizardProvider>
-            </NotificationProvider>
-          </WalletProvider>
-          {/* #438 — top-level boundary: catches errors in any provider or page */}
-          <ErrorBoundary section="Application">
             <WalletProvider>
               <NotificationProvider>
                 <WizardProvider>
                   <HelpProvider>
                     <KeyboardShortcutsProvider>
                       <ToastProvider>
-                        {children}
-                        {/* #438 — boundary around the page content */}
-                        <ErrorBoundary section="Page">
-                          {children}
+                        {/* #438 — top-level boundary: catches errors in any provider or page */}
+                        <ErrorBoundary section="Application">
+                          {/* #438 — boundary around the page content */}
+                          <ErrorBoundary section="Page">
+                            {children}
+                          </ErrorBoundary>
                         </ErrorBoundary>
                         <ScrollToTop />
                         <HelpSearchOverlay />
@@ -128,6 +107,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         <PWAInstallPrompt />
                         <PWAUpdatePrompt />
                         <ConsentBanner />
+                        <OnboardingFlow />
                       </ToastProvider>
                     </KeyboardShortcutsProvider>
                   </HelpProvider>
@@ -136,8 +116,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </WalletProvider>
           </ThemeProvider>
         </ReactQueryProvider>
-          </ErrorBoundary>
-        </ThemeProvider>
       </body>
     </html>
   );

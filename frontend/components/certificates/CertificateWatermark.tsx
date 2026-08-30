@@ -18,14 +18,26 @@
 import { useEffect, useRef, useState } from "react";
 
 export type WatermarkPosition =
-  | "top-left" | "top-center" | "top-right"
-  | "middle-left" | "center" | "middle-right"
-  | "bottom-left" | "bottom-center" | "bottom-right";
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "middle-left"
+  | "center"
+  | "middle-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
 
 const POSITIONS: WatermarkPosition[] = [
-  "top-left", "top-center", "top-right",
-  "middle-left", "center", "middle-right",
-  "bottom-left", "bottom-center", "bottom-right",
+  "top-left",
+  "top-center",
+  "top-right",
+  "middle-left",
+  "center",
+  "middle-right",
+  "bottom-left",
+  "bottom-center",
+  "bottom-right",
 ];
 
 const CANVAS_W = 640;
@@ -36,16 +48,29 @@ export interface CertificateWatermarkProps {
   className?: string;
 }
 
-function watermarkCoords(pos: WatermarkPosition): { x: number; y: number; align: CanvasTextAlign; baseline: CanvasTextBaseline } {
+function watermarkCoords(pos: WatermarkPosition): {
+  x: number;
+  y: number;
+  align: CanvasTextAlign;
+  baseline: CanvasTextBaseline;
+} {
   const [v, h] = pos.split("-").length === 2 ? pos.split("-") : ["middle", pos];
   const pad = 24;
   const xMap: Record<string, number> = { left: pad, center: CANVAS_W / 2, right: CANVAS_W - pad };
   const yMap: Record<string, number> = { top: pad, middle: CANVAS_H / 2, bottom: CANVAS_H - pad };
-  const alignMap: Record<string, CanvasTextAlign> = { left: "left", center: "center", right: "right" };
-  const baselineMap: Record<string, CanvasTextBaseline> = { top: "top", middle: "middle", bottom: "bottom" };
-  const hKey = pos === "center" ? "center" : h;
-  const vKey = pos === "center" ? "middle" : v;
-  return { x: xMap[hKey], y: yMap[vKey], align: alignMap[hKey], baseline: baselineMap[vKey] };
+  const alignMap: Record<string, CanvasTextAlign> = {
+    left: "left",
+    center: "center",
+    right: "right",
+  };
+  const baselineMap: Record<string, CanvasTextBaseline> = {
+    top: "top",
+    middle: "middle",
+    bottom: "bottom",
+  };
+  const hKey: string = pos === "center" ? "center" : (h ?? pos);
+  const vKey: string = pos === "center" ? "middle" : (v ?? "middle");
+  return { x: xMap[hKey]!, y: yMap[vKey]!, align: alignMap[hKey]!, baseline: baselineMap[vKey]! };
 }
 
 function drawCertificate(ctx: CanvasRenderingContext2D, certificateId: string) {

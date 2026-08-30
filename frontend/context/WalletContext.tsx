@@ -17,5 +17,5 @@
 
 // Re-export everything from the canonical locations.
 export { WalletProvider } from "@/components/WalletProvider";
+export type { WalletActions, WalletState, WalletStore } from "@/store/useWalletStore";
 export { useWallet, useWalletStore } from "@/store/useWalletStore";
-export type { WalletState, WalletActions, WalletStore } from "@/store/useWalletStore";

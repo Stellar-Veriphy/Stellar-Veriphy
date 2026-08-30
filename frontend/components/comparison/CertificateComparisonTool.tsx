@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertCircle, CheckCircle,Download, GitCompare, Search, Share2, X } from "lucide-react";
-import { useCallback,useState } from "react";
+import { AlertCircle, CheckCircle, Download, GitCompare, Search, Share2, X } from "lucide-react";
+import { useCallback, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -145,7 +145,7 @@ export function CertificateComparisonTool({
     if (selectedCertificates.length < 2) return [];
 
     type CertificateField = keyof Omit<Certificate, "metadata">;
-    const differences: Array<{ field: string; values: (string | number)[] }> = [];
+    const differences: Array<{ field: string; values: (string | number | boolean)[] }> = [];
     const fields: CertificateField[] = ["creator", "status", "storageRef"];
 
     for (const field of fields) {
