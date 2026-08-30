@@ -402,3 +402,83 @@ export interface VersionDifference {
   newValue: unknown;
   changeType: "added" | "removed" | "modified";
 }
+
+// ---------------------------------------------------------------------------
+// Analytics Dashboard (Issue #470)
+// ---------------------------------------------------------------------------
+
+/** Verification statistics. */
+export interface VerificationStatistics {
+  totalVerifications: number;
+  successfulVerifications: number;
+  failedVerifications: number;
+  successRate: number;
+  averageProcessingTime: number;
+}
+
+/** Usage trend data point. */
+export interface UsageTrendData {
+  date: string;
+  verifications: number;
+  uniqueUsers: number;
+  successfulCertificates: number;
+}
+
+/** Usage trends over a time period. */
+export interface UsageTrends {
+  period: "day" | "week" | "month" | "year";
+  data: UsageTrendData[];
+}
+
+/** Content type popularity metrics. */
+export interface ContentTypeMetric {
+  contentType: string;
+  count: number;
+  percentage: number;
+}
+
+/** Content popularity data. */
+export interface PopularContentData {
+  contentTypes: ContentTypeMetric[];
+  topContentHashes: Array<{
+    contentHash: string;
+    verificationCount: number;
+    lastVerifiedAt: number;
+  }>;
+}
+
+/** Geographic distribution data. */
+export interface GeographicDistribution {
+  country: string;
+  region?: string;
+  userCount: number;
+  verificationCount: number;
+  latitude?: number;
+  longitude?: number;
+}
+
+/** User analytics data. */
+export interface UserAnalytics {
+  totalUsers: number;
+  activeUsers: number;
+  newUsersThisMonth: number;
+  verificationsByUser: Array<{
+    publicKey: string;
+    verificationCount: number;
+    successfulVerifications: number;
+  }>;
+}
+
+/** Report export data. */
+export interface AnalyticsReport {
+  id: string;
+  generatedAt: number;
+  generatedBy: string;
+  period: string;
+  statistics: VerificationStatistics;
+  trends: UsageTrends;
+  contentPopularity: PopularContentData;
+  geographicDistribution: GeographicDistribution[];
+  userAnalytics: UserAnalytics;
+  format: "pdf" | "csv" | "json";
+}
