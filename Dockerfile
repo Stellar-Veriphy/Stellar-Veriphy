@@ -41,7 +41,7 @@ RUN cargo build --target wasm32-unknown-unknown --release
 # ============================================================================
 # Stage 2: Frontend Builder and Runtime
 # ============================================================================
-FROM node:20-slim as frontend-builder
+FROM node:26-slim as frontend-builder
 
 # Install pnpm
 RUN npm install -g pnpm@10.18.2
@@ -73,7 +73,7 @@ RUN pnpm build:frontend
 # ============================================================================
 # Stage 3: Production Runtime
 # ============================================================================
-FROM node:20-slim as runtime
+FROM node:26-slim as runtime
 
 # Install pnpm
 RUN npm install -g pnpm@10.18.2
