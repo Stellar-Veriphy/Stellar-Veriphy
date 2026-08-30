@@ -251,18 +251,13 @@ function objectToXmlContent(obj: SerializableObject, indent: number): string {
       xml += `${spaces}<${tagName} />\n`;
     } else if (typeof value === "object" && !Array.isArray(value)) {
       xml += `${spaces}<${tagName}>\n`;
-      xml += objectToXmlContent(value as SerializableObject, indent + 1);
+      xml += objectToXmlContent(value as Record<string, unknown>, indent + 1);
       xml += `${spaces}</${tagName}>\n`;
     } else if (Array.isArray(value)) {
       (value as SerializableValue[]).forEach((item) => {
         xml += `${spaces}<item>\n`;
-        if (
-          item !== null &&
-          item !== undefined &&
-          typeof item === "object" &&
-          !Array.isArray(item)
-        ) {
-          xml += objectToXmlContent(item as SerializableObject, indent + 1);
+        if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+          xml += objectToXmlContent(item as Record<string, unknown>, indent + 1);
         } else {
           xml += `${"  ".repeat(indent + 1)}${String(item)}\n`;
         }

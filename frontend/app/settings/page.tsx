@@ -1,15 +1,12 @@
 "use client";
 
 /**
- * App Settings — Issues #460, #462, #466, #467
+ * Settings Page — Issues #460, #462, #466, #467
  *
- * Hosts the user preferences panel, email notification settings, PWA
- * install/offline controls, and local-data backup/export.
- *
+ * #460, #462: User preferences and email notification settings
  * #466 "Mobile app version": StellarVeriphy ships as an installable PWA
  * rather than a native app (see PWA_SETUP_GUIDE.md) — this page surfaces
  * install status, push notification opt-in, and offline cache controls.
- *
  * #467 "Backup and export": categorized JSON export/import of this
  * browser's local data, with an optional passphrase-encrypted backup.
  */

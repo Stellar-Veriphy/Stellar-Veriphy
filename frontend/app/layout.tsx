@@ -88,30 +88,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SkipToContentLink />
         <ReactQueryProvider>
           <ThemeProvider>
-            {/* #438 — top-level boundary: catches errors in any provider or page */}
-            <ErrorBoundary section="Application">
-              <WalletProvider>
-                <NotificationProvider>
-                  <WizardProvider>
-                    <HelpProvider>
-                      <KeyboardShortcutsProvider>
-                        <ToastProvider>
+            <WalletProvider>
+              <NotificationProvider>
+                <WizardProvider>
+                  <HelpProvider>
+                    <KeyboardShortcutsProvider>
+                      <ToastProvider>
+                        {/* #438 — top-level boundary: catches errors in any provider or page */}
+                        <ErrorBoundary section="Application">
                           {/* #438 — boundary around the page content */}
-                          <ErrorBoundary section="Page">{children}</ErrorBoundary>
-                          <ScrollToTop />
-                          <HelpSearchOverlay />
-                          <TutorialOverlay />
-                          <PWAInstallPrompt />
-                          <PWAUpdatePrompt />
-                          <ConsentBanner />
-                          <OnboardingFlow />
-                        </ToastProvider>
-                      </KeyboardShortcutsProvider>
-                    </HelpProvider>
-                  </WizardProvider>
-                </NotificationProvider>
-              </WalletProvider>
-            </ErrorBoundary>
+                          <ErrorBoundary section="Page">
+                            {children}
+                          </ErrorBoundary>
+                        </ErrorBoundary>
+                        <ScrollToTop />
+                        <HelpSearchOverlay />
+                        <TutorialOverlay />
+                        <PWAInstallPrompt />
+                        <PWAUpdatePrompt />
+                        <ConsentBanner />
+                        <OnboardingFlow />
+                      </ToastProvider>
+                    </KeyboardShortcutsProvider>
+                  </HelpProvider>
+                </WizardProvider>
+              </NotificationProvider>
+            </WalletProvider>
           </ThemeProvider>
         </ReactQueryProvider>
       </body>
