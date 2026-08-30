@@ -8,6 +8,8 @@
  * next/image can serve IPFS and Arweave assets.
  *
  * Constants are sourced from `config/app.ts` to avoid magic strings.
+ *
+ * Bundle analysis can be enabled with: ANALYZE=true pnpm build
  */
 
 import withBundleAnalyzer from "@next/bundle-analyzer";
@@ -111,18 +113,18 @@ const nextConfig: NextConfig = {
   // #437 — code splitting: keep heavy vendor chunks separate so unchanged
   // pages don't bust the cache for unrelated vendor code.
   experimental: {
-    optimizePackageImports: [
-      "lucide-react",
-      "recharts",
-      "framer-motion",
-      "react-icons",
-    ],
+    optimizePackageImports: ["lucide-react", "recharts", "framer-motion", "react-icons"],
   },
 };
 
 // #437 — wrap with bundle analyser; run `ANALYZE=true pnpm build` to open report
 const analyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
+  openAnalyzer: process.env.ANALYZE === "true" && process.env.CI !== "true",
+  analyzerMode: "static",
+  reportFilename: ".bundle-reports/bundle-analysis.html",
+  generateStatsFile: true,
+  statsFilename: ".bundle-reports/bundle-stats.json",
 });
 
 export default analyzer(nextConfig);
