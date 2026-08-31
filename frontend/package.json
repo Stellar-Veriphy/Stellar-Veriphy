@@ -40,7 +40,7 @@
     "react-hook-form": "^7.54.2",
     "react-icons": "^5.6.0",
     "recharts": "^2.10.0",
-    "swagger-ui-react": "^5.18.2",
+    "swagger-ui-react": "^5.32.14",
     "tailwind-merge": "2.5.4",
     "zustand": "^5.0.3"
   },
@@ -58,7 +58,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/swagger-ui-react": "^4.19.0",
+    "@types/swagger-ui-react": "^5.18.0",
     "axe-core": "^4.10.0",
     "eslint": "9.27.0",
     "eslint-config-next": "15.0.0",
