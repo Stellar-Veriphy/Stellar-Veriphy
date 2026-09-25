@@ -253,6 +253,60 @@ export interface TeeHashWithCert {
 }
 
 // ---------------------------------------------------------------------------
+// Provenance events, records & export  (#616, #617, #618, #619)
+// ---------------------------------------------------------------------------
+
+/** Kinds of events that can appear in a content item's provenance lineage. */
+export type ProvenanceEventType =
+  | "verification_submitted"
+  | "verification_completed"
+  | "verification_failed"
+  | "certificate_minted"
+  | "metadata_updated"
+  | "ownership_transferred"
+  | "certificate_renewed"
+  | "certificate_linked"
+  | "certificate_revoked";
+
+/** A single event in the provenance history of a certificate / asset. */
+export interface ProvenanceEvent {
+  id: string;
+  certificateId: string;
+  type: ProvenanceEventType;
+  /** Stellar public key of the account that triggered the event. */
+  actor: string;
+  /** Seconds since Unix epoch. */
+  timestamp: number;
+  /** Human-readable description of what changed. */
+  details?: string;
+  /** Field-level changes, e.g. `{ owner: { from, to } }`. */
+  changes?: Record<string, { from?: string; to?: string }>;
+  /** Related certificate (for linked / derived content). */
+  relatedCertificateId?: string;
+  txHash?: string;
+}
+
+/** Flattened provenance record used for listings and exports. */
+export interface ProvenanceRecord extends CertificateDetails {
+  contentHash: string;
+  status: "active" | "revoked" | "expired";
+  fileName?: string;
+  fileType?: string;
+  eventCount: number;
+  lastEventAt: number;
+}
+
+export type ProvenanceExportFormat = "json" | "csv" | "ndjson";
+
+/** Wrapper metadata attached to every export for audit traceability. */
+export interface ProvenanceExportMeta {
+  schemaVersion: string;
+  exportedAt: string;
+  exportedBy: string;
+  scope: "own" | "all";
+  recordCount: number;
+  part: number;
+  totalParts: number;
 // Type Guards
 // ---------------------------------------------------------------------------
 

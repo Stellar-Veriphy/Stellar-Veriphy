@@ -10,5 +10,6 @@ export * from "./utils/digest";
 export * from "./types";
 export * from "./scoring/confidence";
 export * from "./types";
+export * from "./utils/hash";export * from "./utils/provenanceExport";
 export * from "./utils/hash";
 export * from "./factories";
