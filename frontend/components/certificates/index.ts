@@ -1,8 +1,12 @@
-export { CertificateVerificationPanel } from "./CertificateVerificationPanel";
+export { CertificateGallery } from "./CertificateGallery";
+export type { HistoryEvent } from "./CertificateHistoryTimeline";
+export { CertificateHistoryTimeline, generateMockHistory } from "./CertificateHistoryTimeline";
 export { CertificateLookupForm } from "./CertificateLookupForm";
 export { CertificateResultCard } from "./CertificateResultCard";
-export { CertificateStatusBadge } from "./CertificateStatusBadge";
 export type { CertificateStatus } from "./CertificateStatusBadge";
-export { CertificateHistoryTimeline, generateMockHistory } from "./CertificateHistoryTimeline";
-export type { HistoryEvent } from "./CertificateHistoryTimeline";
-
+export { CertificateStatusBadge } from "./CertificateStatusBadge";
+export { CertificateVerificationPanel } from "./CertificateVerificationPanel";
+export type { WatermarkPosition } from "./CertificateWatermark";
+export { CertificateWatermark } from "./CertificateWatermark";
+export type { BadgeSize, BadgeStyle, VerificationLevel } from "./VerificationBadge";
+export { VerificationBadge } from "./VerificationBadge";

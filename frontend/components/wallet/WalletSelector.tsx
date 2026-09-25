@@ -16,8 +16,10 @@
  */
 
 import { useEffect, useState } from "react";
+
 import { useWallet } from "@/context/WalletContext";
 import type { WalletType } from "@/services/walletAdapters";
+import { renderTextWithLink } from "@/utils/renderTextWithLink";
 
 interface Props {
   /** Whether the selector panel is visible. */
@@ -34,10 +36,19 @@ interface AdapterStatus {
 }
 
 export function WalletSelector({ open, onClose }: Props) {
-  const { adapters, walletType, connected, publicKey, connect, switchWallet, disconnect, error, clearError } =
-    useWallet();
+  const {
+    adapters,
+    walletType,
+    connected,
+    publicKey,
+    connect,
+    switchWallet,
+    disconnect,
+    error,
+    clearError,
+  } = useWallet();
 
-  const [statuses, setStatuses]     = useState<AdapterStatus[]>([]);
+  const [statuses, setStatuses] = useState<AdapterStatus[]>([]);
   const [connecting, setConnecting] = useState<WalletType | null>(null);
 
   // Probe availability for every adapter once the panel opens
@@ -48,17 +59,19 @@ export function WalletSelector({ open, onClose }: Props) {
     const probe = async () => {
       const results = await Promise.all(
         adapters.map(async (a) => ({
-          type:       a.type,
-          name:       a.name,
+          type: a.type,
+          name: a.name,
           installUrl: a.installUrl,
-          available:  await a.isAvailable(),
+          available: await a.isAvailable(),
         }))
       );
       if (!cancelled) setStatuses(results);
     };
 
     probe();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, adapters]);
 
   if (!open) return null;
@@ -107,8 +120,18 @@ export function WalletSelector({ open, onClose }: Props) {
 
         {/* Error banner */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-900/30 border border-red-700 px-4 py-3 text-sm text-red-300">
-            {error}
+          <div
+            role="alert"
+            className="mb-4 flex items-start gap-3 rounded-lg bg-red-900/30 border border-red-700 px-4 py-3 text-sm text-red-300"
+          >
+            <p className="flex-1">{renderTextWithLink(error, "underline hover:text-red-100")}</p>
+            <button
+              onClick={clearError}
+              aria-label="Dismiss error"
+              className="shrink-0 text-red-400 hover:text-red-200 transition-colors leading-none"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -120,7 +143,10 @@ export function WalletSelector({ open, onClose }: Props) {
               <p className="text-sm font-mono text-white">{truncate(publicKey)}</p>
             </div>
             <button
-              onClick={() => { disconnect(); onClose(); }}
+              onClick={() => {
+                disconnect();
+                onClose();
+              }}
               className="text-xs text-red-400 hover:text-red-300 transition-colors"
             >
               Disconnect
@@ -131,10 +157,10 @@ export function WalletSelector({ open, onClose }: Props) {
         {/* Wallet list */}
         <ul className="space-y-3">
           {adapters.map((adapter) => {
-            const status     = statuses.find((s) => s.type === adapter.type);
-            const available  = status?.available ?? false;
-            const isCurrent  = walletType === adapter.type && connected;
-            const isLoading  = connecting === adapter.type;
+            const status = statuses.find((s) => s.type === adapter.type);
+            const available = status?.available ?? false;
+            const isCurrent = walletType === adapter.type && connected;
+            const isLoading = connecting === adapter.type;
 
             return (
               <li key={adapter.type}>
@@ -196,15 +222,15 @@ export function WalletSelector({ open, onClose }: Props) {
 function WalletIcon({ type }: { type: WalletType }) {
   const colours: Record<WalletType, string> = {
     freighter: "bg-blue-600",
-    albedo:    "bg-purple-600",
-    xbull:     "bg-amber-600",
-    rabet:     "bg-teal-600",
+    albedo: "bg-purple-600",
+    xbull: "bg-amber-600",
+    rabet: "bg-teal-600",
   };
   const labels: Record<WalletType, string> = {
     freighter: "Fr",
-    albedo:    "Al",
-    xbull:     "xB",
-    rabet:     "Rb",
+    albedo: "Al",
+    xbull: "xB",
+    rabet: "Rb",
   };
   return (
     <div

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { cn } from "@/utils/cn";
 
@@ -60,11 +61,7 @@ export function InfiniteList<T>({
   const SkeletonComponent = renderSkeleton || defaultSkeleton;
 
   if (items.length === 0 && !isLoading) {
-    return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        {emptyMessage}
-      </div>
-    );
+    return <div className="text-center py-12 text-gray-500 dark:text-gray-400">{emptyMessage}</div>;
   }
 
   if (itemHeight) {

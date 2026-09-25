@@ -25,7 +25,7 @@ export function useFocusManager() {
     focusableElements.current = Array.from(focusable);
 
     if (focusable.length > 0) {
-      focusable[0].focus();
+      focusable[0]?.focus();
     }
   };
 
@@ -33,9 +33,7 @@ export function useFocusManager() {
    * Move focus to the next focusable element
    */
   const focusNext = () => {
-    const currentIndex = focusableElements.current.findIndex(
-      (el) => el === document.activeElement
-    );
+    const currentIndex = focusableElements.current.findIndex((el) => el === document.activeElement);
     const nextIndex = (currentIndex + 1) % focusableElements.current.length;
     focusableElements.current[nextIndex]?.focus();
   };
@@ -44,12 +42,8 @@ export function useFocusManager() {
    * Move focus to the previous focusable element
    */
   const focusPrevious = () => {
-    const currentIndex = focusableElements.current.findIndex(
-      (el) => el === document.activeElement
-    );
-    const prevIndex = currentIndex <= 0 
-      ? focusableElements.current.length - 1 
-      : currentIndex - 1;
+    const currentIndex = focusableElements.current.findIndex((el) => el === document.activeElement);
+    const prevIndex = currentIndex <= 0 ? focusableElements.current.length - 1 : currentIndex - 1;
     focusableElements.current[prevIndex]?.focus();
   };
 
@@ -59,7 +53,7 @@ export function useFocusManager() {
   const announceToScreenReader = (message: string, priority: "polite" | "assertive" = "polite") => {
     const announcementId = "screen-reader-announcement";
     let announcementElement = document.getElementById(announcementId);
-    
+
     if (!announcementElement) {
       announcementElement = document.createElement("div");
       announcementElement.id = announcementId;
@@ -71,7 +65,7 @@ export function useFocusManager() {
 
     // Update content to trigger announcement
     announcementElement.textContent = message;
-    
+
     // Clear after announcement
     setTimeout(() => {
       if (announcementElement) {
@@ -103,7 +97,7 @@ export function useKeyboardNavigation() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Skip to main content (Ctrl+Alt+M)
-      if (event.ctrlKey && event.altKey && event.key === 'm') {
+      if (event.ctrlKey && event.altKey && event.key === "m") {
         event.preventDefault();
         const mainContent = document.querySelector('main, [role="main"]');
         if (mainContent instanceof HTMLElement) {
@@ -112,10 +106,10 @@ export function useKeyboardNavigation() {
       }
 
       // Escape key to close modals/menus
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         const openModals = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
         const openMenus = document.querySelectorAll('[role="menu"][aria-expanded="true"]');
-        
+
         if (openModals.length > 0) {
           const lastModal = openModals[openModals.length - 1] as HTMLElement;
           lastModal.focus();
@@ -123,13 +117,13 @@ export function useKeyboardNavigation() {
           const lastMenu = openMenus[openMenus.length - 1] as HTMLElement;
           const menuButton = lastMenu.previousElementSibling as HTMLElement;
           menuButton?.focus();
-          menuButton?.setAttribute('aria-expanded', 'false');
+          menuButton?.setAttribute("aria-expanded", "false");
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 }
 
@@ -143,11 +137,11 @@ export function SkipToContentLink() {
       className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       onClick={(e) => {
         e.preventDefault();
-        const mainContent = document.getElementById('main-content');
+        const mainContent = document.getElementById("main-content");
         if (mainContent) {
-          mainContent.setAttribute('tabindex', '-1');
+          mainContent.setAttribute("tabindex", "-1");
           mainContent.focus();
-          setTimeout(() => mainContent.removeAttribute('tabindex'), 100);
+          setTimeout(() => mainContent.removeAttribute("tabindex"), 100);
         }
       }}
     >
@@ -180,12 +174,7 @@ export function AriaLiveRegion({
   className?: string;
 }) {
   return (
-    <div
-      role={role}
-      aria-live={priority}
-      aria-atomic="true"
-      className={`sr-only ${className}`}
-    />
+    <div role={role} aria-live={priority} aria-atomic="true" className={`sr-only ${className}`} />
   );
 }
 
@@ -200,27 +189,27 @@ export function getAriaDescribedBy(
   const ids = [];
   if (helpId) ids.push(helpId);
   if (errorId) ids.push(errorId);
-  return ids.length > 0 ? ids.join(' ') : undefined;
+  return ids.length > 0 ? ids.join(" ") : undefined;
 }
 
 /**
  * Check if color contrast meets WCAG AA standards
  */
-export function checkColorContrast(
-  foreground: string,
-  background: string
-): boolean {
+export function checkColorContrast(foreground: string, background: string): boolean {
   // Simple contrast checker (simplified implementation)
   // In production, use a proper contrast checking library
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
+    if (!result) return null;
+    const r = result[1];
+    const g = result[2];
+    const b = result[3];
+    if (!r || !g || !b) return null;
+    return {
+      r: parseInt(r, 16),
+      g: parseInt(g, 16),
+      b: parseInt(b, 16),
+    };
   };
 
   const fgRgb = hexToRgb(foreground);
@@ -233,7 +222,10 @@ export function checkColorContrast(
       v /= 255;
       return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
     });
-    return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+    const a0 = a[0] ?? 0;
+    const a1 = a[1] ?? 0;
+    const a2 = a[2] ?? 0;
+    return a0 * 0.2126 + a1 * 0.7152 + a2 * 0.0722;
   };
 
   const lum1 = luminance(fgRgb.r, fgRgb.g, fgRgb.b);

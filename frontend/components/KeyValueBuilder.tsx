@@ -9,9 +9,15 @@ interface KeyValuePair {
   type: "string" | "number" | "boolean" | "object";
 }
 
+/** Scalar metadata values supported by the key-value builder. */
+export type MetadataScalar = string | number | boolean;
+
+/** Parsed metadata value — scalar, nested object, or array of scalars. */
+export type MetadataValue = MetadataScalar | Record<string, MetadataScalar> | MetadataScalar[];
+
 interface KeyValueBuilderProps {
-  value?: Record<string, any>;
-  onChange?: (value: Record<string, any>) => void;
+  value?: Record<string, MetadataValue>;
+  onChange?: (value: Record<string, MetadataValue>) => void;
 }
 
 export function KeyValueBuilder({ value = {}, onChange }: KeyValueBuilderProps) {
@@ -41,15 +47,13 @@ export function KeyValueBuilder({ value = {}, onChange }: KeyValueBuilderProps) 
   };
 
   const handleUpdatePair = (id: string, field: keyof KeyValuePair, val: string) => {
-    const updated = pairs.map((p) =>
-      p.id === id ? { ...p, [field]: val } : p
-    );
+    const updated = pairs.map((p) => (p.id === id ? { ...p, [field]: val } : p));
     setPairs(updated);
     updateParent(updated);
   };
 
   const updateParent = (pairs: KeyValuePair[]) => {
-    const result: Record<string, any> = {};
+    const result: Record<string, MetadataValue> = {};
     pairs.forEach((p) => {
       if (p.key) {
         if (p.type === "number") {
@@ -58,7 +62,7 @@ export function KeyValueBuilder({ value = {}, onChange }: KeyValueBuilderProps) 
           result[p.key] = p.value === "true";
         } else if (p.type === "object") {
           try {
-            result[p.key] = JSON.parse(p.value);
+            result[p.key] = JSON.parse(p.value) as Record<string, MetadataScalar>;
           } catch {
             result[p.key] = p.value;
           }
@@ -84,7 +88,7 @@ export function KeyValueBuilder({ value = {}, onChange }: KeyValueBuilderProps) 
           <select
             value={pair.type}
             onChange={(e) =>
-              handleUpdatePair(pair.id, "type", e.target.value as any)
+              handleUpdatePair(pair.id, "type", e.target.value as KeyValuePair["type"])
             }
             className="px-3 py-2 border rounded bg-white dark:bg-gray-800 text-black dark:text-white"
           >

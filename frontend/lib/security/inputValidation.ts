@@ -1,5 +1,5 @@
-import { isValidSHA256, isValidStellarAddress } from "@/utils/validation";
 import { sanitizeManifest, validateManifest } from "@/utils/manifestValidation";
+import { isValidSHA256, isValidStellarAddress } from "@/utils/validation";
 
 const MAX_REQUEST_BYTES = Number(process.env.MAX_VERIFICATION_FILE_SIZE_BYTES ?? 100 * 1024 * 1024);
 const DEFAULT_ALLOWED_FILE_TYPES = [
@@ -55,7 +55,9 @@ export function validateHashFormat(hash: string): boolean {
   return isValidSHA256(hash);
 }
 
-export function validateVerificationRequest(payload: unknown): ValidationResult<VerificationRequestPayload> {
+export function validateVerificationRequest(
+  payload: unknown
+): ValidationResult<VerificationRequestPayload> {
   const errors: string[] = [];
   if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
     return { valid: false, errors: ["Request payload must be an object."] };
@@ -63,7 +65,8 @@ export function validateVerificationRequest(payload: unknown): ValidationResult<
 
   const data = payload as Record<string, unknown>;
   const address = typeof data.address === "string" ? sanitizeUserString(data.address) : "";
-  const contentHash = typeof data.contentHash === "string" ? sanitizeUserString(data.contentHash) : "";
+  const contentHash =
+    typeof data.contentHash === "string" ? sanitizeUserString(data.contentHash) : "";
   const fileName = typeof data.fileName === "string" ? sanitizeUserString(data.fileName) : "";
   const fileType = typeof data.fileType === "string" ? sanitizeUserString(data.fileType) : "";
   const fileSizeBytes = typeof data.fileSizeBytes === "number" ? data.fileSizeBytes : -1;

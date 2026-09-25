@@ -16,13 +16,9 @@ export interface WalletService {
     network: string;
     networkUrl: string;
     networkPassphrase: string;
-    sorobanRpcUrl?: string;
+    sorobanRpcUrl?: string | undefined;
   }>;
-  signTransaction(
-    xdr: string,
-    networkPassphrase: string,
-    address: string
-  ): Promise<string>;
+  signTransaction(xdr: string, networkPassphrase: string, address: string): Promise<string>;
 }
 
 const mockWalletService: WalletService = {

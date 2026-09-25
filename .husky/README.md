@@ -6,24 +6,38 @@ This directory contains Git hooks managed by [Husky](https://typicode.github.io/
 
 ### pre-commit
 
-**Purpose**: Lint and format staged files before committing
+**Purpose**: Lint, format, and type-check staged files before committing
 
 **What it does**:
+
 - Runs `lint-staged` on staged files
 - Automatically fixes ESLint errors in TypeScript/TSX files
+- Formats code with Prettier
 - Formats Rust files with rustfmt
+- Runs TypeScript type checking on entire project
+- Prevents commits with linting or type errors
 
 **Files affected**:
-- `frontend/**/*.{ts,tsx}` - ESLint with auto-fix
+
+- `frontend/**/*.{ts,tsx}` - ESLint with auto-fix + Prettier
 - `contracts/**/*.rs` - Rustfmt formatting
+- `**/*.{js,json,css,md,yml,yaml}` - Prettier formatting
 
 **How it works**:
+
 ```bash
 # When you run: git commit
-# Husky automatically runs: npx lint-staged
+# Husky automatically runs:
+# 1. npx lint-staged (lint and format staged files)
+# 2. pnpm typecheck (type check entire project)
 ```
 
 **Configuration**: See `lint-staged` section in root `package.json`
+
+**Prevents commits if**:
+
+- Linting errors are detected
+- Type check fails
 
 ---
 
@@ -32,17 +46,20 @@ This directory contains Git hooks managed by [Husky](https://typicode.github.io/
 **Purpose**: Build frontend to catch errors before pushing
 
 **What it does**:
+
 - Runs `pnpm build:frontend`
 - Fails the push if build errors are detected
 - Ensures only working code is pushed to remote
 
 **How it works**:
+
 ```bash
 # When you run: git push
 # Husky automatically runs: pnpm build:frontend
 ```
 
 **Output**:
+
 - ✅ Success: Push proceeds
 - ❌ Failure: Push is blocked, fix errors first
 
@@ -104,17 +121,20 @@ unset HUSKY
 **Solutions**:
 
 1. **Reinstall Husky**:
+
    ```bash
    pnpm install
    ```
 
 2. **Check hook permissions**:
+
    ```bash
    ls -la .husky/
    # pre-commit and pre-push should be executable (-rwxr-xr-x)
    ```
 
 3. **Make hooks executable**:
+
    ```bash
    chmod +x .husky/pre-commit
    chmod +x .husky/pre-push
@@ -135,12 +155,14 @@ unset HUSKY
 **Solutions**:
 
 1. **Check ESLint configuration**:
+
    ```bash
    cd frontend
    pnpm lint
    ```
 
 2. **Fix linting errors manually**:
+
    ```bash
    cd frontend
    pnpm lint --fix
@@ -160,6 +182,7 @@ unset HUSKY
 **Solutions**:
 
 1. **Build locally to see errors**:
+
    ```bash
    pnpm build:frontend
    ```
@@ -209,13 +232,11 @@ Edit the `lint-staged` section in root `package.json`:
   "lint-staged": {
     "frontend/**/*.{ts,tsx}": [
       "eslint --fix",
-      "prettier --write"  // Add prettier
+      "prettier --write" // Add prettier
     ],
-    "contracts/**/*.rs": [
-      "rustfmt --edition 2021"
-    ],
+    "contracts/**/*.rs": ["rustfmt --edition 2021"],
     "**/*.md": [
-      "prettier --write"  // Format markdown
+      "prettier --write" // Format markdown
     ]
   }
 }

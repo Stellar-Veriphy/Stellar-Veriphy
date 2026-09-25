@@ -1,10 +1,12 @@
 "use client";
 
+import { ContentManifest } from "@stellarveriphy/shared/types";
 import { useState } from "react";
-import { ContentManifest } from "@stellar-veriphy/shared/types";
+
+import { jsonToXml } from "@/utils/manifestConverter";
+
 import { FormatToggle } from "./FormatToggle";
 import { ManifestPreview } from "./ManifestPreview";
-import { jsonToXml } from "@/utils/manifestConverter";
 
 interface ManifestModalProps {
   manifest: ContentManifest;
@@ -12,11 +14,7 @@ interface ManifestModalProps {
   onClose: () => void;
 }
 
-export function ManifestModal({
-  manifest,
-  isOpen,
-  onClose,
-}: ManifestModalProps) {
+export function ManifestModal({ manifest, isOpen, onClose }: ManifestModalProps) {
   const [format, setFormat] = useState<"json" | "xml">("json");
 
   if (!isOpen) return null;
@@ -25,7 +23,7 @@ export function ManifestModal({
     const content =
       format === "json"
         ? JSON.stringify(manifest, null, 2)
-        : jsonToXml(manifest, "manifest");
+        : jsonToXml(manifest as unknown as Parameters<typeof jsonToXml>[0], "manifest");
 
     const filename = `manifest.${format}`;
     const blob = new Blob([content], {
@@ -44,10 +42,7 @@ export function ManifestModal({
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold">Manifest</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
             ×
           </button>
         </div>
@@ -63,7 +58,14 @@ export function ManifestModal({
             </button>
           </div>
 
-          <ManifestPreview manifest={manifest} format={format} />
+          <ManifestPreview
+            content={
+              format === "json"
+                ? JSON.stringify(manifest, null, 2)
+                : jsonToXml(manifest as unknown as Parameters<typeof jsonToXml>[0], "manifest")
+            }
+            format={format}
+          />
         </div>
       </div>
     </div>

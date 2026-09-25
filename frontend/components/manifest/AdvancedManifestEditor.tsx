@@ -8,10 +8,11 @@
  * validation error messages, format suggestions, and a schema version selector.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useRef,useState } from "react";
+
 import { cn } from "@/utils/cn";
 import { validateManifest } from "@/utils/manifestValidation";
-import { isValidStellarAddress, isValidSHA256 } from "@/utils/validation";
+import { isValidSHA256,isValidStellarAddress } from "@/utils/validation";
 
 // ---------------------------------------------------------------------------
 // Schema versions
@@ -130,8 +131,8 @@ const FIELD_CONFIGS: FieldConfig[] = [
       !v.trim()
         ? "contentHash is required."
         : !isValidSHA256(v)
-        ? "Must be a valid SHA-256 hex string (64 hexadecimal characters)."
-        : null,
+          ? "Must be a valid SHA-256 hex string (64 hexadecimal characters)."
+          : null,
   },
   {
     key: "creator",
@@ -143,8 +144,8 @@ const FIELD_CONFIGS: FieldConfig[] = [
       !v.trim()
         ? "creator is required."
         : !isValidStellarAddress(v)
-        ? "Must be a valid Stellar public key (starts with 'G', 56 base-32 characters)."
-        : null,
+          ? "Must be a valid Stellar public key (starts with 'G', 56 base-32 characters)."
+          : null,
   },
   {
     key: "timestamp",
@@ -190,10 +191,10 @@ interface AutoCompleteInputProps {
   id: string;
   value: string;
   onChange: (val: string) => void;
-  suggestions?: string[];
-  placeholder?: string;
-  hasError?: boolean;
-  "aria-describedby"?: string;
+  suggestions?: string[] | undefined;
+  placeholder?: string | undefined;
+  hasError?: boolean | undefined;
+  "aria-describedby"?: string | undefined;
 }
 
 function AutoCompleteInput({
@@ -231,7 +232,10 @@ function AutoCompleteInput({
       setHighlighted((h) => Math.max(h - 1, 0));
     } else if (e.key === "Enter" && highlighted >= 0) {
       e.preventDefault();
-      select(filtered[highlighted]);
+      const item = filtered[highlighted];
+      if (item) {
+        select(item);
+      }
     } else if (e.key === "Escape") {
       setShowSuggestions(false);
     }
@@ -261,9 +265,7 @@ function AutoCompleteInput({
           "w-full px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white",
           "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
           "transition-colors",
-          hasError
-            ? "border-red-500 focus:ring-red-400"
-            : "border-gray-300 dark:border-gray-600"
+          hasError ? "border-red-500 focus:ring-red-400" : "border-gray-300 dark:border-gray-600"
         )}
       />
       {isOpen && (
@@ -334,7 +336,7 @@ export function AdvancedManifestEditor({
       // Required fields from schema
       for (const fieldCfg of FIELD_CONFIGS) {
         if (!schema.requiredFields.includes(fieldCfg.key)) continue;
-        const raw = (current as Record<string, unknown>)[fieldCfg.key];
+        const raw = (current as unknown as Record<string, unknown>)[fieldCfg.key];
         const val = typeof raw === "string" ? raw : "";
         const err = fieldCfg.validate(val);
         if (err) errors[fieldCfg.key] = err;
@@ -358,8 +360,9 @@ export function AdvancedManifestEditor({
       const fullResult = validateManifest(current);
       if (!fullResult.valid) {
         fullResult.errors.forEach((e) => {
-          const key = e.split(" ")[0].replace(".", "");
-          if (!errors[key]) errors[key] = e;
+          const firstPart = e.split(" ")[0];
+          const key = firstPart ? firstPart.replace(".", "") : "";
+          if (key && !errors[key]) errors[key] = e;
         });
       }
 
@@ -410,9 +413,7 @@ export function AdvancedManifestEditor({
   };
 
   // Derive datetime-local compatible value for the timestamp input
-  const timestampLocal = values.timestamp
-    ? values.timestamp.slice(0, 16)
-    : "";
+  const timestampLocal = values.timestamp ? values.timestamp.slice(0, 16) : "";
 
   const totalErrors = Object.keys(fieldErrors).length;
   const hasAnyTouched = touchedFields.size > 0;
@@ -426,7 +427,9 @@ export function AdvancedManifestEditor({
           className="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
         >
           Schema Version{" "}
-          <span className="text-red-500" aria-hidden="true">*</span>
+          <span className="text-red-500" aria-hidden="true">
+            *
+          </span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {SCHEMA_VERSIONS.map((sv) => (
@@ -479,13 +482,9 @@ export function AdvancedManifestEditor({
           </span>
         </legend>
         <div className="space-y-4">
-          {FIELD_CONFIGS.filter((f) =>
-            schema.requiredFields.includes(f.key)
-          ).map((field) => {
+          {FIELD_CONFIGS.filter((f) => schema.requiredFields.includes(f.key)).map((field) => {
             const errorKey = field.key;
-            const errorMsg = touchedFields.has(field.key)
-              ? fieldErrors[errorKey]
-              : undefined;
+            const errorMsg = touchedFields.has(field.key) ? fieldErrors[errorKey] : undefined;
             const hintId = `${field.key}-hint`;
             const errorId = `${field.key}-error`;
             const isActive = activeHint === field.key;
@@ -507,9 +506,7 @@ export function AdvancedManifestEditor({
                       type="button"
                       aria-expanded={isActive}
                       aria-controls={hintId}
-                      onClick={() =>
-                        setActiveHint(isActive ? null : field.key)
-                      }
+                      onClick={() => setActiveHint(isActive ? null : field.key)}
                       className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
                     >
                       Format hint
@@ -535,15 +532,11 @@ export function AdvancedManifestEditor({
                     aria-describedby={errorMsg ? errorId : undefined}
                     aria-invalid={!!errorMsg}
                     onChange={(e) => setTopLevelField("timestamp", e.target.value)}
-                    onBlur={() =>
-                      setTouchedFields((p) => new Set(p).add(field.key))
-                    }
+                    onBlur={() => setTouchedFields((p) => new Set(p).add(field.key))}
                     className={cn(
                       "w-full px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white",
                       "focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors",
-                      errorMsg
-                        ? "border-red-500"
-                        : "border-gray-300 dark:border-gray-600"
+                      errorMsg ? "border-red-500" : "border-gray-300 dark:border-gray-600"
                     )}
                   />
                 ) : (
@@ -551,27 +544,20 @@ export function AdvancedManifestEditor({
                     id={field.key}
                     type="text"
                     value={
-                      (values as Record<string, unknown>)[field.key] as string ?? ""
+                      ((values as unknown as Record<string, unknown>)[field.key] as string) ?? ""
                     }
                     placeholder={field.placeholder}
                     aria-required="true"
                     aria-describedby={errorMsg ? errorId : undefined}
                     aria-invalid={!!errorMsg}
                     onChange={(e) =>
-                      setTopLevelField(
-                        field.key as keyof AdvancedManifestValue,
-                        e.target.value
-                      )
+                      setTopLevelField(field.key as keyof AdvancedManifestValue, e.target.value)
                     }
-                    onBlur={() =>
-                      setTouchedFields((p) => new Set(p).add(field.key))
-                    }
+                    onBlur={() => setTouchedFields((p) => new Set(p).add(field.key))}
                     className={cn(
                       "w-full px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono",
                       "focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors",
-                      errorMsg
-                        ? "border-red-500"
-                        : "border-gray-300 dark:border-gray-600"
+                      errorMsg ? "border-red-500" : "border-gray-300 dark:border-gray-600"
                     )}
                   />
                 )}
@@ -601,14 +587,10 @@ export function AdvancedManifestEditor({
             {schema.optionalFields.map((optKey) => {
               const subKey = optKey.replace("metadata.", "");
               const label =
-                subKey.charAt(0).toUpperCase() +
-                subKey.slice(1).replace(/([A-Z])/g, " $1");
-              const errorMsg = touchedFields.has(optKey)
-                ? fieldErrors[optKey]
-                : undefined;
+                subKey.charAt(0).toUpperCase() + subKey.slice(1).replace(/([A-Z])/g, " $1");
+              const errorMsg = touchedFields.has(optKey) ? fieldErrors[optKey] : undefined;
               const errorId = `${subKey}-error`;
-              const metaVal =
-                ((values.metadata ?? {}) as Record<string, unknown>)[subKey];
+              const metaVal = ((values.metadata ?? {}) as Record<string, unknown>)[subKey];
               const fieldVal = typeof metaVal === "string" ? metaVal : "";
               const suggestions = FIELD_SUGGESTIONS[optKey] ?? [];
 

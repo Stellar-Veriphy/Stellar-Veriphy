@@ -2,16 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
 import { useHelp } from "@/context/HelpContext";
 
 export function HelpSearchOverlay() {
-  const {
-    showHelpSearch,
-    closeHelpSearch,
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-  } = useHelp();
+  const { showHelpSearch, closeHelpSearch, searchQuery, setSearchQuery, searchResults } = useHelp();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -84,9 +79,7 @@ export function HelpSearchOverlay() {
         </div>
         <div className="max-h-80 overflow-y-auto p-2">
           {searchResults.length === 0 ? (
-            <div className="text-center py-8 text-sm text-gray-500">
-              No help articles found
-            </div>
+            <div className="text-center py-8 text-sm text-gray-500">No help articles found</div>
           ) : (
             searchResults.map((article, i) => (
               <a

@@ -28,14 +28,13 @@
  *   npm run test:e2e -- search-and-filtering
  */
 
-import { test, expect, type Page, type Locator } from "@playwright/test";
+import { expect, type Locator,type Page, test } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Constants — match these to the seeded fixture data in your dev environment
 // ---------------------------------------------------------------------------
 
-const KNOWN_MANIFEST_HASH =
-  "a3f5c2e1b4d6789012345678901234567890abcdef1234567890abcdef123456";
+const KNOWN_MANIFEST_HASH = "a3f5c2e1b4d6789012345678901234567890abcdef1234567890abcdef123456";
 const KNOWN_CREATOR_ADDRESS = "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ";
 const KNOWN_CERT_ID = "1";
 const NONEXISTENT_QUERY = "zzz_this_should_never_match_anything_xyz";
@@ -398,7 +397,7 @@ test.describe("Search and filtering", () => {
       if (await el.isVisible({ timeout: 3_000 }).catch(() => false)) {
         const tag = await el.evaluate((e) => e.tagName.toLowerCase());
         if (tag === "select") {
-          await el.selectOption({ label: /newest|descending|date desc/i });
+          await el.selectOption({ label: "Newest" }).catch(() => el.selectOption({ index: 0 }));
         } else {
           await el.click();
         }
@@ -442,7 +441,7 @@ test.describe("Search and filtering", () => {
       if (await el.isVisible({ timeout: 3_000 }).catch(() => false)) {
         const tag = await el.evaluate((e) => e.tagName.toLowerCase());
         if (tag === "select") {
-          await el.selectOption({ label: /oldest|ascending|date asc/i });
+          await el.selectOption({ label: "Oldest" }).catch(() => el.selectOption({ index: 1 }));
         } else {
           await el.click();
         }
@@ -536,9 +535,9 @@ test.describe("Search and filtering", () => {
 
     if (!(await perPageSelect.isVisible({ timeout: 3_000 }).catch(() => false))) return;
 
-    await perPageSelect.selectOption({ value: "5" }).catch(() =>
-      perPageSelect.selectOption({ label: "5" })
-    );
+    await perPageSelect
+      .selectOption({ value: "5" })
+      .catch(() => perPageSelect.selectOption({ label: "5" }));
     await page.waitForTimeout(600);
 
     const count = await countResults(page);
@@ -620,10 +619,7 @@ test.describe("Search and filtering", () => {
     const placeholder = await input.getAttribute("placeholder");
 
     // At least one of these should describe the input
-    const hasLabel =
-      Boolean(ariaLabel) ||
-      Boolean(ariaLabelledBy) ||
-      Boolean(placeholder);
+    const hasLabel = Boolean(ariaLabel) || Boolean(ariaLabelledBy) || Boolean(placeholder);
 
     expect(hasLabel).toBe(true);
   });

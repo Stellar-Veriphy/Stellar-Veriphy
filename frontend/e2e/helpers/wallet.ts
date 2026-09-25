@@ -8,7 +8,7 @@
  * when the env-var is set.
  */
 
-import { Page, expect } from "@playwright/test";
+import { expect,Page } from "@playwright/test";
 
 /** Click the primary "Connect Wallet" CTA wherever it appears on the page. */
 export async function openWalletModal(page: Page): Promise<void> {
@@ -36,9 +36,9 @@ export async function connectMockWallet(page: Page): Promise<string> {
   await openWalletModal(page);
 
   // The wallet modal should appear
-  await expect(
-    page.locator('[role="dialog"], [data-testid="wallet-modal"]').first()
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('[role="dialog"], [data-testid="wallet-modal"]').first()).toBeVisible({
+    timeout: 10_000,
+  });
 
   // Click the first available wallet option (Freighter or Mock)
   const walletOptions = page.locator(

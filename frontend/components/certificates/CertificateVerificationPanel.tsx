@@ -13,23 +13,27 @@
  * rendering to sub-components.
  */
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
+
+import { CertificateCardSkeleton } from "@/components/ui/Skeleton";
+import { recordVerificationEvent } from "@/lib/verificationHistory";
 import type {
   CertificateLookupMethod,
-  CertificateVerificationResult,
   CertificateSearchResult,
+  CertificateVerificationResult,
 } from "@/services/certificateVerificationService";
 import {
-  getCertificateById,
+  generateVerificationCode,
   getCertificateByCode,
+  getCertificateById,
   getCertificatesByCreator,
   verifyCertificateAuthenticity,
-  generateVerificationCode,
 } from "@/services/certificateVerificationService";
+
+import type { HistoryEvent } from "./CertificateHistoryTimeline";
+import { CertificateHistoryTimeline, generateMockHistory } from "./CertificateHistoryTimeline";
 import { CertificateLookupForm } from "./CertificateLookupForm";
 import { CertificateResultCard } from "./CertificateResultCard";
-import { CertificateHistoryTimeline, generateMockHistory } from "./CertificateHistoryTimeline";
-import type { HistoryEvent } from "./CertificateHistoryTimeline";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +82,12 @@ export function CertificateVerificationPanel() {
     }
 
     if (!response.success || !response.data) {
+      recordVerificationEvent({
+        method,
+        query: value,
+        status: "not_found",
+        details: response.error,
+      });
       setLookupState({ status: "error", message: response.error ?? "Unknown error" });
       return;
     }
@@ -88,16 +98,34 @@ export function CertificateVerificationPanel() {
       // Single result
       const result = data as CertificateVerificationResult;
       setLookupState({ status: "loaded", result });
+      recordVerificationEvent({
+        method,
+        query: value,
+        certificateId: result.certificate.id,
+        status: result.isRevoked ? "revoked" : "verified",
+        details: result.statusLabel,
+      });
       // Populate mock history
       setHistoryEvents(
-        generateMockHistory(result.certificate.id, result.certificate.creator, result.certificate.timestamp)
+        generateMockHistory(
+          result.certificate.id,
+          result.certificate.creator,
+          result.certificate.timestamp
+        )
       );
     } else {
       // Multiple results (creator search)
       const searchResult = data as CertificateSearchResult;
       if (searchResult.certificates.length === 0) {
+        recordVerificationEvent({ method, query: value, status: "not_found" });
         setLookupState({ status: "error", message: "No certificates found for this creator" });
       } else {
+        recordVerificationEvent({
+          method,
+          query: value,
+          status: "verified",
+          details: `${searchResult.certificates.length} result(s)`,
+        });
         setLookupState({ status: "multiple", result: searchResult });
       }
     }
@@ -109,12 +137,26 @@ export function CertificateVerificationPanel() {
     setLookupState({ status: "verifying", certificateId: id });
     const response = await verifyCertificateAuthenticity(id);
     if (response.success && response.data) {
+      recordVerificationEvent({
+        method: "authenticity",
+        query: id,
+        certificateId: id,
+        status: response.data.authentic ? "verified" : "error",
+        details: response.data.details.join("; "),
+      });
       setLookupState({
         status: "verified",
         certificateId: id,
         details: response.data.details,
       });
     } else {
+      recordVerificationEvent({
+        method: "authenticity",
+        query: id,
+        certificateId: id,
+        status: "error",
+        details: response.error,
+      });
       setLookupState({ status: "error", message: response.error ?? "Verification failed" });
     }
   }, []);
@@ -156,27 +198,7 @@ export function CertificateVerificationPanel() {
       </div>
 
       {/* ── Loading state ── */}
-      {lookupState.status === "loading" && (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
-          <svg
-            className="animate-spin h-8 w-8 mb-3 text-blue-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <p className="text-sm">
-            Searching for{" "}
-            <span className="font-medium text-gray-600 dark:text-gray-300">
-              {lookupState.value}
-            </span>
-            ...
-          </p>
-        </div>
-      )}
+      {lookupState.status === "loading" && <CertificateCardSkeleton />}
 
       {/* ── Single result ── */}
       {lookupState.status === "loaded" && (
@@ -266,8 +288,19 @@ export function CertificateVerificationPanel() {
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
           </svg>
           <p className="text-sm">Verifying certificate authenticity...</p>
         </div>
@@ -291,7 +324,10 @@ export function CertificateVerificationPanel() {
           </div>
           <ul className="space-y-2">
             {lookupState.details.map((detail, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-300">
+              <li
+                key={idx}
+                className="flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-300"
+              >
                 <span className="shrink-0 mt-0.5">✓</span>
                 <span>{detail}</span>
               </li>
@@ -302,4 +338,3 @@ export function CertificateVerificationPanel() {
     </div>
   );
 }
-

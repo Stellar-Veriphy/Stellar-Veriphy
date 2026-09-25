@@ -15,9 +15,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
-  verificationStatusService,
   type VerificationStatus,
+  verificationStatusService,
   type WatchOptions,
 } from "@/services/verificationStatusService";
 
@@ -25,8 +26,10 @@ import {
 // Public hook API
 // ---------------------------------------------------------------------------
 
-export interface UseVerificationStatusOptions
-  extends Omit<WatchOptions, "onUpdate" | "onTerminal" | "onError"> {
+export interface UseVerificationStatusOptions extends Omit<
+  WatchOptions,
+  "onUpdate" | "onTerminal" | "onError"
+> {
   /**
    * Optional callback fired whenever the status advances.
    * Use this to trigger toast notifications from outside the hook.
@@ -44,7 +47,7 @@ export interface UseVerificationStatusOptions
 
 export interface UseVerificationStatusReturn {
   /** Latest status snapshot, or null before polling starts. */
-  status:    VerificationStatus | null;
+  status: VerificationStatus | null;
   /** True while a poll is running. */
   isPolling: boolean;
   /**
@@ -53,7 +56,7 @@ export interface UseVerificationStatusReturn {
    */
   start: (jobId: string, opts?: UseVerificationStatusOptions) => void;
   /** Manually stop the current poll. */
-  stop:  () => void;
+  stop: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +66,7 @@ export interface UseVerificationStatusReturn {
 export function useVerificationStatus(
   defaultOpts?: UseVerificationStatusOptions
 ): UseVerificationStatusReturn {
-  const [status,    setStatus]    = useState<VerificationStatus | null>(null);
+  const [status, setStatus] = useState<VerificationStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);
 
   // Keep a ref to the active jobId so the cleanup effect always sees the
@@ -71,7 +74,9 @@ export function useVerificationStatus(
   const activeJobId = useRef<string | null>(null);
   // Stable ref to the latest opts so callbacks are always fresh.
   const optsRef = useRef<UseVerificationStatusOptions | undefined>(defaultOpts);
-  useEffect(() => { optsRef.current = defaultOpts; }, [defaultOpts]);
+  useEffect(() => {
+    optsRef.current = defaultOpts;
+  }, [defaultOpts]);
 
   // ── stop ──────────────────────────────────────────────────────────────────
 
@@ -97,11 +102,11 @@ export function useVerificationStatus(
       setStatus(null);
 
       verificationStatusService.watch(jobId, {
-        txHash:     merged.txHash,
-        requestId:  merged.requestId,
+        txHash: merged.txHash,
+        requestId: merged.requestId,
         horizonUrl: merged.horizonUrl,
         intervalMs: merged.intervalMs,
-        timeoutMs:  merged.timeoutMs,
+        timeoutMs: merged.timeoutMs,
 
         onUpdate(s) {
           setStatus(s);

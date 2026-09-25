@@ -1,13 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import { useWizard } from "@/context/WizardContext";
 import { hashFile } from "@/utils/hashing";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export function ManifestStep() {
-  const { setManifest, setManifestHash, setHashProgress, hashProgress } =
-    useWizard();
+  const { setManifest, setManifestHash, setHashProgress, hashProgress } = useWizard();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [manifestData, setManifestData] = useState<object | null>(null);
   const [isHashing, setIsHashing] = useState(false);
@@ -17,23 +17,23 @@ export function ManifestStep() {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      processFile(files[0]);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processFile(file);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
     }
   };
 
   const processFile = async (file: File) => {
-    const isValidType =
-      file.name.endsWith(".json") || file.name.endsWith(".xml");
+    const isValidType = file.name.endsWith(".json") || file.name.endsWith(".xml");
     if (!isValidType) {
-      setError("Please upload a .json or .xml file");
+      setError("Manifest must be a .json or .xml file. Invalid file type detected.");
       return;
     }
 
@@ -50,9 +50,9 @@ export function ManifestStep() {
       setManifestHash(fileHash);
 
       const content = await file.text();
-      let parsed: object;
+      let parsed: Record<string, unknown>;
       if (file.name.endsWith(".json")) {
-        parsed = JSON.parse(content);
+        parsed = JSON.parse(content) as Record<string, unknown>;
       } else {
         // For XML, store as string representation
         parsed = { xml: content };
@@ -60,9 +60,7 @@ export function ManifestStep() {
       setManifestData(parsed);
       setManifest(parsed);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error processing manifest file"
-      );
+      setError(err instanceof Error ? err.message : "Error processing manifest file");
     } finally {
       setIsHashing(false);
     }
@@ -92,9 +90,7 @@ export function ManifestStep() {
             id="manifest-input"
           />
           <label htmlFor="manifest-input" className="cursor-pointer">
-            <p className="text-lg font-semibold mb-2">
-              Drag and drop your manifest here
-            </p>
+            <p className="text-lg font-semibold mb-2">Drag and drop your manifest here</p>
             <p className="text-gray-600">or click to select a .json or .xml file</p>
           </label>
         </div>
@@ -137,12 +133,21 @@ export function ManifestStep() {
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
           {hash && (
-            <button
-              onClick={handleContinue}
-              className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition"
-            >
-              Continue
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition"
+              >
+                ← Back
+              </button>
+              <button
+                onClick={handleContinue}
+                className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+              >
+                Continue
+              </button>
+            </>
           )}
         </div>
       )}

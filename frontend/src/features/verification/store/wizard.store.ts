@@ -10,7 +10,8 @@
  */
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { createJSONStorage,persist } from "zustand/middleware";
+
 import type {
   FileInfo,
   ManifestData,
@@ -96,11 +97,9 @@ export const useWizardStore = create<WizardState & WizardActions>()(
 
       setHashProgress: (hashProgress) => set({ hashProgress }),
 
-      setAdvancedContentHash: (advancedContentHash) =>
-        set({ advancedContentHash }),
+      setAdvancedContentHash: (advancedContentHash) => set({ advancedContentHash }),
 
-      setAdvancedManifestHash: (advancedManifestHash) =>
-        set({ advancedManifestHash }),
+      setAdvancedManifestHash: (advancedManifestHash) => set({ advancedManifestHash }),
 
       setManifest: (manifest) => set({ manifest }),
 

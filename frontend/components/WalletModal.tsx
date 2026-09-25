@@ -8,12 +8,22 @@
  */
 
 import { useState } from "react";
-import { useWallet } from "@/context/WalletContext";
+
+import { useToastHelpers } from "@/components/ToastProvider";
 import { WalletSelector } from "@/components/wallet/WalletSelector";
+import { useWallet } from "@/context/WalletContext";
 
 export function WalletModal() {
   const { connected, publicKey, walletType, disconnect } = useWallet();
+  const { success: showSuccess } = useToastHelpers();
   const [selectorOpen, setSelectorOpen] = useState(false);
+
+  const handleDisconnect = () => {
+    disconnect();
+    showSuccess("Wallet disconnected successfully", {
+      title: "Disconnected",
+    });
+  };
 
   const truncate = (key: string) => `${key.slice(0, 6)}…${key.slice(-4)}`;
 
@@ -24,8 +34,7 @@ export function WalletModal() {
           <div className="space-y-3">
             <div className="p-3 bg-slate-800 rounded">
               <p className="text-xs text-slate-400 mb-1">
-                Connected via{" "}
-                <span className="capitalize text-slate-300">{walletType}</span>
+                Connected via <span className="capitalize text-slate-300">{walletType}</span>
               </p>
               <p className="text-white font-mono text-sm">{truncate(publicKey)}</p>
             </div>
@@ -37,7 +46,7 @@ export function WalletModal() {
                 Switch Wallet
               </button>
               <button
-                onClick={disconnect}
+                onClick={handleDisconnect}
                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors text-sm"
               >
                 Disconnect
@@ -54,10 +63,7 @@ export function WalletModal() {
         )}
       </div>
 
-      <WalletSelector
-        open={selectorOpen}
-        onClose={() => setSelectorOpen(false)}
-      />
+      <WalletSelector open={selectorOpen} onClose={() => setSelectorOpen(false)} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+
 import { cn } from "@/utils/cn";
 
 interface ProgressBarProps {
@@ -33,9 +34,7 @@ export function ProgressBar({
     <div className={cn("w-full", className)}>
       {label && (
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {label}
-          </span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
           {showPercentage && !indeterminate && (
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
               {Math.round(percentage)}%

@@ -11,7 +11,9 @@
  */
 
 import Link from "next/link";
+
 import { Header } from "@/components/Header";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 interface ToolCard {
   title: string;
@@ -39,8 +41,7 @@ const tools: ToolCard[] = [
     href: "/tools/hash-calculator",
     icon: "🔐",
     badge: "#217",
-    badgeColor:
-      "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+    badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   },
   {
     title: "Certificate Embedding Widget",
@@ -49,8 +50,7 @@ const tools: ToolCard[] = [
     href: "/widget-demo.html",
     icon: "🏅",
     badge: "#218",
-    badgeColor:
-      "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+    badgeColor: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   },
   {
     title: "API Key Management",
@@ -59,8 +59,7 @@ const tools: ToolCard[] = [
     href: "/tools/api-keys",
     icon: "🔑",
     badge: "#219",
-    badgeColor:
-      "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   },
   {
     title: "Signature Verifier",
@@ -69,8 +68,7 @@ const tools: ToolCard[] = [
     href: "/tools/signature-verifier",
     icon: "🛡️",
     badge: "#265",
-    badgeColor:
-      "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+    badgeColor: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
   },
   {
     title: "Audit Logs",
@@ -79,8 +77,25 @@ const tools: ToolCard[] = [
     href: "/tools/audit-logs",
     icon: "🧾",
     badge: "#266",
-    badgeColor:
-      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+    badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+  {
+    title: "Verification History",
+    description:
+      "A local, browser-only timeline of certificates you've looked up or verified, with date filtering, export, and a privacy control to disable or clear tracking.",
+    href: "/verification-history",
+    icon: "🕘",
+    badge: "#465",
+    badgeColor: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+  },
+  {
+    title: "App Settings & Backup",
+    description:
+      "Install StellarVeriphy as an app, manage push notifications and offline cache, and export/import an encrypted backup of your locally stored data.",
+    href: "/settings",
+    icon: "⚙️",
+    badge: "#466 / #467",
+    badgeColor: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
   },
 ];
 
@@ -88,14 +103,14 @@ export default function ToolsPage() {
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
+      <div className="max-w-6xl mx-auto px-6">
+        <Breadcrumbs />
+      </div>
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-            Developer Tools
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">Developer Tools</h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Standalone utilities to help you build, verify, and integrate with
-            StellarVeriphy.
+            Standalone utilities to help you build, verify, and integrate with StellarVeriphy.
           </p>
         </div>
 

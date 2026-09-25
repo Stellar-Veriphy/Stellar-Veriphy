@@ -1,13 +1,18 @@
+import { Footer } from "@/components/Footer";
+import { AboutSection } from "@/components/landing/AboutSection";
+import { CallToActionSection } from "@/components/landing/CallToActionSection";
+import { EcosystemSection } from "@/components/landing/EcosystemSection";
 import { Header } from "@/components/landing/Header";
 import { HeroSection } from "@/components/landing/HeroSection";
-import { AboutSection } from "@/components/landing/AboutSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
-import { EcosystemSection } from "@/components/landing/EcosystemSection";
-import { CallToActionSection } from "@/components/landing/CallToActionSection";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-900 scroll-smooth">
+    <main
+      id="main-content"
+      className="min-h-screen bg-slate-900 scroll-smooth"
+      aria-label="Main content"
+    >
       <Header />
       <div className="pt-16">
         <HeroSection />
@@ -15,6 +20,7 @@ export default function Home() {
         <HowItWorksSection />
         <EcosystemSection />
         <CallToActionSection />
+        <Footer />
       </div>
     </main>
   );

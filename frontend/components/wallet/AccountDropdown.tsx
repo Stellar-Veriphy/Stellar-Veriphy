@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useWallet } from "@/context/WalletContext";
+import { useEffect,useRef, useState } from "react";
 import { FiChevronDown, FiCopy, FiExternalLink, FiLogOut } from "react-icons/fi";
+
+import { useWallet } from "@/context/WalletContext";
 
 export function AccountDropdown() {
   const { publicKey, disconnect } = useWallet();
@@ -12,10 +13,7 @@ export function AccountDropdown() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
@@ -39,10 +37,7 @@ export function AccountDropdown() {
   };
 
   const handleViewExplorer = () => {
-    window.open(
-      `https://stellar.expert/explorer/public/${publicKey}`,
-      "_blank"
-    );
+    window.open(`https://stellar.expert/explorer/public/${publicKey}`, "_blank");
   };
 
   const handleDisconnect = () => {
@@ -57,11 +52,7 @@ export function AccountDropdown() {
         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
       >
         <span className="text-sm font-medium">{truncatedKey}</span>
-        <FiChevronDown
-          className={`w-4 h-4 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
+        <FiChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (

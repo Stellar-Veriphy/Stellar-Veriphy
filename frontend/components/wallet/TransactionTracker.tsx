@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  fetchTransactionStatus,
-  type TransactionStatus,
-} from "@/utils/transaction";
-import { FiLoader, FiCheckCircle, FiAlertCircle, FiExternalLink } from "react-icons/fi";
+import { FiAlertCircle, FiCheckCircle, FiExternalLink, FiLoader } from "react-icons/fi";
+
+import { fetchTransactionStatus, type TransactionStatus } from "@/utils/transaction";
 
 interface TransactionTrackerProps {
   txHash: string;
@@ -64,9 +62,7 @@ export function TransactionTracker({ txHash }: TransactionTrackerProps) {
       <div>{display.icon}</div>
       <div className="flex-1">
         <p className={`font-medium ${display.color}`}>{display.text}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-          {txHash}
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{txHash}</p>
       </div>
       <a
         href={explorerUrl}

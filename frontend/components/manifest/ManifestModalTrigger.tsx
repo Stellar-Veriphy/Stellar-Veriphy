@@ -1,7 +1,8 @@
 "use client";
 
+import { ContentManifest } from "@stellarveriphy/shared/types";
 import { useState } from "react";
-import { ContentManifest } from "@stellar-veriphy/shared/types";
+
 import { ManifestModal } from "./ManifestModal";
 
 interface ManifestModalTriggerProps {
@@ -23,11 +24,7 @@ export function ManifestModalTrigger({
       >
         {label}
       </button>
-      <ManifestModal
-        manifest={manifest}
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
+      <ManifestModal manifest={manifest} isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 }

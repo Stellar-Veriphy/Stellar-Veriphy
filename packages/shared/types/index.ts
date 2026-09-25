@@ -1,8 +1,8 @@
 export interface ContentManifest {
-  schemaVersion?: string;    // semantic version string (e.g. 1.0.0, 2.0.0)
-  contentHash: string;       // sha256 of the media file
-  creator: string;           // Stellar public key (G...)
-  timestamp: string;         // ISO 8601
+  schemaVersion?: string; // semantic version string (e.g. 1.0.0, 2.0.0)
+  contentHash: string; // sha256 of the media file
+  creator: string; // Stellar public key (G...)
+  timestamp: string; // ISO 8601
   metadata?: {
     device?: string;
     location?: string;
@@ -98,8 +98,7 @@ export interface VerificationJob {
  * On failure: `{ success: false, error: string }`
  */
 export type ApiResponse<T> =
-  | { success: true; data: T; error?: never }
-  | { success: false; error: string; data?: never };
+  { success: true; data: T; error?: never } | { success: false; error: string; data?: never };
 
 // ---------------------------------------------------------------------------
 // SLA tracking  (mirrors oracle ProviderSLA + SLACompliance structs)
@@ -232,4 +231,355 @@ export interface ProvenanceExportMeta {
   recordCount: number;
   part: number;
   totalParts: number;
+// Type Guards
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrows an `ApiResponse<T>` to the success branch.
+ * Use this instead of checking `response.success === true` manually.
+ */
+export function isApiSuccess<T>(
+  response: ApiResponse<T>,
+): response is { success: true; data: T; error?: never } {
+  return response.success === true;
+}
+
+/**
+ * Narrows an `ApiResponse<T>` to the failure branch.
+ */
+export function isApiError<T>(
+  response: ApiResponse<T>,
+): response is { success: false; error: string; data?: never } {
+  return response.success === false;
+}
+
+/**
+ * Returns true if `status` is a valid `VerificationStatus` string.
+ */
+export function isVerificationStatus(status: string): status is VerificationStatus {
+  return (
+    status === "pending" ||
+    status === "processing" ||
+    status === "certified" ||
+    status === "failed"
+  );
+}
+
+/**
+ * Returns true if `status` is a valid `VerificationJobStatus` string.
+ */
+export function isVerificationJobStatus(status: string): status is VerificationJobStatus {
+  return (
+    status === "pending" ||
+    status === "processing" ||
+    status === "verified" ||
+    status === "rejected" ||
+    status === "failed"
+  );
+}
+
+/**
+ * Type guard for `CertificateDetails`. Validates that the required fields are
+ * present and correctly typed so callers don't need to cast from `unknown`.
+ */
+export function isCertificateDetails(value: unknown): value is CertificateDetails {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === "string" &&
+    typeof v.storageRef === "string" &&
+    typeof v.manifestHash === "string" &&
+    typeof v.attestationHash === "string" &&
+    typeof v.creator === "string" &&
+    typeof v.timestamp === "number"
+  );
+}
+
+/**
+ * Type guard for `ContentManifest`.
+ */
+export function isContentManifest(value: unknown): value is ContentManifest {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.contentHash === "string" &&
+    typeof v.creator === "string" &&
+    typeof v.timestamp === "string"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Generic utility types
+// ---------------------------------------------------------------------------
+
+/** Makes every property of T deeply readonly. */
+export type DeepReadonly<T> = T extends (infer U)[]
+  ? ReadonlyArray<DeepReadonly<U>>
+  : T extends object
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+
+/** Extracts the data type from a successful ApiResponse. */
+export type ApiData<R extends ApiResponse<unknown>> = R extends { success: true; data: infer D }
+  ? D
+  : never;
+
+/** Makes the listed keys required while keeping the rest as-is. */
+export type RequireFields<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+
+// ---------------------------------------------------------------------------
+// Collaborative Verification (Issue #468)
+// ---------------------------------------------------------------------------
+
+/** User role in a verification team. */
+export type TeamRole = "owner" | "editor" | "reviewer" | "viewer";
+
+/** Permission levels for collaborative features. */
+export type Permission =
+  | "view_verification"
+  | "edit_verification"
+  | "approve_verification"
+  | "manage_team"
+  | "export_data";
+
+/** Member of a verification team. */
+export interface TeamMember {
+  publicKey: string;
+  role: TeamRole;
+  addedAt: number;
+  permissions: Permission[];
+}
+
+/** Verification team for collaborative work. */
+export interface VerificationTeam {
+  id: string;
+  name: string;
+  description?: string;
+  owner: string;
+  members: TeamMember[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Shared verification document with edit tracking. */
+export interface SharedVerificationDocument {
+  id: string;
+  teamId: string;
+  certificateId?: string;
+  title: string;
+  description?: string;
+  contentHash: string;
+  manifestHash: string;
+  status: "draft" | "in_review" | "approved" | "rejected";
+  createdBy: string;
+  createdAt: number;
+  lastModifiedBy: string;
+  lastModifiedAt: number;
+  editors: string[];
+}
+
+/** Workflow step for verification authorization. */
+export interface WorkflowStep {
+  id: string;
+  documentId: string;
+  stepNumber: number;
+  approverRole: TeamRole;
+  status: "pending" | "approved" | "rejected";
+  approvedBy?: string;
+  approvedAt?: number;
+  comment?: string;
+}
+
+/** Audit log entry tracking user actions. */
+export interface AuditLogEntry {
+  id: string;
+  entityType: "team" | "document" | "workflow" | "verification";
+  entityId: string;
+  action: string;
+  actor: string;
+  details?: Record<string, unknown>;
+  timestamp: number;
+}
+
+/** Notification for team members about verification activities. */
+export interface VerificationNotification {
+  id: string;
+  recipientPublicKey: string;
+  type: "team_invite" | "document_shared" | "approval_requested" | "verification_complete";
+  relatedEntityId: string;
+  message: string;
+  read: boolean;
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Content Versioning (Issue #469)
+// ---------------------------------------------------------------------------
+
+/** A version of verified content. */
+export interface ContentVersion {
+  id: string;
+  certificateId?: string;
+  versionNumber: number;
+  contentHash: string;
+  manifestHash: string;
+  creator: string;
+  createdAt: number;
+  changeLog?: string;
+  previousVersionId?: string;
+  nextVersionId?: string;
+  isCurrentVersion: boolean;
+}
+
+/** Version history for a piece of content. */
+export interface VersionHistory {
+  id: string;
+  contentHash: string;
+  contentTitle?: string;
+  versions: ContentVersion[];
+  totalVersions: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Comparison between two versions. */
+export interface VersionComparison {
+  versionA: ContentVersion;
+  versionB: ContentVersion;
+  differences: VersionDifference[];
+}
+
+/** Detailed difference between two versions. */
+export interface VersionDifference {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+  changeType: "added" | "removed" | "modified";
+}
+
+// ---------------------------------------------------------------------------
+// Analytics Dashboard (Issue #470)
+// ---------------------------------------------------------------------------
+
+/** Verification statistics. */
+export interface VerificationStatistics {
+  totalVerifications: number;
+  successfulVerifications: number;
+  failedVerifications: number;
+  successRate: number;
+  averageProcessingTime: number;
+}
+
+/** Usage trend data point. */
+export interface UsageTrendData {
+  date: string;
+  verifications: number;
+  uniqueUsers: number;
+  successfulCertificates: number;
+}
+
+/** Usage trends over a time period. */
+export interface UsageTrends {
+  period: "day" | "week" | "month" | "year";
+  data: UsageTrendData[];
+}
+
+/** Content type popularity metrics. */
+export interface ContentTypeMetric {
+  contentType: string;
+  count: number;
+  percentage: number;
+}
+
+/** Content popularity data. */
+export interface PopularContentData {
+  contentTypes: ContentTypeMetric[];
+  topContentHashes: Array<{
+    contentHash: string;
+    verificationCount: number;
+    lastVerifiedAt: number;
+  }>;
+}
+
+/** Geographic distribution data. */
+export interface GeographicDistribution {
+  country: string;
+  region?: string;
+  userCount: number;
+  verificationCount: number;
+  latitude?: number;
+  longitude?: number;
+}
+
+/** User analytics data. */
+export interface UserAnalytics {
+  totalUsers: number;
+  activeUsers: number;
+  newUsersThisMonth: number;
+  verificationsByUser: Array<{
+    publicKey: string;
+    verificationCount: number;
+    successfulVerifications: number;
+  }>;
+}
+
+/** Report export data. */
+export interface AnalyticsReport {
+  id: string;
+  generatedAt: number;
+  generatedBy: string;
+  period: string;
+  statistics: VerificationStatistics;
+  trends: UsageTrends;
+  contentPopularity: PopularContentData;
+  geographicDistribution: GeographicDistribution[];
+  userAnalytics: UserAnalytics;
+  format: "pdf" | "csv" | "json";
+}
+
+// ---------------------------------------------------------------------------
+// Browser Extension (Issue #471)
+// ---------------------------------------------------------------------------
+
+/** Browser extension configuration. */
+export interface ExtensionConfig {
+  apiBase: string;
+  enableNotifications: boolean;
+  autoVerifyImages: boolean;
+  autoVerifyLinks: boolean;
+  certificateValidationEnabled: boolean;
+}
+
+/** Extension verification request. */
+export interface ExtensionVerificationRequest {
+  contentHash: string;
+  contentType: "image" | "link" | "page" | "file";
+  url?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Extension verification result. */
+export interface ExtensionVerificationResult {
+  contentHash: string;
+  isVerified: boolean;
+  certificateId?: string;
+  certificateData?: CertificateDetails;
+  validationStatus: "valid" | "invalid" | "expired" | "not_found";
+  timestamp: number;
+}
+
+/** Certificate validation result. */
+export interface CertificateValidation {
+  certificateId: string;
+  isValid: boolean;
+  creator: string;
+  createdAt: number;
+  expiresAt?: number;
+  trustScore: number;
+  validationDetails: {
+    signatureVerified: boolean;
+    chainVerified: boolean;
+    notRevoked: boolean;
+    timestampValid: boolean;
+  };
 }

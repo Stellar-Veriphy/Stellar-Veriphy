@@ -20,6 +20,10 @@ interface UseKeyboardShortcutsOptions {
 const STORAGE_KEY = "sv-keyboard-shortcuts";
 
 function getDefaultShortcuts(): Record<string, string[]> {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored);
@@ -29,10 +33,7 @@ function getDefaultShortcuts(): Record<string, string[]> {
   return {};
 }
 
-export function useKeyboardShortcuts({
-  shortcuts,
-  enabled = true,
-}: UseKeyboardShortcutsOptions) {
+export function useKeyboardShortcuts({ shortcuts, enabled = true }: UseKeyboardShortcutsOptions) {
   const customBindingsRef = useRef<Record<string, string[]>>(getDefaultShortcuts());
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
@@ -40,26 +41,20 @@ export function useKeyboardShortcuts({
   const getEffectiveKeys = useCallback((action: ShortcutAction): string[] => {
     const custom = customBindingsRef.current[action.id];
     if (custom && custom.length > 0) return custom;
-    if (navigator.platform?.includes("Mac")) {
+    if (typeof navigator !== "undefined" && navigator.platform?.includes("Mac")) {
       return action.macKeys || action.keys;
     }
     return action.keys;
   }, []);
 
-  const updateCustomBinding = useCallback(
-    (actionId: string, newKeys: string[]) => {
-      customBindingsRef.current[actionId] = newKeys;
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(customBindingsRef.current)
-        );
-      } catch {
-        /* noop */
-      }
-    },
-    []
-  );
+  const updateCustomBinding = useCallback((actionId: string, newKeys: string[]) => {
+    customBindingsRef.current[actionId] = newKeys;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(customBindingsRef.current));
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   const resetCustomBindings = useCallback(() => {
     customBindingsRef.current = {};
@@ -85,8 +80,7 @@ export function useKeyboardShortcuts({
           if (!key) return false;
 
           const ctrlOrCmd =
-            (hasCtrl && (e.ctrlKey || e.metaKey)) ||
-            (hasCmd && (e.metaKey || e.ctrlKey));
+            (hasCtrl && (e.ctrlKey || e.metaKey)) || (hasCmd && (e.metaKey || e.ctrlKey));
 
           if (hasCtrl || hasCmd) {
             if (!ctrlOrCmd) return false;
@@ -97,8 +91,7 @@ export function useKeyboardShortcuts({
           if (hasShift && !e.shiftKey) return false;
           if (hasAlt && !e.altKey) return false;
 
-          const targetKey =
-            key.length === 1 ? key : key === "escape" ? "Escape" : key;
+          const targetKey = key.length === 1 ? key : key === "escape" ? "Escape" : key;
           return e.key.toLowerCase() === targetKey.toLowerCase();
         });
 

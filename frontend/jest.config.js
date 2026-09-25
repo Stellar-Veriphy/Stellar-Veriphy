@@ -11,6 +11,7 @@ const config = {
         "<rootDir>/src/utils/**/__tests__/**/*.test.ts",
         "<rootDir>/src/services/**/__tests__/**/*.test.ts",
         "<rootDir>/services/**/__tests__/**/*.test.ts",
+        "<rootDir>/lib/**/__tests__/**/*.test.ts",
       ],
       moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/$1",

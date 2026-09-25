@@ -1,9 +1,10 @@
 "use client";
 
-import { useWizard } from "@/context/WizardContext";
-import { isValidSHA256 } from "@/utils/validation";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+import { useWizard } from "@/context/WizardContext";
+import { isValidSHA256, validateSHA256 } from "@/utils/validation";
 
 export function AdvancedInput() {
   const {
@@ -21,25 +22,18 @@ export function AdvancedInput() {
   const handleContentHashChange = (value: string) => {
     setContentHashInput(value);
     setAdvancedContentHash(value);
-    if (value && !isValidSHA256(value)) {
-      setContentHashError("Invalid SHA-256 hash format");
-    } else {
-      setContentHashError("");
-    }
+    const error = validateSHA256(value);
+    setContentHashError(error || "");
   };
 
   const handleManifestHashChange = (value: string) => {
     setManifestHashInput(value);
     setAdvancedManifestHash(value);
-    if (value && !isValidSHA256(value)) {
-      setManifestHashError("Invalid SHA-256 hash format");
-    } else {
-      setManifestHashError("");
-    }
+    const error = validateSHA256(value);
+    setManifestHashError(error || "");
   };
 
-  const isValid =
-    isValidSHA256(contentHashInput) && isValidSHA256(manifestHashInput);
+  const isValid = isValidSHA256(contentHashInput) && isValidSHA256(manifestHashInput);
 
   const handleContinue = () => {
     if (isValid) {
@@ -53,9 +47,7 @@ export function AdvancedInput() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-semibold mb-2">
-            Content Hash (SHA-256)
-          </label>
+          <label className="block text-sm font-semibold mb-2">Content Hash (SHA-256)</label>
           <input
             type="text"
             value={contentHashInput}
@@ -65,15 +57,11 @@ export function AdvancedInput() {
               contentHashError ? "border-red-500" : "border-gray-300"
             }`}
           />
-          {contentHashError && (
-            <p className="text-red-500 text-sm mt-1">{contentHashError}</p>
-          )}
+          {contentHashError && <p className="text-red-500 text-sm mt-1">{contentHashError}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-semibold mb-2">
-            Manifest Hash (SHA-256)
-          </label>
+          <label className="block text-sm font-semibold mb-2">Manifest Hash (SHA-256)</label>
           <input
             type="text"
             value={manifestHashInput}
@@ -83,15 +71,20 @@ export function AdvancedInput() {
               manifestHashError ? "border-red-500" : "border-gray-300"
             }`}
           />
-          {manifestHashError && (
-            <p className="text-red-500 text-sm mt-1">{manifestHashError}</p>
-          )}
+          {manifestHashError && <p className="text-red-500 text-sm mt-1">{manifestHashError}</p>}
         </div>
 
         <button
+          type="button"
+          onClick={() => router.back()}
+          className="text-sm font-medium text-gray-600 hover:text-gray-900 transition"
+        >
+          ← Back
+        </button>
+        <button
           onClick={handleContinue}
           disabled={!isValid}
-          className={`w-full py-2 rounded-lg transition ${
+          className={`w-full px-4 py-2 rounded-lg transition ${
             isValid
               ? "bg-blue-500 text-white hover:bg-blue-600"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"

@@ -24,12 +24,9 @@ function createId(): string {
   return `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-async function hashValue(value: string): Promise<string> {
+export async function hashValue(value: string): Promise<string> {
   if (typeof crypto !== "undefined" && crypto.subtle) {
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(value)
-    );
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
     return Array.from(new Uint8Array(digest))
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
@@ -125,7 +122,8 @@ class AuditLogger {
       bySeverity,
       tamperProof: this.entries.every((entry, index) => {
         if (index === 0) return true;
-        return entry.previousHash === this.entries[index - 1].chainHash;
+        const prev = this.entries[index - 1];
+        return Boolean(prev && entry.previousHash === prev.chainHash);
       }),
     };
   }
