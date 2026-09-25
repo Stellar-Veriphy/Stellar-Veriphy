@@ -1,4 +1,5 @@
 import type { FieldError, UploadMetadata, UploadRecord, VerificationJobView } from "@stellarveriphy/shared";
+import { resolveApiEndpoint } from "@/config";
 
 export class ApiError extends Error {
   constructor(message: string, readonly httpStatus: number, readonly errors: FieldError[] = []) {
@@ -6,7 +7,8 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+async function request<T>(pathOrUrl: string, init?: RequestInit): Promise<T> {
+  const url = resolveApiEndpoint(pathOrUrl);
   let res: Response;
   try {
     res = await fetch(url, init);
