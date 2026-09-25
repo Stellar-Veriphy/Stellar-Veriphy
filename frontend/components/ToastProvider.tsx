@@ -164,7 +164,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 "relative flex items-start gap-3 p-4 rounded-lg shadow-lg border",
                 "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
                 "animate-in fade-in slide-in-from-bottom-5 duration-200",
-                "transform transition-all hover:scale-[1.02] hover:shadow-xl",
+                "transition-shadow duration-200 ease-out hover:shadow-xl motion-reduce:transition-none",
                 typeColors[toast.type]
               )}
               role="alert"

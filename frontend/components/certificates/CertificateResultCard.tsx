@@ -50,6 +50,10 @@ function explorerUrl(id: string): string {
   return `https://stellar.expert/explorer/testnet/tx/${id}`;
 }
 
+function certificateUrl(id: string): string {
+  return `/certificate?id=${encodeURIComponent(id)}`;
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -91,6 +95,12 @@ function DetailRow({
             aria-label={copied ? "Copied" : "Copy ".concat(label)}
           >
             {copied ? (
+              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               <svg
                 className="w-4 h-4 text-emerald-500"
                 fill="none"
@@ -193,21 +203,19 @@ export function CertificateResultCard({
         {/* Details grid */}
         <dl className="divide-y divide-gray-100 dark:divide-gray-800">
           <DetailRow label="Certificate ID" value={certificate.id} mono copyable />
-          <DetailRow label="Status" value={statusLabel} />
           <DetailRow label="Owner" value={owner} mono copyable />
           <DetailRow label="Created" value={formatTimestamp(certificate.timestamp)} />
-          <DetailRow label="Verification Level" value={verificationLevel} />
           {isLocked && <DetailRow label="Locked" value="Yes - Certificate is immutable" />}
         </dl>
 
         {/* Cryptographic hashes */}
         <div>
           <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-            Cryptographic Proofs
+            Cryptographic Hashes
           </h4>
           <dl className="divide-y divide-gray-100 dark:divide-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-4">
             <DetailRow
-              label="Storage Ref"
+              label="Storage Reference"
               value={truncateHash(certificate.storageRef)}
               mono
               copyable
@@ -227,14 +235,17 @@ export function CertificateResultCard({
           </dl>
         </div>
 
-        {/* Explorer link */}
+        {/* Actions */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
+          <div className="flex items-center gap-4 flex-wrap">
           <a
             href={explorerUrl(certificate.id)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
           >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             <svg
               className="w-4 h-4"
               fill="none"
@@ -250,6 +261,19 @@ export function CertificateResultCard({
             </svg>
             View on StellarExpert
           </a>
+          <a
+            href={certificateUrl(certificate.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open certificate #${certificate.id} in a new tab`}
+            className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10-2v6h6" />
+            </svg>
+            Open in new tab
+          </a>
+          </div>
 
           <div className="flex items-center gap-2">
             {onVerifyAuthenticity && (
