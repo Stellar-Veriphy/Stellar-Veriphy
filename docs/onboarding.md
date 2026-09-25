@@ -147,3 +147,20 @@ Restart `pnpm dev:frontend` — Next's dev server doesn't always pick up changes
 
 **Where do I ask questions?**
 Open a [GitHub issue](https://github.com/Stellar-Veriphy/Stellar-Veriphy/issues) with the `question` label, or comment directly on the issue/PR you're working from.
+
+## Challenge-Response Email Verification Guidance
+
+StellarVeriphy incorporates a challenge-response verification flow (`frontend/components/auth/EmailVerificationChallenge.tsx` & `/verify-email`) to authenticate user emails for identity trust and notification workflows.
+
+### Security Principles
+- **One-Time Challenge Tokens**: Codes are 6-digit numeric sequences generated with cryptographic randomness.
+- **Short-Lived Expiration**: Tokens expire after 10 minutes. Expired tokens are immediately invalidated.
+- **Rate-Limiting & Anti-Brute-Force**: Maximum of 5 verification attempts permitted per challenge session. After 5 failed attempts, the challenge is invalidated and the user must re-request.
+- **Anti-Spam Cooldown**: A 60-second cooldown is enforced between challenge request dispatches to prevent mail-bombing and spamming.
+- **Input Sanitization**: Email addresses and token codes are normalized, trimmed, and formatted before transmission.
+
+### UX Best Practices
+- **Duplicate Submission Prevention**: Form submit controls and resend triggers are disabled while requests are inflight and during cooldown periods.
+- **Clear State Transitions**: Distinct UI feedback for challenge request, code input, verification in progress, success confirmation, and specific error states.
+- **Direct Focus Management**: Focus automatically shifts to the code input field upon entering the challenge phase.
+
