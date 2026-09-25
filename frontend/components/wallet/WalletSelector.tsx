@@ -18,6 +18,7 @@
 import { useEffect, useState } from "react";
 
 import { useWallet } from "@/context/WalletContext";
+import { safeIsWalletAvailable } from "@/lib/walletDetection";
 import type { WalletType } from "@/services/walletAdapters";
 import { renderTextWithLink } from "@/utils/renderTextWithLink";
 
@@ -62,7 +63,7 @@ export function WalletSelector({ open, onClose }: Props) {
           type: a.type,
           name: a.name,
           installUrl: a.installUrl,
-          available: await a.isAvailable(),
+          available: await safeIsWalletAvailable(a),
         }))
       );
       if (!cancelled) setStatuses(results);

@@ -19,3 +19,10 @@
 export { WalletProvider } from "@/components/WalletProvider";
 export type { WalletActions, WalletState, WalletStore } from "@/store/useWalletStore";
 export { useWallet, useWalletStore } from "@/store/useWalletStore";
+export {
+  isBrowser,
+  isSSR,
+  safeIsWalletAvailable,
+  probeAllWallets,
+  useSSRSafeWalletDetection,
+} from "@/lib/walletDetection";
