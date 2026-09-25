@@ -3,9 +3,21 @@
 import { FiArrowRight } from "react-icons/fi";
 
 import { useWallet } from "@/context/WalletContext";
+import { trackCtaClick } from "@/lib/analytics";
 
 export function HeroSection() {
   const { connect, connected } = useWallet();
+
+  const handleCtaClick = () => {
+    trackCtaClick({
+      ctaId: "hero_connect_wallet",
+      ctaLabel: connected ? "Wallet Connected" : "Connect Wallet",
+      ctaLocation: "hero",
+      isWalletConnected: connected,
+      customEventName: "wallet_connect_cta_click",
+    });
+    connect("freighter");
+  };
 
   return (
     <section
@@ -26,7 +38,7 @@ export function HeroSection() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button
-            onClick={() => connect("freighter")}
+            onClick={handleCtaClick}
             disabled={connected}
             className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:from-emerald-600 disabled:to-emerald-700 disabled:hover:from-emerald-600 disabled:hover:to-emerald-700 text-white font-semibold rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-950 focus:scale-105 active:scale-95 min-h-[44px] sm:min-h-[48px] min-w-[44px] text-base sm:text-lg shadow-lg shadow-blue-500/50 hover:shadow-blue-500/75"
             aria-label={connected ? "Wallet is connected" : "Connect wallet to start"}
