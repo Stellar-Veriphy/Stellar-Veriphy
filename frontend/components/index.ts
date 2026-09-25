@@ -51,3 +51,4 @@ export { APIKeyManagement } from "./APIKeyManagement";
 export { ContentHashCalculator } from "./ContentHashCalculator";
 export { MediaSnapshotPreview } from "./MediaSnapshotPreview";
 export { AssetStatusFilterChips, matchesAssetStatusFilter, type AssetStatusFilter } from "./AssetStatusFilterChips";
+export { ShareVerificationModal } from "./ShareVerificationModal";

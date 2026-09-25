@@ -97,9 +97,25 @@ export default async function CertificateDetail({ params }: { params: Params }) 
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
-      <Link href="/explore" className="text-sm text-indigo-700 hover:underline">
-        <span aria-hidden="true">← </span>Back to explore
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/explore" className="text-sm text-indigo-700 hover:underline">
+          <span aria-hidden="true">← </span>Back to explore
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/v/${record.id}?mode=public`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+          >
+            <span>🌐</span> Public Verification URL
+          </Link>
+          <Link
+            href={`/v/${record.id}?mode=authenticated&role=auditor`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            <span>🔐</span> Auditor View
+          </Link>
+        </div>
+      </div>
 
       <header className="mt-4">
         <div className="flex flex-wrap items-center gap-3">
