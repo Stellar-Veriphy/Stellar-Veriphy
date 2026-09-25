@@ -48,13 +48,13 @@ Partial reports are still useful — if you are unsure of the full impact, repor
 
 ## 2. Response Timeline
 
-| Milestone | Target |
-|---|---|
-| Acknowledgement | Within 48 hours of receipt |
-| Initial triage (severity classification) | Within 5 business days |
-| Fix timeline communicated | Within 10 business days for Critical/High; 30 days for Medium/Low |
-| Patch released (Critical/High) | Within 30 days where technically feasible |
-| Public disclosure | Coordinated with reporter; default 90 days from initial report |
+| Milestone                                | Target                                                            |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| Acknowledgement                          | Within 48 hours of receipt                                        |
+| Initial triage (severity classification) | Within 5 business days                                            |
+| Fix timeline communicated                | Within 10 business days for Critical/High; 30 days for Medium/Low |
+| Patch released (Critical/High)           | Within 30 days where technically feasible                         |
+| Public disclosure                        | Coordinated with reporter; default 90 days from initial report    |
 
 For vulnerabilities in deployed smart contracts on mainnet, timelines may need to compress significantly due to the immutable nature of on-chain code. We will communicate urgency to the reporter as soon as we assess the severity.
 
@@ -65,11 +65,13 @@ For vulnerabilities in deployed smart contracts on mainnet, timelines may need t
 The following are in scope for security reports:
 
 ### Smart Contracts
+
 - `contracts/oracle/src/lib.rs` — verification request orchestration, staking, SLA enforcement, disputes, attestation verification
 - `contracts/provenance/src/lib.rs` — provenance certificate minting, transfer, revocation, locking, and lifecycle management
 - `contracts/registry/src/lib.rs` — TEE code hash registry, provider management, multisig governance, reputation, blacklist
 
 Particularly relevant contract security areas:
+
 - Authentication and authorization bypasses (`require_auth` / admin checks)
 - Integer overflow or underflow in staking, stake slashing, or fee calculations
 - Logic errors in the SLA suspension threshold or dispute resolution
@@ -78,6 +80,7 @@ Particularly relevant contract security areas:
 - Reentrancy or state corruption patterns
 
 ### Frontend and API
+
 - `frontend/app/api/` — all Next.js API routes, especially the verification endpoint
 - Input validation and sanitization logic (`frontend/lib/security/inputValidation.ts`)
 - Rate limiting logic and bypass (`frontend/app/api/verification/route.ts`)
@@ -87,9 +90,11 @@ Particularly relevant contract security areas:
 - Audit log tamper resistance (`frontend/lib/security/auditLogger.ts`)
 
 ### Shared Package
+
 - `packages/shared/utils/hash.ts` — hash computation correctness and collision resistance
 
 ### Deployment and Infrastructure
+
 - `deploy.sh` and `scripts/deploy/blue-green-deploy.sh` — command injection, unsafe environment variable handling
 - `Dockerfile` and `docker-compose.yml` — privilege escalation, secret leakage, insecure defaults
 - GitHub Actions workflows (`.github/workflows/`) — secret exposure, workflow injection
@@ -135,9 +140,9 @@ Error discriminants are explicitly numbered starting from 1 and must not be renu
 
 ### Storage and TTL
 
-Verification requests are stored in *temporary* storage with a TTL (default 100 ledgers, configurable by admin). This means unprocessed requests expire automatically — they do not accumulate indefinitely and cannot be used to inflate state size without cost.
+Verification requests are stored in _temporary_ storage with a TTL (default 100 ledgers, configurable by admin). This means unprocessed requests expire automatically — they do not accumulate indefinitely and cannot be used to inflate state size without cost.
 
-Long-lived records (certificates, provider registrations, stakes) use *persistent* storage. There is no automatic expiration for these by design — a provider's stake or a provenance certificate is intended to persist indefinitely unless explicitly acted upon.
+Long-lived records (certificates, provider registrations, stakes) use _persistent_ storage. There is no automatic expiration for these by design — a provider's stake or a provenance certificate is intended to persist indefinitely unless explicitly acted upon.
 
 ### Arithmetic safety
 
@@ -185,39 +190,39 @@ A full description of this trust model is in [`docs/adr/0004-tee-oracle-trust-mo
 
 The following are documented, tracked risks that have been deliberately accepted or are pending remediation:
 
-| Risk | Area | Status |
-|---|---|---|
-| Registry admin check inconsistency in `add_tee_hash` | `contracts/registry` | Tracked — pending fix before mainnet |
-| Client-side-only API key management (no server verification) | Frontend | Accepted for current stage; server-side validation required before production API launch |
-| In-memory rate limiter resets on process restart | Frontend API | Accepted for current stage; persistent rate limiting store required for multi-instance production |
-| Three contracts use different `soroban-sdk` versions (21.0.0, 21.7.7, 23.0.0) | Contracts | Tracked — should be unified to reduce ABI risk |
-| Duplicate constant and function definitions in `oracle/src/lib.rs` | `contracts/oracle` | Tracked — code quality issue that may cause compilation errors; requires deduplication |
-| No upgrade path for deployed contracts | All contracts | By design for Soroban — bugs require deploying a new instance and migrating consumers |
-| Stellar deployer key not hardware-backed on testnet | Deployment | Acceptable for testnet; mainnet deployments must use a hardware wallet or HSM |
+| Risk                                                                          | Area                 | Status                                                                                            |
+| ----------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| Registry admin check inconsistency in `add_tee_hash`                          | `contracts/registry` | Tracked — pending fix before mainnet                                                              |
+| Client-side-only API key management (no server verification)                  | Frontend             | Accepted for current stage; server-side validation required before production API launch          |
+| In-memory rate limiter resets on process restart                              | Frontend API         | Accepted for current stage; persistent rate limiting store required for multi-instance production |
+| Three contracts use different `soroban-sdk` versions (21.0.0, 21.7.7, 23.0.0) | Contracts            | Tracked — should be unified to reduce ABI risk                                                    |
+| Duplicate constant and function definitions in `oracle/src/lib.rs`            | `contracts/oracle`   | Tracked — code quality issue that may cause compilation errors; requires deduplication            |
+| No upgrade path for deployed contracts                                        | All contracts        | By design for Soroban — bugs require deploying a new instance and migrating consumers             |
+| Stellar deployer key not hardware-backed on testnet                           | Deployment           | Acceptable for testnet; mainnet deployments must use a hardware wallet or HSM                     |
 
 ---
 
 ## 8. Security Controls Summary
 
-| Control | Location |
-|---|---|
-| HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) | `frontend/next.config.ts` — documented in [`docs/security/security-headers.md`](./docs/security/security-headers.md) |
-| Input validation and sanitization | `frontend/lib/security/inputValidation.ts` |
-| Per-address rate limiting with progressive backoff | `frontend/app/api/verification/route.ts` — documented in [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) |
-| CSP violation reporting | `frontend/app/api/csp-report/route.ts` |
-| Hash-chained tamper-evident audit log | `frontend/lib/security/auditLogger.ts` |
-| API key hash-only storage (no plaintext persistence) | `frontend/components/APIKeyManagement.tsx` |
-| ed25519 attestation signature verification | `contracts/oracle/src/lib.rs` — `verify_attestation()` |
-| TEE code hash expiry and rotation | `contracts/registry/src/lib.rs` — `is_tee_hash_approved()`, `rotate_tee_hash()` |
-| Provider reputation tracking and auto-suspension | `contracts/oracle/src/lib.rs` — SLA enforcement, `SLA_SUSPENSION_THRESHOLD = 70%` |
-| Provider blacklist | `contracts/registry/src/lib.rs` — `blacklist_provider()`, `is_provider_authorized()` |
-| Stake slashing for malicious providers | `contracts/oracle/src/lib.rs` — `slash_stake()` |
-| Circuit breaker (pause/unpause) | `contracts/oracle/src/lib.rs` — `pause()` / `unpause()` |
-| Multisig governance for admin operations | `contracts/registry/src/lib.rs` — `propose_operation()`, `approve_proposal()`, `execute_proposal()` |
-| Non-root container user | `Dockerfile` — `appuser` |
-| Production-only dependency install | `Dockerfile` — `pnpm install --prod` in runtime stage |
-| Cryptographic key management | Documented in [`docs/security/key-management.md`](./docs/security/key-management.md) |
-| Smart contract audit process | Documented in [`docs/security/smart-contract-audit-runbook.md`](./docs/security/smart-contract-audit-runbook.md) |
+| Control                                                  | Location                                                                                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) | `frontend/next.config.ts` — documented in [`docs/security/security-headers.md`](./docs/security/security-headers.md)                                          |
+| Input validation and sanitization                        | `frontend/lib/security/inputValidation.ts`                                                                                                                    |
+| Per-address rate limiting with progressive backoff       | `frontend/app/api/verification/route.ts` — documented in [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) |
+| CSP violation reporting                                  | `frontend/app/api/csp-report/route.ts`                                                                                                                        |
+| Hash-chained tamper-evident audit log                    | `frontend/lib/security/auditLogger.ts`                                                                                                                        |
+| API key hash-only storage (no plaintext persistence)     | `frontend/components/APIKeyManagement.tsx`                                                                                                                    |
+| ed25519 attestation signature verification               | `contracts/oracle/src/lib.rs` — `verify_attestation()`                                                                                                        |
+| TEE code hash expiry and rotation                        | `contracts/registry/src/lib.rs` — `is_tee_hash_approved()`, `rotate_tee_hash()`                                                                               |
+| Provider reputation tracking and auto-suspension         | `contracts/oracle/src/lib.rs` — SLA enforcement, `SLA_SUSPENSION_THRESHOLD = 70%`                                                                             |
+| Provider blacklist                                       | `contracts/registry/src/lib.rs` — `blacklist_provider()`, `is_provider_authorized()`                                                                          |
+| Stake slashing for malicious providers                   | `contracts/oracle/src/lib.rs` — `slash_stake()`                                                                                                               |
+| Circuit breaker (pause/unpause)                          | `contracts/oracle/src/lib.rs` — `pause()` / `unpause()`                                                                                                       |
+| Multisig governance for admin operations                 | `contracts/registry/src/lib.rs` — `propose_operation()`, `approve_proposal()`, `execute_proposal()`                                                           |
+| Non-root container user                                  | `Dockerfile` — `appuser`                                                                                                                                      |
+| Production-only dependency install                       | `Dockerfile` — `pnpm install --prod` in runtime stage                                                                                                         |
+| Cryptographic key management                             | Documented in [`docs/security/key-management.md`](./docs/security/key-management.md)                                                                          |
+| Smart contract audit process                             | Documented in [`docs/security/smart-contract-audit-runbook.md`](./docs/security/smart-contract-audit-runbook.md)                                              |
 
 ---
 
@@ -226,6 +231,7 @@ The following are documented, tracked risks that have been deliberately accepted
 ### Rust contracts
 
 All three contracts are `#![no_std]` with minimal, pinned dependencies:
+
 - `soroban-sdk` (versions 21.0.0–23.0.0 across the three contracts) — the only runtime dependency
 - `ed25519-dalek = "2.1.1"` — oracle contract dev dependency (test signature generation only, not in the deployed WASM)
 
@@ -240,6 +246,7 @@ pnpm audit
 ```
 
 Key dependencies to monitor:
+
 - `@stellar/freighter-api` — wallet integration; keep at the version specified in `package.json`
 - `next` — Next.js runtime; apply security patches promptly
 - `fast-xml-parser` — XML processing; a common target for injection attacks
@@ -265,12 +272,14 @@ StellarVeriphy follows coordinated vulnerability disclosure:
 7. **Credit** — reporters are credited in the public advisory unless they prefer to remain anonymous.
 
 We ask that reporters:
+
 - Give us reasonable time to fix the issue before public disclosure.
 - Avoid accessing or modifying data beyond what is necessary to demonstrate the vulnerability.
 - Avoid disrupting live services or user data.
 - Do not publicly disclose details until the coordinated release date is reached.
 
 We commit to:
+
 - Respond promptly and in good faith.
 - Not pursue legal action against good-faith security researchers following this policy.
 - Credit reporters who wish to be named.
@@ -282,14 +291,16 @@ We commit to:
 
 Detailed security implementation guides are in [`docs/security/`](./docs/security/):
 
-| Document | Contents |
-|---|---|
-| [`docs/security/key-management.md`](./docs/security/key-management.md) | Key inventory, HSM requirements, rotation procedures, backup and recovery, key usage auditing |
-| [`docs/security/smart-contract-audit-runbook.md`](./docs/security/smart-contract-audit-runbook.md) | Audit firm selection, scope definition, finding remediation, report publication, re-audit process |
-| [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) | Rate limiting configuration, input validation schema, CSP setup, audit logging |
-| [`docs/security/security-headers.md`](./docs/security/security-headers.md) | HTTP header set, rationale per header, how to verify, policy change guidance |
+| Document                                                                                             | Contents                                                                                               |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`docs/security/verifier-network-threat-model.md`](./docs/security/verifier-network-threat-model.md) | STRIDE threat model, participant trust boundaries, attack vectors, and engineering remediation mapping |
+| [`docs/security/key-management.md`](./docs/security/key-management.md)                               | Key inventory, HSM requirements, rotation procedures, backup and recovery, key usage auditing          |
+| [`docs/security/smart-contract-audit-runbook.md`](./docs/security/smart-contract-audit-runbook.md)   | Audit firm selection, scope definition, finding remediation, report publication, re-audit process      |
+| [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) | Rate limiting configuration, input validation schema, CSP setup, audit logging                         |
+| [`docs/security/security-headers.md`](./docs/security/security-headers.md)                           | HTTP header set, rationale per header, how to verify, policy change guidance                           |
 
 Related documents:
+
 - [`contracts/IMPLEMENTATION.md`](./contracts/IMPLEMENTATION.md) — storage conventions, cross-contract call patterns, error enum stability rules
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) — contract initialization order, admin key handling, rollback procedures
 - [`docs/adr/`](./docs/adr/) — architecture decision records including the TEE oracle trust model (ADR-0004)
