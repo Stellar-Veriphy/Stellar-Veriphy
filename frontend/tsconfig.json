@@ -6,6 +6,14 @@
       "dom.iterable",
       "esnext"
     ],
+    "jsx": "preserve",
+    "incremental": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "Bundler",
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -17,10 +25,23 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
+    },
+    "allowJs": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
     "types": ["jest"],
     "baseUrl": ".",
     "paths": {

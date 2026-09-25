@@ -1,6 +1,7 @@
 {
   "name": "@stellarveriphy/shared",
   "version": "0.1.0",
+  "main": "index.ts"
   "main": "index.ts",
   "exports": {
     ".": "./index.ts",

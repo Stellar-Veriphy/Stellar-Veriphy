@@ -1,3 +1,8 @@
+export default function Home() {
+  return (
+    <main>
+      <h1>StellarVeriphy</h1>
+      <p>Decentralized content verification and provenance on the Stellar blockchain.</p>
 import Link from "next/link";
 import { FEATURED_SAMPLE_ID } from "@/lib/sample-records";
 
