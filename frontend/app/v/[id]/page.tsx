@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { computeConfidence, metadataCompleteness, STANDARD_METADATA_FIELDS } from "@stellarveriphy/shared/scoring";
+import { computeConfidence } from "@stellarveriphy/shared/scoring";
 import type { ProvenanceEventType, VerificationRecord } from "@stellarveriphy/shared/types";
+import ConfidenceExplanation from "@/components/ConfidenceExplanation";
 import ConfidenceScore from "@/components/ConfidenceScore";
+import { OwnershipTransferPanel } from "@/components/certificates/OwnershipTransferPanel";
 import StatusBadge from "@/components/StatusBadge";
 import { getRecord, SAMPLE_RECORDS } from "@/lib/sample-records";
 import { parseVerificationUrlContext } from "@/lib/shareableUrl";
@@ -115,7 +117,7 @@ export default async function ShareableVerificationPage({
   }
 
   const { manifest, cert, evidence, timeline } = record;
-  const completeness = metadataCompleteness(record);
+  const confidence = computeConfidence(record);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -183,7 +185,7 @@ export default async function ShareableVerificationPage({
           {/* Metadata Section */}
           <Section title="Asset Manifest & Provenance">
             <dl className="divide-y divide-slate-100 dark:divide-gray-800">
-              <Field label="Creator" mono>
+              <Field label="Original creator" mono>
                 {manifest.creator}
               </Field>
               <Field label="Content Hash" mono>
@@ -228,10 +230,10 @@ export default async function ShareableVerificationPage({
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Section title="Confidence Assessment">
-            <ConfidenceScore result={computeConfidence(record)} />
-            <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-gray-800">
-              Metadata Completeness: {Math.round(completeness.score * 100)}% ({completeness.presentFields.length}/{STANDARD_METADATA_FIELDS.length} standard fields)
+          <Section title="Why this score?">
+            <ConfidenceScore result={confidence} />
+            <div className="mt-4">
+              <ConfidenceExplanation result={confidence} />
             </div>
           </Section>
 
@@ -260,6 +262,15 @@ export default async function ShareableVerificationPage({
               )}
             </dl>
           </Section>
+
+          {cert && (
+            <Section title="Ownership">
+              <OwnershipTransferPanel
+                certificateId={record.id}
+                initialOwner={cert.owner ?? cert.creator}
+              />
+            </Section>
+          )}
         </div>
       </div>
     </main>

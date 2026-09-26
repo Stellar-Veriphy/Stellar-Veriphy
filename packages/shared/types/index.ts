@@ -24,7 +24,10 @@ export interface ProvenanceCert {
   storageRef: string;
   manifestHash: string;
   attestationHash: string;
+  /** Original content creator; remains unchanged when ownership is transferred. */
   creator: string;
+  /** Current certificate owner, resolved separately from the on-chain owner lookup. */
+  owner?: string;
   timestamp: number;
 }
 

@@ -7,7 +7,7 @@
  *
  * Features:
  * - Opt-in toggle + email address capture
- * - Per-event preferences (verification complete / request status updates)
+ * - Per-event preferences for verification, certificate, and operational updates
  * - Unsubscribe action
  * - "Send test email" button to verify delivery
  */
@@ -69,9 +69,9 @@ export function EmailNotificationSettings({ className = "" }: EmailNotificationS
     <div
       className={`rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 ${className}`}
     >
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Email Notifications</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Email notifications</h3>
       <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-        Get emailed when a verification finishes or a request&apos;s status changes.
+        Choose which updates reach your inbox. Your choices are saved on this device.
       </p>
 
       <label className="mt-4 flex items-center gap-2">
@@ -108,24 +108,48 @@ export function EmailNotificationSettings({ className = "" }: EmailNotificationS
         />
       </div>
 
-      <fieldset className="mt-4 space-y-2" disabled={!prefs.optedIn}>
+      <fieldset className="mt-5 space-y-4" disabled={!prefs.optedIn}>
+        <legend className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
+          Event preferences
+        </legend>
+        <div className="space-y-3 border-l-2 border-gray-200 pl-4 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Verification status</p>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prefs.notifyOnVerificationComplete}
+              onChange={(e) => update({ notifyOnVerificationComplete: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Verification complete</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prefs.notifyOnRequestStatusUpdate}
+              onChange={(e) => update({ notifyOnRequestStatusUpdate: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Request status updates</span>
+          </label>
+        </div>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={prefs.notifyOnVerificationComplete}
-            onChange={(e) => update({ notifyOnVerificationComplete: e.target.checked })}
+            checked={prefs.notifyOnCertificateUpdates}
+            onChange={(e) => update({ notifyOnCertificateUpdates: e.target.checked })}
             className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <span className="text-sm text-gray-700 dark:text-gray-300">Verification complete</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300">Certificate updates</span>
         </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={prefs.notifyOnRequestStatusUpdate}
-            onChange={(e) => update({ notifyOnRequestStatusUpdate: e.target.checked })}
+            checked={prefs.notifyOnOperationalAlerts}
+            onChange={(e) => update({ notifyOnOperationalAlerts: e.target.checked })}
             className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <span className="text-sm text-gray-700 dark:text-gray-300">Request status updates</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300">Operational alerts</span>
         </label>
       </fieldset>
 
