@@ -252,6 +252,9 @@ export default function ManifestPage() {
               </button>
             </div>
           </div>
+          <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+            <ManifestPreview manifest={manifest} />
+          </aside>
         </div>
       </div>
     </main>
