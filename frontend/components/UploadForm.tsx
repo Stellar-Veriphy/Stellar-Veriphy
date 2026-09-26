@@ -16,6 +16,7 @@ import { ApiError, api } from "@/lib/api";
 import { trackJob } from "@/lib/tracked-jobs";
 import { Field } from "./Field";
 import { JobProgress } from "./JobProgress";
+import { MediaSnapshotPreview } from "./MediaSnapshotPreview";
 
 // Maps validation paths from the shared schema to the form input that fixes them.
 const FIELD_FOR_PATH: Record<string, string> = {
@@ -154,6 +155,12 @@ export function UploadForm() {
     return (
       <section className="card">
         <h2>Submitted for verification</h2>
+        {file && (
+          <MediaSnapshotPreview
+            file={file}
+            verificationState={job.status === "completed" ? "completed" : job.status === "failed" ? "failed" : "processing"}
+          />
+        )}
         <JobProgress job={job} />
         <p>
           Track this and earlier submissions on <a href="/creator/jobs">My verification jobs</a>.
@@ -203,6 +210,12 @@ export function UploadForm() {
             }}
           />
         </Field>
+        {file && (
+          <MediaSnapshotPreview
+            file={file}
+            verificationState={hashState.status === "hashing" ? "hashing" : submitting ? "submitting" : "idle"}
+          />
+        )}
         {hashState.status === "hashing" && <p className="muted">Computing SHA-256 hash…</p>}
         {hashState.status === "done" && (
           <p className="muted">SHA-256: <code className="hash">{hashState.hash}</code></p>

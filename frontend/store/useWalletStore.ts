@@ -30,6 +30,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
 import { auditLogger } from "@/lib/security/auditLogger";
+import { safeIsWalletAvailable } from "@/lib/walletDetection";
 import {
   ALL_ADAPTERS,
   getAdapter,
@@ -202,7 +203,7 @@ export const useWalletStore = create<WalletStore>()(
 
         try {
           const adpt = getAdapter(savedType);
-          const available = await adpt.isAvailable();
+          const available = await safeIsWalletAvailable(adpt);
           if (!available) {
             localStorage.removeItem(STORAGE_KEY_TYPE);
             localStorage.removeItem(STORAGE_KEY_KEY);
@@ -231,7 +232,7 @@ export const useWalletStore = create<WalletStore>()(
         try {
           const adpt = getAdapter(type);
           walletName = adpt.name;
-          const available = await adpt.isAvailable();
+          const available = await safeIsWalletAvailable(adpt);
           if (!available) {
             throw new Error(`${adpt.name} is not installed. Install it from: ${adpt.installUrl}`);
           }
