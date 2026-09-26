@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   SUPPORTED_MEDIA_TYPES,
   UPLOAD_LIMITS,
@@ -38,6 +38,37 @@ const FIELD_FOR_PATH: Record<string, string> = {
 };
 
 const ACCEPT = Object.entries(SUPPORTED_MEDIA_TYPES).flatMap(([type, exts]) => [type, ...exts]).join(",");
+const DRAFT_KEY = "stellar-veriphy:certificate-upload-draft:v1";
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type FormValues = {
+  creator: string;
+  capturedAt: string;
+  device: string;
+  location: string;
+  aiModel: string;
+  title: string;
+  description: string;
+  tags: string;
+};
+
+type DraftState = {
+  savedAt: string;
+  values: FormValues;
+  fileName?: string;
+  fileSize?: number;
+};
+
+const emptyValues = (): FormValues => ({
+  creator: "",
+  capturedAt: localDateTimeNow(),
+  device: "",
+  location: "",
+  aiModel: "",
+  title: "",
+  description: "",
+  tags: "",
+});
 
 // Value for <input type="datetime-local"> in the user's timezone.
 function localDateTimeNow(): string {
@@ -52,16 +83,8 @@ function toIsoTimestamp(local: string): string {
 
 export function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
-  const [values, setValues] = useState({
-    creator: "",
-    capturedAt: localDateTimeNow(),
-    device: "",
-    location: "",
-    aiModel: "",
-    title: "",
-    description: "",
-    tags: "",
-  });
+  const [values, setValues] = useState<FormValues>(() => emptyValues());
+  const [restoredDraft, setRestoredDraft] = useState<DraftState | null>(null);
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -69,6 +92,39 @@ export function UploadForm() {
   const [submitted, setSubmitted] = useState<VerificationJobView | null>(null);
   const hashState = useFileHash(file);
   const { jobs } = useJobStatuses(submitted ? [submitted.id] : []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as DraftState;
+      const savedAt = Date.parse(draft.savedAt);
+      if (!Number.isFinite(savedAt) || Date.now() - savedAt > DRAFT_TTL_MS) {
+        window.localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      setValues({ ...emptyValues(), ...draft.values });
+      setRestoredDraft(draft);
+    } catch {
+      window.localStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const hasTypedDraft = Object.entries(values).some(([key, value]) => {
+      if (key === "capturedAt") return false;
+      return value.trim() !== "";
+    });
+    if (!hasTypedDraft && !file) return;
+
+    const draft: DraftState = {
+      savedAt: new Date().toISOString(),
+      values,
+      fileName: file?.name ?? restoredDraft?.fileName,
+      fileSize: file?.size ?? restoredDraft?.fileSize,
+    };
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [file, restoredDraft?.fileName, restoredDraft?.fileSize, values]);
 
   const set = (name: keyof typeof values) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -142,6 +198,8 @@ export function UploadForm() {
       const upload = await api.createUpload(validation.value);
       const job = await api.createJob(upload.id);
       trackJob({ id: job.id, label: upload.title ?? upload.fileName, submittedAt: job.createdAt });
+      window.localStorage.removeItem(DRAFT_KEY);
+      setRestoredDraft(null);
       setSubmitted(job);
     } catch (err) {
       setServerError(err instanceof ApiError ? err : new ApiError("Submission failed. Please try again.", 0));
@@ -178,6 +236,11 @@ export function UploadForm() {
       {(summaryErrors.length > 0 || serverError) && (
         <div className="notice notice-error" role="alert">
           <p><strong>{serverError && serverError.errors.length === 0 ? serverError.message : "Please fix the following before submitting:"}</strong></p>
+          {serverError?.httpStatus === 429 && (
+            <p className="hint">
+              Retry after {serverError.retryAfterSeconds ?? "the indicated backoff period"} seconds. Your draft is saved locally, so you can safely wait and submit again.
+            </p>
+          )}
           {summaryErrors.length > 0 && (
             <ul>
               {summaryErrors.map(([input, error]) => (
@@ -188,6 +251,26 @@ export function UploadForm() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {restoredDraft && !file && (
+        <div className="notice" role="status">
+          <p>
+            <strong>Draft restored.</strong> Your form details were saved locally
+            {restoredDraft.fileName ? ` with ${restoredDraft.fileName}.` : "."} Re-select the file before submitting.
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              window.localStorage.removeItem(DRAFT_KEY);
+              setValues(emptyValues());
+              setRestoredDraft(null);
+            }}
+          >
+            Discard draft
+          </button>
         </div>
       )}
 

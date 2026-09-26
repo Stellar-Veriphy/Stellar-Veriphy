@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FiAlertCircle, FiCheckCircle, FiExternalLink, FiLoader } from "react-icons/fi";
 
-import { fetchTransactionStatus, type TransactionStatus } from "@/utils/transaction";
+import { pollTransactionStatus, type TransactionStatus } from "@/utils/transaction";
 
 interface TransactionTrackerProps {
   txHash: string;
@@ -11,25 +11,20 @@ interface TransactionTrackerProps {
 
 export function TransactionTracker({ txHash }: TransactionTrackerProps) {
   const [status, setStatus] = useState<TransactionStatus>("PENDING");
-  const [isPolling, setIsPolling] = useState(true);
 
   useEffect(() => {
-    if (!isPolling) return;
+    const controller = new AbortController();
+    setStatus("PENDING");
+    void pollTransactionStatus(txHash, {
+      signal: controller.signal,
+      onStatus: setStatus,
+    }).catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setStatus("FAILED");
+    });
 
-    const pollTransaction = async () => {
-      const newStatus = await fetchTransactionStatus(txHash);
-      setStatus(newStatus);
-
-      if (newStatus !== "PENDING") {
-        setIsPolling(false);
-      }
-    };
-
-    pollTransaction();
-    const interval = setInterval(pollTransaction, 3000);
-
-    return () => clearInterval(interval);
-  }, [txHash, isPolling]);
+    return () => controller.abort();
+  }, [txHash]);
 
   const getStatusDisplay = () => {
     switch (status) {
@@ -51,6 +46,12 @@ export function TransactionTracker({ txHash }: TransactionTrackerProps) {
           text: "Failed",
           color: "text-red-600",
         };
+      case "TIMEOUT":
+        return {
+          icon: <FiAlertCircle className="w-5 h-5 text-amber-500" />,
+          text: "Still pending",
+          color: "text-amber-600",
+        };
     }
   };
 
@@ -62,6 +63,8 @@ export function TransactionTracker({ txHash }: TransactionTrackerProps) {
       <div>{display.icon}</div>
       <div className="flex-1">
         <p className={`font-medium ${display.color}`}>{display.text}</p>
+        {status === "PENDING" && <p className="text-xs text-gray-500 dark:text-gray-400">Waiting for Stellar finality...</p>}
+        {status === "TIMEOUT" && <p className="text-xs text-gray-500 dark:text-gray-400">No final status yet. Check the explorer or retry in a minute.</p>}
         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{txHash}</p>
       </div>
       <a

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { FieldError } from "@stellarveriphy/shared";
+import { logOperationalEvent } from "./observability";
 
 export type ApiStatus =
   | "ok"
@@ -39,6 +40,11 @@ export async function readJson(req: Request): Promise<{ body: unknown } | { resp
 }
 
 export function serverError(context: string, err: unknown) {
-  console.error(`[${context}]`, err);
+  logOperationalEvent("error", "api.server_error", {
+    route: context,
+    operation: "request",
+    status: 500,
+    error: err,
+  });
   return respond(500, { status: "server_error", message: "Something went wrong on our side. Please try again." });
 }
