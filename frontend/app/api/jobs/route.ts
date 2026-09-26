@@ -1,17 +1,35 @@
 import { isPlainObject, type VerificationJobView } from "@stellarveriphy/shared";
 import { readJson, respond, serverError } from "@/lib/server/http";
 import { enqueueJob, getJobViews } from "@/lib/server/jobs";
+import { logOperationalEvent, requestIdFrom } from "@/lib/server/observability";
 import { getUpload } from "@/lib/server/uploads";
 
 const MAX_IDS_PER_REQUEST = 50;
 
 // POST /api/jobs { uploadId }: queue a verification job for a stored upload.
 export async function POST(req: Request) {
+  const requestId = requestIdFrom(req);
   const parsed = await readJson(req);
-  if ("response" in parsed) return parsed.response;
+  if ("response" in parsed) {
+    logOperationalEvent("warn", "verification_submission.rejected", {
+      requestId,
+      route: "POST /api/jobs",
+      operation: "parse_verification_submission",
+      status: parsed.response.status,
+      reason: "invalid_request_body",
+    });
+    return parsed.response;
+  }
 
   const uploadId = isPlainObject(parsed.body) ? parsed.body.uploadId : undefined;
   if (typeof uploadId !== "string" || uploadId === "") {
+    logOperationalEvent("warn", "verification_submission.rejected", {
+      requestId,
+      route: "POST /api/jobs",
+      operation: "validate_verification_submission",
+      status: 422,
+      reason: "missing_upload_id",
+    });
     return respond(422, {
       status: "validation_error",
       errors: [{ field: "uploadId", message: "uploadId is required.", hint: "Register the upload with POST /api/uploads first." }],
@@ -19,13 +37,41 @@ export async function POST(req: Request) {
   }
 
   try {
-    if (!(await getUpload(uploadId))) {
+    const upload = await getUpload(uploadId);
+    if (!upload) {
+      logOperationalEvent("warn", "verification_submission.rejected", {
+        requestId,
+        route: "POST /api/jobs",
+        operation: "load_upload_for_verification",
+        status: 404,
+        reason: "upload_not_found",
+        uploadId,
+      });
       return respond(404, { status: "not_found", message: "No upload exists with this ID." });
     }
     const job = await enqueueJob(uploadId);
     const [view] = await getJobViews([job.id]);
+    logOperationalEvent("info", "verification_submission.queued", {
+      requestId,
+      route: "POST /api/jobs",
+      operation: "enqueue_verification_job",
+      status: 202,
+      actor: upload.creator,
+      uploadId,
+      jobId: job.id,
+      contentHash: upload.contentHash,
+      manifestHash: upload.manifestHash,
+    });
     return respond<VerificationJobView>(202, { status: "queued", data: view });
   } catch (err) {
+    logOperationalEvent("error", "verification_submission.failed", {
+      requestId,
+      route: "POST /api/jobs",
+      operation: "enqueue_verification_job",
+      status: 500,
+      uploadId,
+      error: err,
+    });
     return serverError("POST /api/jobs", err);
   }
 }

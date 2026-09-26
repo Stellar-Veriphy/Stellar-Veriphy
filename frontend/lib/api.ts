@@ -2,7 +2,12 @@ import type { FieldError, UploadMetadata, UploadRecord, VerificationJobView } fr
 import { resolveApiEndpoint } from "@/config";
 
 export class ApiError extends Error {
-  constructor(message: string, readonly httpStatus: number, readonly errors: FieldError[] = []) {
+  constructor(
+    message: string,
+    readonly httpStatus: number,
+    readonly errors: FieldError[] = [],
+    readonly retryAfterSeconds?: number
+  ) {
     super(message);
   }
 }
@@ -92,6 +97,26 @@ async function request<T>(pathOrUrl: string, init?: RequestOptions): Promise<T> 
       status,
     });
     await wait(delayMs);
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch {
+    throw new ApiError("Could not reach the server. Check your connection and try again.", 0);
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    const retryAfter = Number(res.headers.get("Retry-After") ?? body?.retryAfterSeconds);
+    const retryAfterSeconds = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined;
+    const rateLimitMessage =
+      res.status === 429 && retryAfterSeconds
+        ? `Too many requests. Please wait ${retryAfterSeconds} seconds before trying again.`
+        : undefined;
+    throw new ApiError(
+      rateLimitMessage ?? body?.message ?? body?.error ?? `Request failed (${res.status}).`,
+      res.status,
+      body?.errors ?? [],
+      retryAfterSeconds
+    );
   }
 
   throw lastError ?? new ApiError("Request failed.", 0);
