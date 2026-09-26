@@ -56,7 +56,7 @@ certutil -hashfile photo.jpg SHA256   # Windows
 
 Every item on StellarVeriphy shows a **confidence score from 0 to 100**. It tells you how much verified evidence backs the content. It does not tell you whether what the content shows is true: a score of 100 means the file is exactly what its creator registered and that it was checked by an approved verifier.
 
-In the app, select the **?** icon next to any score for a short summary. You can reach it with the mouse, a tap, or the keyboard (Tab to focus it, Escape to close).
+On a certificate or public verification page, open **Why this score?** to see each factor, the points it contributed, and a plain-language explanation. The **?** icon beside other scores gives a shorter summary. Both are usable with a mouse, touch, or keyboard.
 
 ### How the score is calculated
 
@@ -72,12 +72,14 @@ The score is the sum of the points for each check that passes:
 
 Checks that have not run yet earn 0 points, so content that is still pending or processing scores low until verification finishes.
 
+The explanation panel shows earned points out of each factor's maximum. Origin details can earn partial points; other checks earn their full weight when passed. “No points yet” can mean a check failed or has not run, so use the verification status and history for that context.
+
 ### Score levels
 
 | Level | Range | Meaning |
 |---|---|---|
 | High | 85–100 | All key checks passed. A High score is only possible when the secure check, approved verifier and file-unchanged checks all pass. |
-| Medium | 50–84 | Most checks passed, but at least one failed or evidence is missing. Check the evidence summary to see which. |
+| Medium | 50–84 | Most checks passed, but at least one failed or evidence is missing. Check **Why this score?** to see which factors contributed. |
 | Low | 0–49 | Important checks failed or have not run yet. |
 
 For example, a file that passed every check but whose creator gave no device, location or AI-model details scores 90 (High). A file changed after its manifest was created loses the 20 "File unchanged" points, so it can score at most 80 and never reaches High. Verification also fails and no certificate is issued, so always check the status next to the score.
@@ -88,7 +90,7 @@ For example, a file that passed every check but whose creator gave no device, lo
 
 Open any item from **Explore** to see its certificate page:
 
-- **Evidence summary**: each scoring check and whether it passed.
+- **Why this score?**: each scoring factor, its plain-language meaning and the points it contributed.
 - **History**: every step from manifest creation to minting, with Stellar transaction hashes for on-chain events.
 - **Provenance**: the creator's Stellar account, when the content was created, and any origin details they provided. Fields the creator left out are shown as "Not provided".
 - **Certificate**: the on-chain certificate ID, storage reference, and the hashes you can use to check the record yourself.

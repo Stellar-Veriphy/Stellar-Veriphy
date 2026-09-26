@@ -893,10 +893,23 @@ mod tests {
             &s(&env, "ahash"),
             &owner1,
         );
+        assert_eq!(client.get_owner(&id), owner1);
         client.transfer_certificate(&id, &owner2);
 
         let cert = client.get_certificate(&id);
-        assert_eq!(cert.creator, owner2);
+        assert_eq!(cert.creator, owner1);
+        assert_eq!(client.get_owner(&id), owner2);
+
+        let history = client.get_certificate_history(&id, &0, &10);
+        assert_eq!(history.get_unchecked(0).action, s(&env, "transferred"));
+        assert_eq!(history.get_unchecked(0).modifier, owner1);
+        assert_eq!(
+            client
+                .try_transfer_certificate(&id, &owner2)
+                .unwrap_err()
+                .unwrap(),
+            ProvenanceError::InvalidOwner
+        );
     }
 
     #[test]

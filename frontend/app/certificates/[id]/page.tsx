@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { computeConfidence, metadataCompleteness, STANDARD_METADATA_FIELDS } from "@stellarveriphy/shared/scoring";
 import type { ProvenanceEventType, VerificationRecord } from "@stellarveriphy/shared/types";
+import ConfidenceExplanation from "@/components/ConfidenceExplanation";
 import ConfidenceScore from "@/components/ConfidenceScore";
 import StatusBadge from "@/components/StatusBadge";
+import { OwnershipTransferPanel } from "@/components/certificates/OwnershipTransferPanel";
 import { getRecord } from "@/lib/sample-records";
 
 type Params = Promise<{ id: string }>;
@@ -70,19 +72,6 @@ function Missing() {
   return <span className="italic text-slate-400">Not provided</span>;
 }
 
-function Check({ ok, pending }: { ok: boolean; pending?: boolean }) {
-  if (pending) return <span className="text-slate-500">Not yet checked</span>;
-  return ok ? (
-    <span className="font-medium text-emerald-700">
-      <span aria-hidden="true">✓ </span>Passed
-    </span>
-  ) : (
-    <span className="font-medium text-rose-700">
-      <span aria-hidden="true">✗ </span>Failed
-    </span>
-  );
-}
-
 export default async function CertificateDetail({ params }: { params: Params }) {
   const record = getRecord((await params).id);
   if (!record) notFound();
@@ -131,36 +120,8 @@ export default async function CertificateDetail({ params }: { params: Params }) 
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          <Section title="Evidence summary">
-            {evidence ? (
-              <ul className="divide-y divide-slate-100">
-                {confidence.breakdown.map((f) => (
-                  <li key={f.key} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-                    <div>
-                      <p className="font-medium">{f.label}</p>
-                      <p className="text-sm text-slate-500">{f.description}</p>
-                    </div>
-                    <p className="shrink-0 text-sm sm:text-right">
-                      {f.key === "metadata" ? (
-                        <span className="text-slate-700">
-                          {Math.round(metadataCompleteness(manifest) * STANDARD_METADATA_FIELDS.length)} of{" "}
-                          {STANDARD_METADATA_FIELDS.length} fields
-                        </span>
-                      ) : (
-                        <Check ok={f.earned > 0} />
-                      )}
-                      <span className="ml-2 tabular-nums text-slate-500">
-                        {f.earned}/{f.weight}
-                      </span>
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">
-                No evidence yet. The secure enclave has not checked this content.
-              </p>
-            )}
+          <Section title="Why this score?">
+            <ConfidenceExplanation result={confidence} />
           </Section>
 
           <Section title="History">
@@ -195,7 +156,7 @@ export default async function CertificateDetail({ params }: { params: Params }) 
         <div className="space-y-6">
           <Section title="Provenance">
             <dl className="divide-y divide-slate-100">
-              <Field label="Creator (Stellar account)" mono>
+              <Field label="Original creator" mono>
                 {manifest.creator}
               </Field>
               <Field label="Created">{formatDate(manifest.timestamp)}</Field>
@@ -248,6 +209,15 @@ export default async function CertificateDetail({ params }: { params: Params }) 
               )}
             </dl>
           </Section>
+
+          {cert && (
+            <Section title="Ownership">
+              <OwnershipTransferPanel
+                certificateId={record.id}
+                initialOwner={cert.owner ?? cert.creator}
+              />
+            </Section>
+          )}
         </div>
       </div>
     </main>

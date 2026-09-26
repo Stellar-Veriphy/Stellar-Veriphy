@@ -23,8 +23,9 @@ pub struct ProvenanceCert {
 //! - `creator`          — Stellar address of the content creator.
 //! - `timestamp`        — Ledger Unix timestamp at the time of minting.
 //!
-//! Once minted, the certificate is immutable (unless explicitly revoked or
-//! locked by the creator).
+//! The original creator and verification evidence remain fixed after minting.
+//! Current ownership is tracked separately and may be transferred by its
+//! current owner; descriptive metadata remains attached to the certificate.
 //!
 //! ## Key operations
 //!
@@ -34,6 +35,7 @@ pub struct ProvenanceCert {
 //! | [`mint_batch`] | Mint up to [`MAX_BATCH_SIZE`] certificates in one transaction. |
 //! | [`revoke`] | Mark a certificate as revoked with a [`RevocationReason`]. |
 //! | [`transfer_certificate`] | Transfer ownership to a new Stellar address. |
+//! | [`get_owner`] | Look up the current owner without changing creator attribution. |
 //! | [`lock_certificate`] | Permanently lock a certificate against future changes. |
 //! | [`get`] | Look up a certificate by its auto-incremented numeric ID. |
 //! | [`get_by_code`] | Resolve a human-readable verification code to a certificate. |
@@ -86,6 +88,7 @@ pub enum ProvenanceError {
     CollectionNotFound = 11,
     InvalidTagLength = 12,
     MaxTagsExceeded = 13,
+    InvalidOwner = 14,
 }
 
 // #171 — Revocation reason
@@ -395,6 +398,8 @@ pub enum DataKey {
     EndorsementCount(u64),
     /// Ordered list of endorser addresses for a certificate.
     EndorsementIndex(u64),
+    /// Current owner, separate from the immutable original creator.
+    CurrentOwner(u64),
 }
 
 #[contract]
@@ -617,6 +622,16 @@ impl ProvenanceContract {
         Ok(cert)
     }
 
+    /// Return the current owner, falling back to the original creator for existing certificates.
+    pub fn get_owner(env: Env, certificate_id: u64) -> Result<Address, ProvenanceError> {
+        let cert: ProvenanceCert = env
+            .storage()
+            .persistent()
+            .get(&certificate_id)
+            .ok_or(ProvenanceError::CertificateNotFound)?;
+        Ok(Self::current_owner(&env, certificate_id, &cert))
+    }
+
     /// #171 — Revoke a certificate. Only the oracle may call this.
     pub fn revoke_certificate(
         env: Env,
@@ -639,7 +654,7 @@ impl ProvenanceContract {
         cert.revoked = true;
         cert.revocation_reason = reason.clone();
         cert.revocation_timestamp = Some(env.ledger().timestamp());
-        let owner = cert.creator.clone();
+        let owner = Self::current_owner(&env, certificate_id, &cert);
 
         env.storage().persistent().set(&certificate_id, &cert);
 
@@ -684,7 +699,7 @@ impl ProvenanceContract {
             .get(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
 
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         if let Some(ts) = expires_at {
             if ts <= env.ledger().timestamp() {
@@ -723,14 +738,15 @@ impl ProvenanceContract {
             .get(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
 
-        cert.creator.require_auth();
+        let owner = Self::current_owner(&env, certificate_id, &cert);
+        owner.require_auth();
 
         if new_expires_at <= env.ledger().timestamp() {
             return Err(ProvenanceError::InvalidExpiration);
         }
 
         cert.expires_at = Some(new_expires_at);
-        let renewed_by = cert.creator.clone();
+        let renewed_by = owner;
         env.storage().persistent().set(&certificate_id, &cert);
 
         CertificateRenewed {
@@ -761,7 +777,7 @@ impl ProvenanceContract {
             if expires_at > now && expires_at - now <= warning_window {
                 CertificateExpirationWarning {
                     certificate_id,
-                    owner: cert.creator,
+                    owner: Self::current_owner(&env, certificate_id, &cert),
                     expires_at,
                 }
                 .publish(&env);
@@ -851,7 +867,7 @@ impl ProvenanceContract {
 
     /// #178 — Link two certificates together (parent/child/sibling). The link is
     /// stored on both certificates as reciprocal relations. Requires auth from
-    /// `certificate_id`'s creator.
+    /// `certificate_id`'s current owner.
     pub fn link_certificates(
         env: Env,
         certificate_id: u64,
@@ -868,7 +884,7 @@ impl ProvenanceContract {
             .persistent()
             .get(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         if !env.storage().persistent().has(&related_id) {
             return Err(ProvenanceError::CertificateNotFound);
@@ -936,28 +952,33 @@ impl ProvenanceContract {
             .unwrap_or(Vec::new(&env)))
     }
 
-    /// #172 — Transfer certificate ownership to a new address
+    /// #172 — Transfer certificate ownership to a new address without changing
+    /// the original creator or certificate metadata.
     pub fn transfer_certificate(
         env: Env,
         certificate_id: u64,
         new_owner: Address,
     ) -> Result<(), ProvenanceError> {
-        let mut cert = env
+        let cert = env
             .storage()
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
 
-        cert.creator.require_auth();
+        let old_owner = Self::current_owner(&env, certificate_id, &cert);
+        old_owner.require_auth();
 
         if cert.locked {
             return Err(ProvenanceError::CertificateLocked);
         }
 
-        let old_owner = cert.creator.clone();
+        if old_owner == new_owner {
+            return Err(ProvenanceError::InvalidOwner);
+        }
 
-        cert.creator = new_owner.clone();
-        env.storage().persistent().set(&certificate_id, &cert);
+        env.storage()
+            .persistent()
+            .set(&DataKey::CurrentOwner(certificate_id), &new_owner);
 
         let transfer_key = (symbol_short!("TRNF"), certificate_id);
         let transfer_count: u64 = env
@@ -970,7 +991,7 @@ impl ProvenanceContract {
             .set(&transfer_key, &(transfer_count + 1));
 
         // #181 — record in amendment history
-        Self::record_history(&env, certificate_id, "transferred", new_owner.clone());
+        Self::record_history(&env, certificate_id, "transferred", old_owner.clone());
 
         CertificateTransferred {
             certificate_id,
@@ -995,7 +1016,8 @@ impl ProvenanceContract {
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
 
-        cert.creator.require_auth();
+        let owner = Self::current_owner(&env, certificate_id, &cert);
+        owner.require_auth();
 
         if cert.locked {
             return Err(ProvenanceError::CertificateLocked);
@@ -1033,12 +1055,12 @@ impl ProvenanceContract {
             &env,
             certificate_id,
             "metadata_updated",
-            cert.creator.clone(),
+            owner.clone(),
         );
 
         MetadataUpdated {
             certificate_id,
-            updated_by: cert.creator,
+            updated_by: owner,
             new_version: metadata.version,
         }
         .publish(&env);
@@ -1241,6 +1263,13 @@ impl ProvenanceContract {
     // #181 — Certificate amendment history
     // -----------------------------------------------------------------
 
+    fn current_owner(env: &Env, certificate_id: u64, cert: &ProvenanceCert) -> Address {
+        env.storage()
+            .persistent()
+            .get(&DataKey::CurrentOwner(certificate_id))
+            .unwrap_or_else(|| cert.creator.clone())
+    }
+
     // Helper: append an entry to a certificate's amendment history
     fn record_history(env: &Env, certificate_id: u64, action: &str, modifier: Address) {
         let count_key = (symbol_short!("CHCNT"), certificate_id);
@@ -1330,7 +1359,7 @@ impl ProvenanceContract {
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         // #182 — regenerating invalidates the previous code
         let cert_code_key = (symbol_short!("CVCODE"), certificate_id);
@@ -1435,7 +1464,7 @@ impl ProvenanceContract {
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         if mime_type.len() == 0 {
             return Err(ProvenanceError::InvalidMediaMetadata);
@@ -1665,7 +1694,8 @@ impl ProvenanceContract {
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
 
-        cert.creator.require_auth();
+        let owner = Self::current_owner(&env, certificate_id, &cert);
+        owner.require_auth();
 
         if !cert.locked {
             cert.locked = true;
@@ -1673,7 +1703,7 @@ impl ProvenanceContract {
 
             CertificateLockedEvent {
                 certificate_id,
-                locked_by: cert.creator,
+                locked_by: owner,
             }
             .publish(&env);
         }
@@ -1695,7 +1725,7 @@ impl ProvenanceContract {
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         if cert.locked {
             return Err(ProvenanceError::CertificateLocked);
@@ -1745,7 +1775,7 @@ impl ProvenanceContract {
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         if cert.locked {
             return Err(ProvenanceError::CertificateLocked);
@@ -1852,7 +1882,7 @@ impl ProvenanceContract {
             .persistent()
             .get::<u64, ProvenanceCert>(&certificate_id)
             .ok_or(ProvenanceError::CertificateNotFound)?;
-        cert.creator.require_auth();
+        Self::current_owner(&env, certificate_id, &cert).require_auth();
 
         if cert.locked {
             return Err(ProvenanceError::CertificateLocked);

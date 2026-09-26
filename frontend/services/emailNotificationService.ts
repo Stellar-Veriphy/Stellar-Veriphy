@@ -13,7 +13,11 @@
  *  {@link "./certificateVerificationService"}.
  */
 
-export type EmailNotificationType = "verification_complete" | "request_status_update";
+export type EmailNotificationType =
+  | "verification_complete"
+  | "request_status_update"
+  | "certificate_update"
+  | "operational_alert";
 
 export interface EmailPreferences {
   /** Whether the subscriber has opted in to any email notifications. */
@@ -21,6 +25,8 @@ export interface EmailPreferences {
   email: string;
   notifyOnVerificationComplete: boolean;
   notifyOnRequestStatusUpdate: boolean;
+  notifyOnCertificateUpdates: boolean;
+  notifyOnOperationalAlerts: boolean;
 }
 
 export interface SentEmailRecord {
@@ -40,6 +46,8 @@ export const DEFAULT_EMAIL_PREFERENCES: EmailPreferences = {
   email: "",
   notifyOnVerificationComplete: true,
   notifyOnRequestStatusUpdate: true,
+  notifyOnCertificateUpdates: true,
+  notifyOnOperationalAlerts: true,
 };
 
 function delay(ms = 400): Promise<void> {
@@ -67,7 +75,8 @@ function writeJson(key: string, value: unknown): void {
 
 /** Reads the current subscriber's email preferences. */
 export function getEmailPreferences(): EmailPreferences {
-  return readJson(PREFS_KEY, DEFAULT_EMAIL_PREFERENCES);
+  const stored = readJson<Partial<EmailPreferences>>(PREFS_KEY, {});
+  return { ...DEFAULT_EMAIL_PREFERENCES, ...stored };
 }
 
 /** Persists the subscriber's email preferences (the "opt-in UI"). */
@@ -100,6 +109,16 @@ export function renderEmailTemplate(
       return {
         subject: `Request status update: ${vars.status ?? "updated"}`,
         body: `Your verification request for certificate ${vars.certificateId ?? "—"} is now "${vars.status ?? "updated"}".`,
+      };
+    case "certificate_update":
+      return {
+        subject: `Certificate update: ${vars.status ?? "updated"}`,
+        body: `Certificate ${vars.certificateId ?? "—"} has an update: ${vars.status ?? "updated"}.`,
+      };
+    case "operational_alert":
+      return {
+        subject: `StellarVeriphy operational alert: ${vars.status ?? "notice"}`,
+        body: vars.status ?? "There is an operational update for StellarVeriphy.",
       };
   }
 }
@@ -149,6 +168,25 @@ export async function sendRequestStatusUpdateEmail(
   const prefs = getEmailPreferences();
   if (!prefs.optedIn || !prefs.notifyOnRequestStatusUpdate || !prefs.email) return null;
   return dispatch(prefs.email, "request_status_update", { certificateId, status });
+}
+
+/** Sends a certificate update when the subscriber has enabled that category. */
+export async function sendCertificateUpdateEmail(
+  certificateId: string,
+  update: string
+): Promise<SentEmailRecord | null> {
+  const prefs = getEmailPreferences();
+  if (!prefs.optedIn || !prefs.notifyOnCertificateUpdates || !prefs.email) return null;
+  return dispatch(prefs.email, "certificate_update", { certificateId, status: update });
+}
+
+/** Sends an operational alert when the subscriber has enabled that category. */
+export async function sendOperationalAlertEmail(
+  alert: string
+): Promise<SentEmailRecord | null> {
+  const prefs = getEmailPreferences();
+  if (!prefs.optedIn || !prefs.notifyOnOperationalAlerts || !prefs.email) return null;
+  return dispatch(prefs.email, "operational_alert", { status: alert });
 }
 
 /** Sends a one-off test email to verify delivery, ignoring opt-in preferences. */
