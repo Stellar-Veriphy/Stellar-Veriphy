@@ -1,29 +1,9 @@
-import type { Metadata } from "next";
-import "./globals.css";
-
-export const metadata: Metadata = {
-  title: "StellarVeriphy",
-  description: "Decentralized content verification on the Stellar blockchain",
-};
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <nav className="nav">
-          <a href="/">StellarVeriphy</a>
-          <a href="/creator/upload-content">Upload</a>
-          <a href="/creator/jobs">My jobs</a>
-          <a href="/verify">Verify a file</a>
-        </nav>
-        {children}
 import "./globals.css";
 
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import SiteHeader from "@/components/SiteHeader";
-import "./globals.css";
 
 import { WizardProvider } from "@/app/context/WizardContext";
 import { ConsentBanner } from "@/components/ConsentBanner";
@@ -42,6 +22,7 @@ import { TutorialOverlay } from "@/components/ui/TutorialOverlay";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/config/app";
 import { HelpProvider } from "@/context/HelpContext";
 import { WalletProvider } from "@/context/WalletContext";
+import { CacheInvalidationProvider } from "@/context/CacheInvalidationContext";
 // #440 — wrap application with React Query provider
 import { ReactQueryProvider } from "@/lib/queryClient";
 import { SkipToContentLink } from "@/utils/accessibility";
@@ -98,10 +79,6 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem('theme')||(w
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-        <SiteHeader />
-        {children}
     <html lang="en" suppressHydrationWarning className="ios-full-height">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
@@ -112,34 +89,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans safe-inset`}>
         <SkipToContentLink />
         <ReactQueryProvider>
-          <ThemeProvider>
-            <WalletProvider>
-              <NotificationProvider>
-                <WizardProvider>
-                  <HelpProvider>
-                    <KeyboardShortcutsProvider>
-                      <ToastProvider>
-                        {/* #438 — top-level boundary: catches errors in any provider or page */}
-                        <ErrorBoundary section="Application">
-                          {/* #438 — boundary around the page content */}
-                          <ErrorBoundary section="Page">
-                            {children}
+          <CacheInvalidationProvider>
+            <ThemeProvider>
+              <WalletProvider>
+                <NotificationProvider>
+                  <WizardProvider>
+                    <HelpProvider>
+                      <KeyboardShortcutsProvider>
+                        <ToastProvider>
+                          <SiteHeader />
+                          {/* #438 — top-level boundary: catches errors in any provider or page */}
+                          <ErrorBoundary section="Application">
+                            {/* #438 — boundary around the page content */}
+                            <ErrorBoundary section="Page">
+                              {children}
+                            </ErrorBoundary>
                           </ErrorBoundary>
-                        </ErrorBoundary>
-                        <ScrollToTop />
-                        <HelpSearchOverlay />
-                        <TutorialOverlay />
-                        <PWAInstallPrompt />
-                        <PWAUpdatePrompt />
-                        <ConsentBanner />
-                        <OnboardingFlow />
-                      </ToastProvider>
-                    </KeyboardShortcutsProvider>
-                  </HelpProvider>
-                </WizardProvider>
-              </NotificationProvider>
-            </WalletProvider>
-          </ThemeProvider>
+                          <ScrollToTop />
+                          <HelpSearchOverlay />
+                          <TutorialOverlay />
+                          <PWAInstallPrompt />
+                          <PWAUpdatePrompt />
+                          <ConsentBanner />
+                          <OnboardingFlow />
+                        </ToastProvider>
+                      </KeyboardShortcutsProvider>
+                    </HelpProvider>
+                  </WizardProvider>
+                </NotificationProvider>
+              </WalletProvider>
+            </ThemeProvider>
+          </CacheInvalidationProvider>
         </ReactQueryProvider>
       </body>
     </html>

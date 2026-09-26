@@ -136,3 +136,25 @@ If contract upgradeability becomes a real requirement, that's a design decision 
 - [ ] Deployment transaction confirmed on a block explorer.
 - [ ] Consumers (frontend, oracle worker) updated to point at the new contract ID.
 - [ ] If replacing a previous deployment: rollback/migration plan for existing on-chain state decided _before_ the old contract ID is dropped from any config, per [Rollback procedures](#rollback-procedures).
+
+## Environment-Aware API Configuration
+
+The frontend dynamically resolves backend API endpoints and behaviors based on the target environment (`development`, `staging`, `production`, or `test`).
+
+### Configuration Layer (`frontend/config/environment.ts`)
+
+Endpoints and behavioral defaults are controlled by environment variables:
+
+| Environment | Variable | Default Value | Notes |
+| ----------- | -------- | ------------- | ----- |
+| **Development** | `NEXT_PUBLIC_API_URL` | `http://localhost:3000` | Mock fallbacks permitted, debug logging |
+| **Staging** | `NEXT_PUBLIC_API_URL` | `https://staging-api.stellarveriphy.io` | Testnet contracts, HTTPS enforced |
+| **Production** | `NEXT_PUBLIC_API_URL` | `https://api.stellarveriphy.io` | Mainnet contracts, strict HTTPS enforced |
+
+### Misconfiguration Detection
+
+The configuration layer validates at runtime:
+- **HTTPS Enforcement**: In staging and production, non-HTTPS URLs are rejected.
+- **Localhost Prevention**: In production, endpoints configured to `localhost` or `127.0.0.1` throw an explicit runtime configuration error.
+- **Clear Guidance**: Malformed URLs or missing mandatory configurations display clear remediation instructions in console and build logs.
+
