@@ -102,6 +102,12 @@ Returns one `UploadRecord`.
 
 Queues a verification job and returns `202` with the job.
 
+### Client retry policy
+
+The creator review flow retries `POST /api/uploads` and `POST /api/jobs` for transient failures only: network failures, `408`, `409`, `425`, `429`, and `5xx` responses. Retries use exponential backoff with jitter, start around 800 ms, cap at 6 seconds, and stop after 4 total attempts. Validation failures and unsupported media types are not retried.
+
+The UI shows a retrying state while another attempt is scheduled and switches to a failed state after the cap is reached. The client logs retry attempts with status, delay, and attempt count; final retry exhaustion is logged as an error for maintainers.
+
 ## `GET /api/jobs?ids=<id>,<id>` and `GET /api/jobs/:id`
 
 These return the current state of jobs. The list form omits unknown IDs and accepts at most 50 IDs.
