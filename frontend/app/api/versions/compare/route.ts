@@ -8,6 +8,44 @@ function getStoredVersions(): ContentVersion[] {
   return [];
 }
 
+function flatten(value: unknown, prefix = ""): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return prefix ? { [prefix]: value } : {};
+  }
+
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>(
+    (acc, [key, entry]) => {
+      const path = prefix ? `${prefix}.${key}` : key;
+      if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
+        Object.assign(acc, flatten(entry, path));
+      } else {
+        acc[path] = entry;
+      }
+      return acc;
+    },
+    {},
+  );
+}
+
+function compareVersions(versionA: ContentVersion, versionB: ContentVersion) {
+  const a = flatten(versionA);
+  const b = flatten(versionB);
+  const fields = new Set([...Object.keys(a), ...Object.keys(b)]);
+
+  return [...fields]
+    .sort()
+    .filter((field) => JSON.stringify(a[field]) !== JSON.stringify(b[field]))
+    .map((field) => {
+      const changeType = a[field] === undefined ? "added" : b[field] === undefined ? "removed" : "modified";
+      return {
+        field,
+        oldValue: a[field],
+        newValue: b[field],
+        changeType,
+      } as const;
+    });
+}
+
 export async function GET(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse<VersionComparison>>> {
@@ -37,20 +75,7 @@ export async function GET(
     const comparison: VersionComparison = {
       versionA,
       versionB,
-      differences: [
-        {
-          field: "manifestHash",
-          oldValue: versionA.manifestHash,
-          newValue: versionB.manifestHash,
-          changeType: versionA.manifestHash === versionB.manifestHash ? "modified" : "modified",
-        },
-        {
-          field: "versionNumber",
-          oldValue: versionA.versionNumber,
-          newValue: versionB.versionNumber,
-          changeType: "modified",
-        },
-      ],
+      differences: compareVersions(versionA, versionB),
     };
 
     return NextResponse.json({ success: true, data: comparison });

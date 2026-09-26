@@ -1,8 +1,11 @@
 "use client";
 
+import type { UploadMetadata } from "@stellarveriphy/shared";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { useWizard } from "@/context/WizardContext";
+import { ApiError, api, type RetryUpdate } from "@/lib/api";
 
 function downloadManifest(manifest: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(manifest, null, 2)], {
@@ -16,8 +19,21 @@ function downloadManifest(manifest: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+type SubmitState = "idle" | "uploading" | "retrying" | "queued" | "failed";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function retryMessage(update: RetryUpdate): string {
+  return `Transient ${update.reason}; retrying attempt ${update.attempt + 1} of ${update.maxAttempts} in ${Math.ceil(update.delayMs / 1000)}s.`;
+}
+
 export default function ReviewPage() {
   const router = useRouter();
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [failureDetails, setFailureDetails] = useState("");
   const {
     mode,
     file,
@@ -34,6 +50,82 @@ export default function ReviewPage() {
       downloadManifest(manifest, filename);
     }
   };
+
+  const handleSubmit = async () => {
+    const activeContentHash = mode === "advanced" ? advancedContentHash : contentHash;
+    const activeManifestHash = mode === "advanced" ? advancedManifestHash : manifestHash;
+
+    if (!activeContentHash || !activeManifestHash || !isRecord(manifest)) {
+      setSubmitState("failed");
+      setFailureDetails("Missing content hash or manifest data. Go back and complete the upload steps first.");
+      return;
+    }
+
+    const creator = typeof manifest.creator === "string" ? manifest.creator : "";
+    if (!creator) {
+      setSubmitState("failed");
+      setFailureDetails("The manifest needs a creator public key before verification can be submitted.");
+      return;
+    }
+
+    const retry = {
+      maxAttempts: 4,
+      baseDelayMs: 800,
+      maxDelayMs: 6000,
+      onRetry: (update: RetryUpdate) => {
+        setSubmitState("retrying");
+        setStatusMessage(retryMessage(update));
+      },
+    };
+
+    setSubmitState("uploading");
+    setStatusMessage("Registering upload metadata.");
+    setFailureDetails("");
+
+    try {
+      const uploadMetadata: UploadMetadata = {
+        fileName: file?.name ?? "advanced-verification.pdf",
+        mimeType: file?.type || "application/pdf",
+        fileSize: file?.size ?? 1,
+        contentHash: activeContentHash,
+        creator,
+        tags: Array.isArray(manifest.tags)
+          ? manifest.tags.filter((tag): tag is string => typeof tag === "string")
+          : [],
+        manifest: manifest as never,
+      };
+      if (typeof manifest.title === "string") uploadMetadata.title = manifest.title;
+      if (typeof manifest.description === "string") uploadMetadata.description = manifest.description;
+
+      const upload = await api.createUpload(
+        uploadMetadata,
+        { retry }
+      );
+
+      setSubmitState("uploading");
+      setStatusMessage("Upload registered. Queueing verification job.");
+      const job = await api.createJob(upload.id, { retry });
+      setSubmitState("queued");
+      setStatusMessage(`Verification job ${job.id} is queued. Queue position: ${job.queuePosition ?? "processing soon"}.`);
+      console.info("Upload submitted for verification", {
+        uploadId: upload.id,
+        jobId: job.id,
+        contentHash: activeContentHash,
+      });
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Upload submission failed.";
+      setSubmitState("failed");
+      setFailureDetails(message);
+      setStatusMessage("");
+      console.error("Upload submission failed", {
+        mode,
+        contentHash: activeContentHash,
+        error,
+      });
+    }
+  };
+
+  const isSubmitting = submitState === "uploading" || submitState === "retrying";
 
   return (
     <div className="space-y-6">
@@ -114,12 +206,42 @@ export default function ReviewPage() {
       <button
         type="button"
         onClick={() => router.back()}
-        className="text-sm font-medium text-gray-600 hover:text-gray-900 transition"
+        disabled={isSubmitting}
+        className="text-sm font-medium text-gray-600 hover:text-gray-900 transition disabled:cursor-not-allowed disabled:text-gray-400"
       >
-        ← Back
+        Back
       </button>
-      <button className="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-        Submit for Verification
+
+      {statusMessage && (
+        <div
+          className={`rounded-lg border p-4 text-sm ${
+            submitState === "retrying"
+              ? "border-amber-200 bg-amber-50 text-amber-900"
+              : "border-blue-200 bg-blue-50 text-blue-900"
+          }`}
+          role="status"
+        >
+          {statusMessage}
+        </div>
+      )}
+
+      {failureDetails && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+          {failureDetails}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={isSubmitting || submitState === "queued"}
+        className="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition disabled:cursor-not-allowed disabled:bg-gray-400"
+      >
+        {submitState === "retrying"
+          ? "Retrying upload..."
+          : submitState === "queued"
+            ? "Submitted"
+            : "Submit for Verification"}
       </button>
     </div>
   );
