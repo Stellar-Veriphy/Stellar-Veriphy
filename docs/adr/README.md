@@ -53,3 +53,4 @@ Small, easily-reversible implementation details (variable naming, a single funct
 | [0016](0016-multi-tenant-registry-governance.md)  | Multi-tenant registry governance model              | Accepted |
 | [0017](0017-tee-remote-attestation-pipeline.md)   | Hardened TEE remote attestation pipeline            | Accepted |
 | [0018](0018-verifier-reputation-network.md)       | Decentralised verifier reputation network           | Accepted |
+| [0019](0019-autonomous-governance-framework.md)   | Autonomous governance and policy review framework   | Accepted |

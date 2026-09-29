@@ -12,6 +12,7 @@
 | [Contract Error Codes](api/error-codes.md)        | Contributors, support, integrators                    | Contract-specific error enums, triggers, and first-pass remediation                                                |
 | [Video Tutorials](tutorials/README.md)            | End users, onboarding help                            | Tutorial scripts/transcripts for recording and YouTube publishing                                                  |
 | [Architecture Decision Records](adr/README.md)    | Contributors, especially anyone touching architecture | Why the system is built the way it is                                                                               |
+| [Governance and Policy Review Framework](security/governance-framework.md) | Contributors, operators, community | Stakeholder roles, review paths, trust thresholds, emergency actions, accountability |
 | [Testing Strategy Design Docs](testing/README.md) | Contributors picking up testing work                  | Contract snapshot testing, chaos engineering, API contract testing, visual regression testing                       |
 
 Start with the [Developer Onboarding Guide](onboarding.md) if you're new to the project.
