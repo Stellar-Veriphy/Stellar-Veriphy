@@ -38,6 +38,18 @@ export * from "./organisms";
 export * from "./templates";
 export * as utils from "./utils";
 
+// Confidence scoring
+export { default as ConfidencePanel } from "./ConfidencePanel";
+export { default as ConfidenceScore, ConfidenceScoreHelp } from "./ConfidenceScore";
+export { default as ConfidenceExplanation } from "./ConfidenceExplanation";
+
+// Dispute governance workflow
+export { default as DisputeSubmissionForm } from "./DisputeSubmissionForm";
+export { default as DisputeAuditTrail } from "./DisputeAuditTrail";
+
+// Multi-anchor provenance
+export { default as ProvenanceAnchors } from "./ProvenanceAnchors";
+
 // Legacy landing page components (can be reorganized into atoms/molecules)
 export { default as About } from "./About";
 export { default as CallToAction } from "./CallToAction";

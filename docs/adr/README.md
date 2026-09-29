@@ -23,6 +23,16 @@ Small, easily-reversible implementation details (variable naming, a single funct
 
 ## Index
 
+| ADR                                           | Title                                               | Status   |
+| --------------------------------------------- | --------------------------------------------------- | -------- |
+| [0001](0001-record-architecture-decisions.md) | Record architecture decisions                       | Accepted |
+| [0002](0002-soroban-on-stellar.md)            | Use Soroban smart contracts on Stellar              | Accepted |
+| [0003](0003-pnpm-monorepo.md)                 | Use a pnpm workspaces monorepo                      | Accepted |
+| [0004](0004-tee-oracle-trust-model.md)        | TEE-based oracle for trusted off-chain verification | Accepted |
+| [0005](0005-pluggable-storage-layer.md)       | Pluggable storage layer (IPFS or MongoDB)           | Accepted |
+| [0006](0006-oracle-request-routing.md)        | Rate-limited oracle request router                  | Accepted |
+| [0007](0007-contract-upgrade-model.md)        | Contract upgrade model — redeploy with ID rotation  | Accepted |
+| [0008](0008-multi-anchor-provenance.md)        | Multi-anchor provenance                             | Accepted |
 | ADR                                              | Title                                               | Status   |
 | ------------------------------------------------ | --------------------------------------------------- | -------- |
 | [0001](0001-record-architecture-decisions.md)    | Record architecture decisions                       | Accepted |

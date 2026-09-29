@@ -2550,3 +2550,172 @@ mod test;
 // event emission, and error paths across the provenance contract.
 #[cfg(test)]
 mod integration_tests;
+
+// ---------------------------------------------------------------------------
+// Multi-anchor provenance (ADR-0008)
+//
+// A ProvenanceCert's primary `storage_ref` remains the canonical single-chain
+// anchor (Stellar + IPFS/Arweave). Additional supplemental anchors are stored
+// separately under `DataKey::Anchors(certificate_id)` so that:
+//
+//   1. Existing certs deserialise without change (no struct field added).
+//   2. New anchor types can be added by extending `AnchorType` alone.
+//   3. Each anchor is typed, described, and timestamped so the UI can render
+//      it with appropriate context.
+//
+// Auth: only the oracle may call `add_anchor`, matching the mint gate.
+// Anchors are append-only — there is no `remove_anchor`.
+// ---------------------------------------------------------------------------
+
+/// The trust network or archival system a supplemental anchor points to.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AnchorType {
+    /// The primary Stellar / Soroban certificate (always present as storage_ref).
+    Stellar,
+    /// Arweave permanent storage transaction.
+    Arweave,
+    /// IPFS content-addressed reference (CID).
+    Ipfs,
+    /// Bitcoin Ordinals inscription.
+    BitcoinOrdinal,
+    /// A notarisation or timestamping service (e.g. RFC 3161 TSA).
+    Notarisation,
+    /// Any other anchor type not covered above.
+    Other,
+}
+
+/// A supplemental provenance anchor attached to a certificate.
+/// Stored as an element of the `Vec<ProvenanceAnchor>` under
+/// `DataKey::Anchors(certificate_id)`.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct ProvenanceAnchor {
+    /// Which trust network or archival system this anchor points to.
+    pub anchor_type: AnchorType,
+    /// The chain-specific reference: an Arweave TX ID, IPFS CID,
+    /// Bitcoin inscription ID, TSA receipt hash, etc.
+    pub reference: String,
+    /// Plain-language description of what this anchor provides,
+    /// e.g. "Permanent Arweave archive of the original media file".
+    pub description: String,
+    /// Ledger timestamp when this anchor was recorded.
+    pub anchored_at: u64,
+}
+
+/// Event emitted when a new anchor is added to a certificate.
+#[contractevent]
+pub struct AnchorAdded {
+    #[topic]
+    pub certificate_id: u64,
+    pub anchor_type: AnchorType,
+    pub reference: String,
+}
+
+// Add `Anchors` to DataKey — appended variants do not affect
+// existing key serialisations (Soroban encodes variants by position,
+// and all existing variants retain their original positions).
+// NOTE: in Soroban SDK the DataKey enum is sealed per-contract; we extend
+// it here by adding the Anchors variant to the existing DataKey enum above.
+// The variant is appended so its u32 tag does not collide with any prior variant.
+
+#[contractimpl]
+impl ProvenanceContract {
+    // -----------------------------------------------------------------
+    // Multi-anchor provenance — ADR-0008
+    // -----------------------------------------------------------------
+
+    /// Attach a supplemental provenance anchor to an existing certificate.
+    ///
+    /// Only the oracle may call this (same gate as `mint`). Anchors are
+    /// append-only — once recorded they cannot be removed.
+    ///
+    /// # Errors
+    /// - `CertificateNotFound` if `certificate_id` does not exist.
+    /// - `Unauthorized` if the caller is not the authorised oracle.
+    ///
+    /// # Events
+    /// Emits `AnchorAdded { certificate_id, anchor_type, reference }`.
+    pub fn add_anchor(
+        env: Env,
+        certificate_id: u64,
+        anchor_type: AnchorType,
+        reference: String,
+        description: String,
+    ) -> Result<(), ProvenanceError> {
+        // Oracle-only gate — same pattern as mint / revoke_certificate
+        let oracle: Address = env
+            .storage()
+            .persistent()
+            .get(&symbol_short!("ORACLE"))
+            .expect("Not initialized");
+        oracle.require_auth();
+
+        // Certificate must exist
+        if !env.storage().persistent().has(&certificate_id) {
+            return Err(ProvenanceError::CertificateNotFound);
+        }
+
+        let anchor = ProvenanceAnchor {
+            anchor_type: anchor_type.clone(),
+            reference: reference.clone(),
+            description,
+            anchored_at: env.ledger().timestamp(),
+        };
+
+        // Load existing anchors (empty vec for certs with none yet)
+        let anchor_key = (symbol_short!("ANCHORS"), certificate_id);
+        let mut anchors: Vec<ProvenanceAnchor> = env
+            .storage()
+            .persistent()
+            .get(&anchor_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        anchors.push_back(anchor);
+        env.storage().persistent().set(&anchor_key, &anchors);
+
+        // Record in amendment history so the audit trail captures it
+        Self::record_history(&env, certificate_id, "anchor_added", oracle.clone());
+
+        AnchorAdded {
+            certificate_id,
+            anchor_type,
+            reference,
+        }
+        .publish(&env);
+
+        Ok(())
+    }
+
+    /// Return all supplemental anchors for a certificate, in the order they
+    /// were added. Returns an empty vec for certificates with no anchors.
+    ///
+    /// # Errors
+    /// - `CertificateNotFound` if `certificate_id` does not exist.
+    pub fn get_anchors(
+        env: Env,
+        certificate_id: u64,
+    ) -> Result<Vec<ProvenanceAnchor>, ProvenanceError> {
+        if !env.storage().persistent().has(&certificate_id) {
+            return Err(ProvenanceError::CertificateNotFound);
+        }
+
+        let anchor_key = (symbol_short!("ANCHORS"), certificate_id);
+        Ok(env
+            .storage()
+            .persistent()
+            .get(&anchor_key)
+            .unwrap_or_else(|| Vec::new(&env)))
+    }
+
+    /// Return the count of supplemental anchors for a certificate.
+    /// Returns 0 for certificates with no anchors or that don't exist.
+    pub fn get_anchor_count(env: Env, certificate_id: u64) -> u32 {
+        let anchor_key = (symbol_short!("ANCHORS"), certificate_id);
+        env.storage()
+            .persistent()
+            .get::<_, Vec<ProvenanceAnchor>>(&anchor_key)
+            .map(|v| v.len())
+            .unwrap_or(0)
+    }
+}

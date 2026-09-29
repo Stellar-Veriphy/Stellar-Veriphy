@@ -4,14 +4,18 @@
  * CertificateResultCard.tsx
  *
  * Displays detailed certificate information after a successful lookup.
- * Shows identity fields, status indicators, metadata, and cryptographic hashes.
+ * Shows identity fields, status indicators, metadata, cryptographic hashes,
+ * and the verification confidence score with its per-factor breakdown.
  */
 
 import { useState } from "react";
 
+import ConfidencePanel from "@/components/ConfidencePanel";
+import ProvenanceAnchors from "@/components/ProvenanceAnchors";
+import { useConfidenceScore } from "@/hooks/useConfidenceScore";
 import type { CertificateVerificationResult } from "@/services/certificateVerificationService";
 
-import { type CertificateStatus,CertificateStatusBadge } from "./CertificateStatusBadge";
+import { type CertificateStatus, CertificateStatusBadge } from "./CertificateStatusBadge";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,6 +172,10 @@ export function CertificateResultCard({
     result;
   const status = statusLabel as CertificateStatus;
 
+  // Compute confidence from the oracle evidence + manifest attached to this result
+  const confidence = useConfidenceScore(result.evidence, result.manifest);
+  const anchors = result.anchors ?? [];
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       {/* ── Header ── */}
@@ -198,6 +206,14 @@ export function CertificateResultCard({
           <p className="text-sm text-gray-600 dark:text-gray-400 italic border-l-2 border-gray-200 dark:border-gray-700 pl-3">
             {description}
           </p>
+        )}
+
+        {/* Confidence score panel — shown whenever oracle evidence is available */}
+        {confidence && (
+          <ConfidencePanel
+            result={confidence}
+            defaultExpanded={false}
+          />
         )}
 
         {/* Details grid */}
@@ -234,6 +250,11 @@ export function CertificateResultCard({
             />
           </dl>
         </div>
+
+        {/* Supplemental provenance anchors */}
+        {anchors.length > 0 && (
+          <ProvenanceAnchors anchors={anchors} />
+        )}
 
         {/* Actions */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-2">

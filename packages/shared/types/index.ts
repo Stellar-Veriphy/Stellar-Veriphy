@@ -684,6 +684,9 @@ export interface CertificateValidation {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-anchor provenance (ADR-0008)
+// ---------------------------------------------------------------------------
+export * from "./anchors";
 // Oracle Analytics Dashboard (Feature: analytics/operations/oracle)
 // ---------------------------------------------------------------------------
 

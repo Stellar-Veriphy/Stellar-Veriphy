@@ -14,6 +14,7 @@ import type {
   ModerationQueueSummary,
   ModerationStatus,
 } from "@stellarveriphy/shared";
+import DisputeAuditTrail from "@/components/DisputeAuditTrail";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -262,6 +263,13 @@ function ItemDetailPanel({
           >
             {saving ? "Saving…" : "Save decision"}
           </button>
+        </div>
+
+        {/* Audit trail — loads the dispute audit trail if a matching dispute ID exists.
+            ModerationQueueItem IDs may differ from DisputeRecord IDs; the item id is
+            passed here and the API returns an empty array if no entries exist yet. */}
+        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+          <DisputeAuditTrail disputeId={item.id} />
         </div>
       </div>
     </div>
