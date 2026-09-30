@@ -391,6 +391,7 @@ The contracts use the **Soroban SDK** (Rust → WASM). The important building bl
 | [Contract Error Codes](docs/api/error-codes.md)       | Error lookup for oracle, provenance, and registry contract failures                                                                  |
 | [Video Tutorials](docs/tutorials/README.md)           | Transcript source for getting started, verification workflow, and developer setup walkthroughs                                       |
 | [Architecture Decision Records](docs/adr/README.md)   | Why the system is built the way it is — Soroban, the monorepo layout, the TEE trust model, storage abstraction                       |
+| [Governance & Policy Review Framework](docs/security/governance-framework.md) | Stakeholder roles, impact-proportionate review paths, trust-threshold governance, emergency actions, and accountability |
 
 ## 🤝 Contributing
 
