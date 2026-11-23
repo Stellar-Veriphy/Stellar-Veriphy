@@ -139,6 +139,18 @@ Use the following template when summarizing milestone work for a release. Copy i
 - **Maintainers:** Before publishing a release, copy the template into the GitHub release, replace the version, date, and link placeholders, group merged PRs under Features and Fixes, and list any open or deferred items under Known Issues.
 - Keep entries concise and user-facing, and always include links so readers can trace changes back to PRs and issues.
 
+## Data migration releases
+
+Releases that include schema changes or indexed data migrations must attach the completed **release data migration checklist** to the release notes (see the [release data migration checklist](docs/operations/release-data-migration-checklist.md)). The checklist must explicitly cover:
+
+- **Backups** — verified backups taken before the migration runs
+- **Validation** — pre- and post-migration validation steps and expected results
+- **Rollback** — tested rollback procedure and decision criteria
+- **Data ownership** — the data owner accountable for the migration
+- **Approvals** — sign-off from the required approvers before deployment
+
+Link the completed checklist in the release notes and follow the deployment procedures in [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Branches
 
 - **main**: Production-ready releases

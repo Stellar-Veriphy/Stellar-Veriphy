@@ -4,7 +4,9 @@
 #   config-audit.sh record KEY VALUE [ENV]   # log a change (value is masked)
 #   config-audit.sh diff OLD.env NEW.env [ENV] # log all changes between env files
 #   config-audit.sh show [N]                 # show last N entries (default 20)
+#   config-audit.sh rotate-rehearsal ENVFILE # validate a rotation plan (keys/status only)
 # Log: JSON Lines at $CONFIG_AUDIT_LOG (default: ./logs/config-audit.jsonl). Retain >= 1 year.
+=======
 set -euo pipefail
 
 LOG="${CONFIG_AUDIT_LOG:-./logs/config-audit.jsonl}"
@@ -41,5 +43,45 @@ case "${1:-}" in
     for k in "${!old[@]}"; do [[ -z "${new[$k]+x}" ]] && log_entry "$k" removed "" "${4:-}"; done
     ;;
   show) tail -n "${2:-20}" "$LOG" 2>/dev/null || echo "No audit entries." ;;
-  *) sed -n '2,8p' "$0"; exit 1 ;;
+  rotate-rehearsal)
+    # Validate a proposed credential rotation without exposing secret values.
+    # ENVFILE must define, for each rotated credential KEY:
+    #   KEY            current credential (present during overlap)
+    #   KEY_PREVIOUS   previous credential (present during overlap)
+    #   KEY_REVOKE_AT  revocation deadline for the previous credential
+    # Output lists only key names and status; values are never printed.
+    envfile="${2:-}"
+    if [[ -z "$envfile" || ! -r "$envfile" ]]; then
+      echo "Usage: $0 rotate-rehearsal ENVFILE" >&2
+      exit 1
+    fi
+    declare -A cfg
+    while IFS='=' read -r k v; do
+      [[ -n "$k" && "$k" != \#* ]] && cfg[$k]="$v"
+    done < "$envfile"
+    rc=0
+    found=0
+    for k in "${!cfg[@]}"; do
+      [[ "$k" =~ (SECRET|KEY|TOKEN|PASSWORD|PRIVATE|CREDENTIAL) ]] || continue
+      [[ "$k" == *_PREVIOUS || "$k" == *_REVOKE_AT ]] && continue
+      found=1
+      cur="${cfg[$k]:-}"
+      prev="${cfg[${k}_PREVIOUS]:-}"
+      deadline="${cfg[${k}_REVOKE_AT]:-}"
+      status="ok"
+      if [[ -z "$cur" ]]; then status="missing-current"; rc=1
+      elif [[ -z "$prev" ]]; then status="missing-previous"; rc=1
+      elif [[ -z "$deadline" ]]; then status="missing-revoke-deadline"; rc=1
+      fi
+      printf 'key=%s status=%s current=%s previous=%s revoke_at=%s\n' \
+        "$k" "$status" "$(mask "$k" "$cur")" "$(mask "$k" "$prev")" \
+        "$( [[ -n "$deadline" ]] && echo "$deadline" || echo "unset" )"
+    done
+    if (( ! found )); then
+      echo "No rotatable credential keys found in $envfile." >&2
+      exit 1
+    fi
+    exit "$rc"
+    ;;
+  *) sed -n '2,9p' "$0"; exit 1 ;;
 esac

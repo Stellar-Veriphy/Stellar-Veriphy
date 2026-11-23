@@ -11,8 +11,10 @@ Do not include secrets or other users' data, disrupt services or access unnecess
 data. Coordinate publication with maintainers. Acknowledgement target: 48 hours;
 initial triage: five business days. Full scope and disclosure timelines follow below.
 
-Operational guides: [dependency review](docs/security/dependency-review.md) and
-[incident communication](docs/operations/incident-communication.md).
+Operational guides: [dependency review](docs/security/dependency-review.md),
+[incident communication](docs/operations/incident-communication.md) and
+[secret rotation rehearsal](docs/security/secret-rotation-rehearsal.md).
+[incident command checklist](docs/operations/incident-command-checklist.md).
 
 This document describes StellarVeriphy's vulnerability disclosure process, security scope, known risk areas, and how we handle security reports. For implementation-level security controls (rate limiting, input validation, key management, HTTP headers, smart contract audit procedures), see the detailed guides in [`docs/security/`](./docs/security/).
 
@@ -29,8 +31,9 @@ This document describes StellarVeriphy's vulnerability disclosure process, secur
 7. [Known Risks and Accepted Limitations](#7-known-risks-and-accepted-limitations)
 8. [Security Controls Summary](#8-security-controls-summary)
 9. [Dependency Security](#9-dependency-security)
-10. [Responsible Disclosure Policy](#10-responsible-disclosure-policy)
-11. [Security Documentation Index](#11-security-documentation-index)
+10. [Secret Rotation Rehearsal](#10-secret-rotation-rehearsal)
+11. [Responsible Disclosure Policy](#11-responsible-disclosure-policy)
+12. [Security Documentation Index](#12-security-documentation-index)
 
 ---
 
@@ -165,7 +168,29 @@ The Registry contract supports a multisig approval mechanism for adding provider
 
 The Registry contract's `add_tee_hash` function currently has a code path where the admin check is performed inline rather than through the centralized `require_admin()` helper. This is a tracked issue. Until resolved, the admin address should be treated as a high-value secret on any deployment where Registry outputs are trusted for real verification decisions.
 
+### Contract access policy matrix
+
+Every privileged contract action, the role required to perform it, the least-privilege option available, and the expected recovery path if the action is taken maliciously or by mistake. The full, maintained matrix lives in [`docs/security/contract-access-policy.md`](./docs/security/contract-access-policy.md); the summary below is normative for reviewers.
+
+| Action | Contract | Required role | Least-privilege option | Recovery path |
+|---|---|---|---|---|
+| Deploy / initialize | All | Deployer key (hardware wallet or HSM on mainnet) | Deploy from a dedicated, single-purpose key; hand admin to multisig immediately after `init` | Deploy a new instance and migrate consumers (no in-place upgrade) |
+| Upgrade / migrate | All | N/A — Soroban contracts are immutable | Deploy new instance; never reuse an admin key across instances | New deployment + consumer migration; revoke old admin key |
+| Pause / unpause | Oracle | Admin (`require_auth`) | Time-boxed pause by a dedicated circuit-breaker key with multisig approval | Unpause via admin; if key compromised, rotate admin through Registry governance |
+| Attestation approval (TEE hash add/rotate) | Registry | Admin + multisig threshold > 1 | Multisig with threshold ≥ 2; separate proposer and approver keys | Rotate hash, blacklist affected provider, re-verify affected certificates |
+| Provider registration | Registry | Admin + multisig threshold > 1 | Multisig approval; provider key distinct from admin key | Blacklist provider, slash stake, revoke certificates minted by provider |
+| Provider blacklist | Registry | Admin | Multisig approval for removals from blacklist | Re-review via governance; blacklist is reversible only by admin |
+| Stake slashing | Oracle | Admin | Multisig approval; cap slash amount in policy | Dispute resolution; restore stake only via governance decision |
+| Dispute resolution | Oracle | Admin | Multisig approval for outcomes above a value threshold | Escalate to governance; publish post-mortem |
+| Policy / governance handoff (admin transfer) | All | Current admin | Two-step handoff: propose new admin, new admin accepts | Revert handoff before acceptance; after acceptance, recover via multisig |
+| Certificate revocation | Provenance | Oracle address (contract) | Oracle-only; no human key can revoke directly | Re-mint after re-verification; audit revocation log |
+
+Reviewers should prefer the least-privilege option in every row: dedicated keys per function class, multisig thresholds above 1 for mainnet, and no reuse of the deployer key as an operational admin key.
+
+The matrix is validated against the implementation by [`scripts/contract-surface.sh`](./scripts/contract-surface.sh) in CI; a CI failure means the documented roles no longer match the contract entrypoints and the matrix must be updated in the same change.
+
 ---
+=======
 
 ## 6. TEE and Oracle Trust Model
 
@@ -267,7 +292,53 @@ Workflow steps pin third-party actions by version tag (e.g., `actions/checkout@v
 
 ---
 
-## 10. Responsible Disclosure Policy
+## 10. Secret Rotation Rehearsal
+
+Service credentials (API keys, signing keys, webhook secrets, database and KMS
+credentials) are rotated on a fixed schedule and rehearsed before the first
+production rotation. The full runbook is in
+[`docs/security/secret-rotation-rehearsal.md`](./docs/security/secret-rotation-rehearsal.md).
+
+### Zero-downtime rotation (dual-credential overlap)
+
+Rotation never replaces a credential in place. Instead:
+
+1. **Issue the new credential** alongside the old one. Both are valid at the same time.
+2. **Deploy consumers** configured with the new credential, one service at a time, verifying health checks between steps.
+3. **Confirm traffic** — all consumers must be observed using the new credential (logs, metrics, or audit trail) before proceeding.
+4. **Revoke the old credential** only after the overlap window has elapsed and no consumer has used it.
+
+The overlap window must be long enough to cover the slowest deploy and rollback path
+(at minimum one full deployment cycle plus the rollback window). If any consumer fails
+during the overlap, roll back to the old credential — it is still valid until revoked.
+
+### Revocation schedule for old credentials
+
+- Old credentials are revoked on a published schedule, not ad hoc. The default is
+  **7 days after the new credential is confirmed in use**, or immediately on suspicion
+  of compromise.
+- Revocation is recorded with the credential identifier (never the value), the
+  revocation time, and the operator who performed it.
+- A credential that misses its revocation date is treated as an incident and escalated
+  per [`docs/operations/incident-communication.md`](./docs/operations/incident-communication.md).
+
+### Rehearsal output must exclude secret values
+
+Rehearsal runs (and any logs, transcripts, or artifacts they produce) must never
+contain credential values, partial values, hashes of low-entropy secrets, or
+environment dumps. Output records only credential identifiers, timestamps, the
+services exercised, and pass/fail results. Redact before sharing rehearsal output in
+issues, pull requests, or incident channels.
+
+### Detecting stale credentials
+
+Run [`scripts/ops/config-audit.sh`](./scripts/ops/config-audit.sh) to detect
+credentials that are past their rotation or revocation date. The script reports
+identifiers and ages only — it does not print secret values.
+
+---
+
+## 11. Responsible Disclosure Policy
 
 StellarVeriphy follows coordinated vulnerability disclosure:
 
@@ -293,7 +364,7 @@ We commit to:
 
 ---
 
-## 11. Security Documentation Index
+## 12. Security Documentation Index
 
 Detailed security implementation guides are in [`docs/security/`](./docs/security/):
 
@@ -307,6 +378,8 @@ Detailed security implementation guides are in [`docs/security/`](./docs/securit
 | [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) | Rate limiting configuration, input validation schema, CSP setup, audit logging |
 | [`docs/security/security-headers.md`](./docs/security/security-headers.md) | HTTP header set, rationale per header, how to verify, policy change guidance |
 | [`docs/security/governance-framework.md`](./docs/security/governance-framework.md) | Autonomous governance — stakeholder roles, review paths, trust thresholds, emergency actions, audit trail |
+| [`docs/security/secret-rotation-rehearsal.md`](./docs/security/secret-rotation-rehearsal.md) | Secret rotation rehearsal — dual-credential overlap, revocation schedule, redacted rehearsal output, stale-credential detection |
+| [`docs/operations/incident-command-checklist.md`](./docs/operations/incident-command-checklist.md) | Incident command checklist — roles, required decisions, legal/security/engineering considerations, evidence preservation, recovery, and auditable incident record |
 
 Related documents:
 - [`contracts/IMPLEMENTATION.md`](./contracts/IMPLEMENTATION.md) — storage conventions, cross-contract call patterns, error enum stability rules
