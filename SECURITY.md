@@ -11,8 +11,9 @@ Do not include secrets or other users' data, disrupt services or access unnecess
 data. Coordinate publication with maintainers. Acknowledgement target: 48 hours;
 initial triage: five business days. Full scope and disclosure timelines follow below.
 
-Operational guides: [dependency review](docs/security/dependency-review.md) and
-[incident communication](docs/operations/incident-communication.md).
+Operational guides: [dependency review](docs/security/dependency-review.md),
+[incident communication](docs/operations/incident-communication.md) and
+[incident command checklist](docs/operations/incident-command-checklist.md).
 
 This document describes StellarVeriphy's vulnerability disclosure process, security scope, known risk areas, and how we handle security reports. For implementation-level security controls (rate limiting, input validation, key management, HTTP headers, smart contract audit procedures), see the detailed guides in [`docs/security/`](./docs/security/).
 
@@ -306,6 +307,7 @@ Detailed security implementation guides are in [`docs/security/`](./docs/securit
 | [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) | Rate limiting configuration, input validation schema, CSP setup, audit logging |
 | [`docs/security/security-headers.md`](./docs/security/security-headers.md) | HTTP header set, rationale per header, how to verify, policy change guidance |
 | [`docs/security/governance-framework.md`](./docs/security/governance-framework.md) | Autonomous governance — stakeholder roles, review paths, trust thresholds, emergency actions, audit trail |
+| [`docs/operations/incident-command-checklist.md`](./docs/operations/incident-command-checklist.md) | Incident command checklist — roles, required decisions, legal/security/engineering considerations, evidence preservation, recovery, and auditable incident record |
 
 Related documents:
 - [`contracts/IMPLEMENTATION.md`](./contracts/IMPLEMENTATION.md) — storage conventions, cross-contract call patterns, error enum stability rules

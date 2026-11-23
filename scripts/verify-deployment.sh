@@ -152,6 +152,29 @@ case "$CONTRACT" in
 esac
 
 # ---------------------------------------------------------------------------
+# Rollback checkpoint gate
+#
+# Promotion is only allowed when the rollback points (application and
+# contract) are healthy. The checkpoint verifier is read-only and must not
+# modify live data.
+# ---------------------------------------------------------------------------
+ROLLBACK_VERIFIER="$(dirname "$0")/ops/verify-rollback-checkpoints.sh"
+
+if [[ "$FAILED" -eq 0 ]]; then
+  echo ""
+  echo "--- Rollback checkpoint verification ---"
+  if [[ ! -x "$ROLLBACK_VERIFIER" && ! -f "$ROLLBACK_VERIFIER" ]]; then
+    fail "Rollback checkpoint verifier not found: $ROLLBACK_VERIFIER"
+  else
+    if bash "$ROLLBACK_VERIFIER" "$CONTRACT" "$CONTRACT_ID" "$NETWORK"; then
+      pass "Rollback checkpoints are healthy"
+    else
+      fail "Rollback checkpoints are unhealthy — promotion blocked"
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
