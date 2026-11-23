@@ -100,3 +100,21 @@ export STELLAR_SECRET_KEY=SB... (your secret key, optional if configured in stel
 ## Verification providers and cancellation
 
 See [verification lifecycle operations](docs/operations/verification-lifecycle.md) for startup validation, provider configuration restart policy, MongoDB transaction requirements, cancellation authorization, the versioned error taxonomy, and Grafana traffic filters. Configure `VERIFICATION_BACKEND_URL` in the frontend server environment for the backend status proxy.
+
+## Promotion gates
+
+Before promoting a build from staging to production, both of the following gates must pass. They are enforced by the deployment workflow in `.github/workflows` and are documented in detail in [docs/deployment.md](docs/deployment.md).
+
+### Staging smoke test sign-off
+
+Critical staging checks must be recorded with a concise sign-off before promotion. Each sign-off records the test scope and the reviewer. Failed checks block promotion by default; emergency exceptions require an explicit, documented override. See [staging sign-off workflow](docs/deployment/staging-signoff.md) for the checklist, sign-off record format, and the emergency exception procedure.
+
+### Rollback checkpoint verification
+
+Before a rollback point is approved, verify that both the application and contract rollback points are healthy:
+
+- Identify the rollback artifacts and their versions (application image/tag and contract WASM hash/address).
+- Verify each checkpoint without modifying live data (read-only checks only).
+- Unhealthy rollback points block promotion.
+
+See [docs/deployment.md](docs/deployment.md) for the rollback checkpoint verification procedure and the scripts under `scripts/` that perform it.
