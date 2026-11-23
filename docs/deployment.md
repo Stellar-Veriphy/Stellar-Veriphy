@@ -13,6 +13,8 @@ It assumes you've already completed the [Developer Onboarding Guide](onboarding.
 - [Step-by-step deployment](#step-by-step-deployment)
 - [Contract initialization](#contract-initialization)
 - [Verification process](#verification-process)
+- [Staging smoke-test sign-off](#staging-smoke-test-sign-off)
+- [Rollback checkpoint verification](#rollback-checkpoint-verification)
 - [Rollback procedures](#rollback-procedures)
 - [Deployment checklist](#deployment-checklist)
 - [Data migrations and restore tests](#data-migrations-and-restore-tests)
@@ -115,6 +117,25 @@ stellar contract invoke --id <CONTRACT_ID> --source deployer --network testnet \
 
 **4. Record the contract ID** wherever your deployment's source of truth lives (deployment log, environment config for the frontend/oracle worker) — there's no on-chain registry of "which contract ID is the current one" beyond what you deployed and wrote down.
 
+## Staging smoke-test sign-off
+
+Before promoting a build from staging to production, a reviewer must record a concise sign-off confirming the critical staging checks passed. The sign-off captures the **test scope** (which checks were run) and the **reviewer** (who approved the promotion).
+
+- **Workflow:** [`.github/workflows/staging-signoff.yml`](../.github/workflows/staging-signoff.yml) — runs the staging smoke checks and records the sign-off as a promotion gate.
+- **Procedure and sign-off template:** [`deployment/staging-signoff.md`](deployment/staging-signoff.md) — the checklist of critical checks, how to record scope and reviewer, and how to request an emergency exception.
+
+**Failed checks block promotion by default.** If any critical staging check fails, the sign-off cannot be recorded and the promotion is blocked. For genuine emergencies, the workflow supports an explicit exception path (documented in [`deployment/staging-signoff.md`](deployment/staging-signoff.md)) that requires a named approver and a recorded justification — it is not a silent bypass.
+
+## Rollback checkpoint verification
+
+Before a promotion is approved, confirm that the rollback points for both the **application** and the **contracts** are healthy. Verification is read-only: it inspects artifacts, versions and configuration and **does not modify live data**.
+
+- **Rollback checkpoint verification:** [`scripts/ops/verify-rollback-checkpoints.sh`](../scripts/ops/verify-rollback-checkpoints.sh) — identifies the rollback artifacts and versions (previous application build, previous contract IDs/WASM hashes) and checks they are present and healthy.
+- **Deployment verification:** [`scripts/verify-deployment.sh`](../scripts/verify-deployment.sh) — confirms the current deployment is healthy before it becomes the new rollback point.
+- **Upgrade safety:** [`scripts/upgrade-safety-check.sh`](../scripts/upgrade-safety-check.sh) — checks upgrade/rollback preconditions.
+
+**Unhealthy rollback points block promotion.** If the application or contract rollback point cannot be identified or fails verification, the promotion is blocked until the rollback point is restored or a documented exception is approved.
+
 ## Rollback procedures
 
 > For an ordered, operator-facing checklist covering configuration, frontend/API, database and contract rollback plus post-rollback verification, see [`operations/rollback-checklist.md`](operations/rollback-checklist.md).
@@ -138,6 +159,8 @@ If contract upgradeability becomes a real requirement, that's a design decision 
 - [ ] For `registry`: aware of and comfortable with the current lack of a stored/checked admin (see [Contract initialization](#contract-initialization)) for this deployment's risk level.
 - [ ] Contract ID recorded immediately after deploy, before doing anything else.
 - [ ] Read + write-then-read verification performed against the new contract ID (see [Verification process](#verification-process)).
+- [ ] Staging smoke-test sign-off recorded with test scope and reviewer (see [Staging smoke-test sign-off](#staging-smoke-test-sign-off)); failed checks block promotion unless an emergency exception is approved.
+- [ ] Rollback checkpoints for application and contracts verified healthy (see [Rollback checkpoint verification](#rollback-checkpoint-verification)); unhealthy rollback points block promotion.
 - [ ] Deployment transaction confirmed on a block explorer.
 - [ ] Consumers (frontend, oracle worker) updated to point at the new contract ID.
 - [ ] If replacing a previous deployment: rollback/migration plan for existing on-chain state decided _before_ the old contract ID is dropped from any config, per [Rollback procedures](#rollback-procedures).

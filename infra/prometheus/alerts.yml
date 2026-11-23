@@ -1,5 +1,5 @@
 # Prometheus alert rules for the StellarVeriphy backend.
-# Runbooks: docs/operations/{health-checks,job-queue,data-retention,database-indexes}.md
+# Runbooks: docs/operations/{health-checks,job-queue,data-retention,database-indexes,provider-outage-drill}.md
 groups:
   - name: dependencies
     rules:
@@ -20,6 +20,36 @@ groups:
           summary: "Dependency {{ $labels.dependency }} has been down for 5 minutes"
           description: "Dependent jobs are retrying with backoff. Check GET /health and the 'dependency down' log for the reason."
           runbook: docs/operations/health-checks.md#recovery-and-retries
+
+      # Verification provider outages (soroban_rpc, ipfs, kms, tee_oracle).
+      # These fire regardless of the critical flag so a provider outage is always
+      # surfaced, and they point at the provider outage drill runbook so the
+      # documented fallback/degraded-mode procedures are followed.
+      - alert: VerificationProviderDown
+        expr: max by (dependency) (sv_dependency_health{dependency=~"soroban_rpc|ipfs|kms|tee_oracle"}) == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "Verification provider {{ $labels.dependency }} is down"
+          description: "A verification provider is unavailable. Fallback/degraded mode should engage; confirm via GET /health and the 'dependency down' log."
+          runbook: docs/operations/provider-outage-drill.md#fallback-and-degraded-modes
+
+      - alert: VerificationProviderDegraded
+        expr: max by (dependency) (sv_dependency_health{dependency=~"soroban_rpc|ipfs|kms|tee_oracle"}) == 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Verification provider {{ $labels.dependency }} degraded for 15 minutes"
+          description: "Provider is reachable but unhealthy; degraded mode may be active. Validate fallback behavior."
+          runbook: docs/operations/provider-outage-drill.md#fallback-and-degraded-modes
+
+      - alert: VerificationProviderHealthChecksStale
+        expr: time() - max by (dependency) (sv_dependency_last_success_timestamp_seconds{dependency=~"soroban_rpc|ipfs|kms|tee_oracle"}) > 600
+        labels: { severity: warning }
+        annotations:
+          summary: "No successful health check for verification provider {{ $labels.dependency }} in 10 minutes"
+          description: "Health checks are not reporting; alerts may be blind to a provider outage."
+          runbook: docs/operations/provider-outage-drill.md#drill-steps
 
       - alert: DependencyDegraded
         expr: max by (dependency) (sv_dependency_health) == 1
