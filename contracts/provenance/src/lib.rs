@@ -2706,6 +2706,10 @@ impl ProvenanceContract {
 #[cfg(test)]
 mod smoke_tests;
 
+// #966 — contract pause-state recovery tests
+#[cfg(test)]
+mod pause_recovery_tests;
+
 // #793 — cost benchmark for common provenance calls (see docs/benchmarks/README.md)
 #[cfg(test)]
 mod benchmark;

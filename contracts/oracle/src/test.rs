@@ -6,6 +6,11 @@ use soroban_sdk::{
     Bytes, BytesN, Env,
 };
 
+#[cfg(test)]
+mod witness_verification_tests;
+#[cfg(test)]
+mod invariant_fuzz_tests;
+
 fn make_env() -> Env {
     Env::default()
 }

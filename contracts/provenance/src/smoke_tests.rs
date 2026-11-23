@@ -11,6 +11,9 @@ use soroban_sdk::{
     Address, Env, String,
 };
 
+#[cfg(test)]
+mod governance_simulation_tests;
+
 fn setup(env: &Env) -> ProvenanceContractClient<'_> {
     env.mock_all_auths();
     let contract_id = env.register_contract(None, ProvenanceContract);
