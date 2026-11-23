@@ -5,6 +5,7 @@ import { CardGrid } from "@/components/ui/CardGrid";
 import type { DashboardMetrics } from "@/lib/provenance/data";
 import Link from "next/link";
 import { DashboardEmptyState } from "./DashboardEmptyState";
+import { CapacityForecastCard } from "./CapacityForecastCard";
 
 interface MetricsCardsProps {
   metrics: DashboardMetrics | null;
@@ -122,6 +123,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
           </div>
         ))}
       </CardGrid>
+      <CapacityForecastCard />
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-baseline justify-between">
           <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Completed verifications · last 14 days</p>

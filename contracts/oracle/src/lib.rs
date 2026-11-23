@@ -2437,3 +2437,8 @@ mod integration_tests;
 // #807 — repeatable cost benchmark for the most-used calls. Run via scripts/benchmark-contracts.mjs.
 #[cfg(test)]
 mod benchmark;
+
+// #966 — pause-state recovery tests: verify contracts return safely from
+// administrative pause states without corrupted or duplicated records.
+#[cfg(test)]
+mod pause_recovery_tests;

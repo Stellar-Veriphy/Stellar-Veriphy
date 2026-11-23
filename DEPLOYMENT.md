@@ -81,8 +81,23 @@ stellar contract invoke \
 
 For automated deployment, use the provided `deploy.sh` script (see below). The script performs all steps above and requires the same environment variables.
 
+> **Releases with data migrations:** If this release includes schema changes or indexed data migrations, complete the [Release data migration checklist](docs/operations/release-data-migration-checklist.md) before running the deployment script. See [Release data migration checklist](#release-data-migration-checklist) below.
+
+## Release data migration checklist
+
+Any release that includes schema changes or indexed data migrations **must** complete the [Release data migration checklist](docs/operations/release-data-migration-checklist.md) before deployment. The checklist is mandatory for these releases and covers:
+
+- **Backups**: verified backups of affected data stores, with restore points recorded.
+- **Validation**: pre- and post-migration validation queries and integrity checks.
+- **Rollback**: explicit rollback steps, including data restore procedures and decision criteria.
+- **Ownership**: named data owners responsible for each affected data set.
+- **Approvals**: required sign-offs from data owners and release approvers.
+
+Do not proceed with deployment until every item on the checklist is complete and recorded.
+
 ## Troubleshooting
 
+- **Data migrations**: If the release includes schema or indexed data migrations, confirm the [Release data migration checklist](docs/operations/release-data-migration-checklist.md) is complete (backups, validation, rollback, ownership, approvals) before deploying.
 - **Insufficient funds**: Ensure the source account has at least 1 XLM for deployment and transaction fees.
 - **Contract size too large**: Optimize the contract code or enable `--release` profile.
 - **Network errors**: Verify `STELLAR_NETWORK` is correct and you have horizon access.
@@ -100,3 +115,21 @@ export STELLAR_SECRET_KEY=SB... (your secret key, optional if configured in stel
 ## Verification providers and cancellation
 
 See [verification lifecycle operations](docs/operations/verification-lifecycle.md) for startup validation, provider configuration restart policy, MongoDB transaction requirements, cancellation authorization, the versioned error taxonomy, and Grafana traffic filters. Configure `VERIFICATION_BACKEND_URL` in the frontend server environment for the backend status proxy.
+
+## Promotion gates
+
+Before promoting a build from staging to production, both of the following gates must pass. They are enforced by the deployment workflow in `.github/workflows` and are documented in detail in [docs/deployment.md](docs/deployment.md).
+
+### Staging smoke test sign-off
+
+Critical staging checks must be recorded with a concise sign-off before promotion. Each sign-off records the test scope and the reviewer. Failed checks block promotion by default; emergency exceptions require an explicit, documented override. See [staging sign-off workflow](docs/deployment/staging-signoff.md) for the checklist, sign-off record format, and the emergency exception procedure.
+
+### Rollback checkpoint verification
+
+Before a rollback point is approved, verify that both the application and contract rollback points are healthy:
+
+- Identify the rollback artifacts and their versions (application image/tag and contract WASM hash/address).
+- Verify each checkpoint without modifying live data (read-only checks only).
+- Unhealthy rollback points block promotion.
+
+See [docs/deployment.md](docs/deployment.md) for the rollback checkpoint verification procedure and the scripts under `scripts/` that perform it.

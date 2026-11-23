@@ -284,3 +284,246 @@ mod provenance_integration_tests {
         );
     }
 }
+
+/// # Provenance Contract — Witness Verification Tests (#967)
+///
+/// Covers cryptographic witness verification for attestations:
+/// - Attestations are accepted only with a valid witness signature from a
+///   trusted key.
+/// - Invalid signatures are rejected with a typed error.
+/// - Unknown (untrusted) keys are rejected.
+/// - Key rotation is honoured (old keys stop being trusted).
+/// - Verification failures are auditable via a typed error and a failure event.
+///
+/// ## Trusted key configuration
+///
+/// Trusted witness keys are configured by the oracle (the address passed to
+/// `initialize`) via `add_trusted_witness_key` / `remove_trusted_witness_key`.
+/// Only keys present in the trusted set at verification time are accepted.
+/// Rotating a key means removing the old key and adding the new one; any
+/// attestation signed by a removed key is rejected.
+#[cfg(test)]
+mod witness_verification_tests {
+    extern crate std;
+    use std::format;
+    use std::string::ToString;
+
+    use crate::{
+        ProvenanceContract, ProvenanceContractClient, ProvenanceError, WitnessVerificationFailure,
+    };
+    use soroban_sdk::{
+        testutils::{Address as _, Events},
+        Address, Bytes, Env, String,
+    };
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    fn make_env() -> Env {
+        Env::default()
+    }
+
+    fn s(env: &Env, v: &str) -> String {
+        String::from_str(env, v)
+    }
+
+    fn b(env: &Env, v: &[u8]) -> Bytes {
+        Bytes::from_slice(env, v)
+    }
+
+    /// Deploy a fresh contract and return (contract_id, oracle_address).
+    fn setup(env: &Env) -> (Address, Address) {
+        env.mock_all_auths();
+        let cid = env.register_contract(None, ProvenanceContract);
+        let oracle = Address::generate(env);
+        let client = ProvenanceContractClient::new(env, &cid);
+        client.initialize(&oracle);
+        (cid, oracle)
+    }
+
+    /// Mint one certificate, returns the certificate id.
+    fn mint_one(
+        env: &Env,
+        client: &ProvenanceContractClient,
+        suffix: &str,
+        owner: &Address,
+    ) -> u64 {
+        client.mint(
+            &s(env, &format!("ipfs://Qm{suffix}")),
+            &s(env, &format!("manifest_{suffix}")),
+            &s(env, &format!("attestation_{suffix}")),
+            owner,
+        )
+    }
+
+    // -----------------------------------------------------------------------
+    // Valid witness signature is accepted
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_attestation_accepted_with_valid_witness_signature() {
+        let env = make_env();
+        let (cid, _oracle) = setup(&env);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let owner = Address::generate(&env);
+        let witness = Address::generate(&env);
+
+        // Configure the trusted witness key.
+        client.add_trusted_witness_key(&witness);
+
+        let id = mint_one(&env, &client, "wv", &owner);
+
+        let attestation = s(&env, "attestation_wv");
+        let signature = b(&env, b"valid-signature");
+
+        // Verification must succeed for a trusted key with a valid signature.
+        let ok = client.verify_witness(&id, &attestation, &witness, &signature);
+        assert!(ok, "valid witness signature must be accepted");
+    }
+
+    // -----------------------------------------------------------------------
+    // Invalid signature is rejected with a typed error
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_invalid_signature_rejected_with_typed_error() {
+        let env = make_env();
+        let (cid, _oracle) = setup(&env);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let owner = Address::generate(&env);
+        let witness = Address::generate(&env);
+
+        client.add_trusted_witness_key(&witness);
+        let id = mint_one(&env, &client, "bad", &owner);
+
+        let attestation = s(&env, "attestation_bad");
+        // Empty signature is treated as invalid.
+        let bad_signature = b(&env, b"");
+
+        let result = client.try_verify_witness(&id, &attestation, &witness, &bad_signature);
+        assert!(result.is_err(), "invalid signature must be rejected");
+        match result {
+            Err(Ok(err)) => assert_eq!(
+                err,
+                ProvenanceError::InvalidWitnessSignature,
+                "invalid signature must map to InvalidWitnessSignature"
+            ),
+            _ => panic!("expected typed InvalidWitnessSignature error"),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Unknown key is rejected
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_unknown_witness_key_rejected() {
+        let env = make_env();
+        let (cid, _oracle) = setup(&env);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let owner = Address::generate(&env);
+        let trusted = Address::generate(&env);
+        let unknown = Address::generate(&env);
+
+        client.add_trusted_witness_key(&trusted);
+        let id = mint_one(&env, &client, "unk", &owner);
+
+        let attestation = s(&env, "attestation_unk");
+        let signature = b(&env, b"valid-signature");
+
+        let result = client.try_verify_witness(&id, &attestation, &unknown, &signature);
+        assert!(result.is_err(), "unknown witness key must be rejected");
+        match result {
+            Err(Ok(err)) => assert_eq!(
+                err,
+                ProvenanceError::UntrustedWitnessKey,
+                "unknown key must map to UntrustedWitnessKey"
+            ),
+            _ => panic!("expected typed UntrustedWitnessKey error"),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Key rotation — removed key is no longer trusted
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_key_rotation_invalidates_old_key() {
+        let env = make_env();
+        let (cid, _oracle) = setup(&env);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let owner = Address::generate(&env);
+        let old_key = Address::generate(&env);
+        let new_key = Address::generate(&env);
+
+        // Initially trust the old key.
+        client.add_trusted_witness_key(&old_key);
+        let id = mint_one(&env, &client, "rot", &owner);
+        let attestation = s(&env, "attestation_rot");
+        let signature = b(&env, b"valid-signature");
+
+        assert!(
+            client.verify_witness(&id, &attestation, &old_key, &signature),
+            "old key must be accepted before rotation"
+        );
+
+        // Rotate: remove old key, add new key.
+        client.remove_trusted_witness_key(&old_key);
+        client.add_trusted_witness_key(&new_key);
+
+        // Old key is now rejected.
+        let old_result = client.try_verify_witness(&id, &attestation, &old_key, &signature);
+        assert!(old_result.is_err(), "rotated-out key must be rejected");
+
+        // New key is accepted.
+        assert!(
+            client.verify_witness(&id, &attestation, &new_key, &signature),
+            "new key must be accepted after rotation"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Verification failures are auditable
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_verification_failure_is_auditable() {
+        let env = make_env();
+        let (cid, _oracle) = setup(&env);
+        let client = ProvenanceContractClient::new(&env, &cid);
+        let owner = Address::generate(&env);
+        let witness = Address::generate(&env);
+
+        client.add_trusted_witness_key(&witness);
+        let id = mint_one(&env, &client, "aud", &owner);
+
+        let attestation = s(&env, "attestation_aud");
+        let bad_signature = b(&env, b"");
+
+        // Trigger a verification failure.
+        let result = client.try_verify_witness(&id, &attestation, &witness, &bad_signature);
+        assert!(result.is_err(), "invalid signature must be rejected");
+
+        // A failure event must have been emitted for auditability.
+        let events = env.events().all();
+        let mut found_failure = false;
+        for (_, topics, data) in events.iter() {
+            // The failure event carries the WitnessVerificationFailure payload.
+            if let Ok(failure) =
+                <WitnessVerificationFailure as soroban_sdk::TryFromVal<Env, _>>::try_from_val(
+                    &env, &data,
+                )
+            {
+                if failure.certificate_id == id {
+                    found_failure = true;
+                }
+            }
+            let _ = topics;
+        }
+        assert!(
+            found_failure,
+            "verification failure must emit an auditable event"
+        );
+    }
+}

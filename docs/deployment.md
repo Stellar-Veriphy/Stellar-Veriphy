@@ -13,8 +13,11 @@ It assumes you've already completed the [Developer Onboarding Guide](onboarding.
 - [Step-by-step deployment](#step-by-step-deployment)
 - [Contract initialization](#contract-initialization)
 - [Verification process](#verification-process)
+- [Staging smoke-test sign-off](#staging-smoke-test-sign-off)
+- [Rollback checkpoint verification](#rollback-checkpoint-verification)
 - [Rollback procedures](#rollback-procedures)
 - [Deployment checklist](#deployment-checklist)
+- [Data migrations and restore tests](#data-migrations-and-restore-tests)
 
 ## Deployment prerequisites
 
@@ -114,6 +117,25 @@ stellar contract invoke --id <CONTRACT_ID> --source deployer --network testnet \
 
 **4. Record the contract ID** wherever your deployment's source of truth lives (deployment log, environment config for the frontend/oracle worker) — there's no on-chain registry of "which contract ID is the current one" beyond what you deployed and wrote down.
 
+## Staging smoke-test sign-off
+
+Before promoting a build from staging to production, a reviewer must record a concise sign-off confirming the critical staging checks passed. The sign-off captures the **test scope** (which checks were run) and the **reviewer** (who approved the promotion).
+
+- **Workflow:** [`.github/workflows/staging-signoff.yml`](../.github/workflows/staging-signoff.yml) — runs the staging smoke checks and records the sign-off as a promotion gate.
+- **Procedure and sign-off template:** [`deployment/staging-signoff.md`](deployment/staging-signoff.md) — the checklist of critical checks, how to record scope and reviewer, and how to request an emergency exception.
+
+**Failed checks block promotion by default.** If any critical staging check fails, the sign-off cannot be recorded and the promotion is blocked. For genuine emergencies, the workflow supports an explicit exception path (documented in [`deployment/staging-signoff.md`](deployment/staging-signoff.md)) that requires a named approver and a recorded justification — it is not a silent bypass.
+
+## Rollback checkpoint verification
+
+Before a promotion is approved, confirm that the rollback points for both the **application** and the **contracts** are healthy. Verification is read-only: it inspects artifacts, versions and configuration and **does not modify live data**.
+
+- **Rollback checkpoint verification:** [`scripts/ops/verify-rollback-checkpoints.sh`](../scripts/ops/verify-rollback-checkpoints.sh) — identifies the rollback artifacts and versions (previous application build, previous contract IDs/WASM hashes) and checks they are present and healthy.
+- **Deployment verification:** [`scripts/verify-deployment.sh`](../scripts/verify-deployment.sh) — confirms the current deployment is healthy before it becomes the new rollback point.
+- **Upgrade safety:** [`scripts/upgrade-safety-check.sh`](../scripts/upgrade-safety-check.sh) — checks upgrade/rollback preconditions.
+
+**Unhealthy rollback points block promotion.** If the application or contract rollback point cannot be identified or fails verification, the promotion is blocked until the rollback point is restored or a documented exception is approved.
+
 ## Rollback procedures
 
 > For an ordered, operator-facing checklist covering configuration, frontend/API, database and contract rollback plus post-rollback verification, see [`operations/rollback-checklist.md`](operations/rollback-checklist.md).
@@ -137,9 +159,26 @@ If contract upgradeability becomes a real requirement, that's a design decision 
 - [ ] For `registry`: aware of and comfortable with the current lack of a stored/checked admin (see [Contract initialization](#contract-initialization)) for this deployment's risk level.
 - [ ] Contract ID recorded immediately after deploy, before doing anything else.
 - [ ] Read + write-then-read verification performed against the new contract ID (see [Verification process](#verification-process)).
+- [ ] Staging smoke-test sign-off recorded with test scope and reviewer (see [Staging smoke-test sign-off](#staging-smoke-test-sign-off)); failed checks block promotion unless an emergency exception is approved.
+- [ ] Rollback checkpoints for application and contracts verified healthy (see [Rollback checkpoint verification](#rollback-checkpoint-verification)); unhealthy rollback points block promotion.
 - [ ] Deployment transaction confirmed on a block explorer.
 - [ ] Consumers (frontend, oracle worker) updated to point at the new contract ID.
 - [ ] If replacing a previous deployment: rollback/migration plan for existing on-chain state decided _before_ the old contract ID is dropped from any config, per [Rollback procedures](#rollback-procedures).
+
+## Data migrations and restore tests
+
+Releases that include schema changes or indexed data migrations need more than the contract checklist above — they need explicit backups, validation, rollback steps, and named owners/approvers. Use these documents and scripts together:
+
+- **[Release data migration checklist](operations/release-data-migration-checklist.md)** — the standard, per-release checklist for any release containing a schema or indexed data migration. It makes backups, validation, and rollback steps explicit, identifies data ownership and required approvals, and is linked from this deployment procedure so it is completed before the release proceeds.
+- **[Backup restore test schedule](operations/backup-restore-test-schedule.md)** — the schedule and procedure for automated restore tests. Restore tests run periodically (on a schedule) against representative production and staging data sets in **isolated environments**, so a restore never touches live data. Each run verifies key record counts and integrity checks; any failure automatically creates actionable follow-up work (a tracked issue assigned to the owning team) rather than being silently retried.
+
+Supporting scripts:
+
+- `scripts/migrations/validate.sh` — validates migration state (schema version, applied migrations, and data integrity checks) after a migration runs.
+- `scripts/upgrade-safety-check.sh` — pre-release safety gate; run it before deploying to confirm backups exist, migrations are validated, and rollback steps are documented.
+- `scripts/ops/restore-test.sh` — runs a restore test in an isolated environment and verifies key record counts and integrity checks; used by the scheduled restore-test job and runnable manually.
+
+Run the safety check as part of the release, and confirm the restore-test schedule is green (or that any failures have follow-up work assigned) before considering the release complete.
 
 ## Environment-Aware API Configuration
 

@@ -32,7 +32,8 @@
 #   4. Entry points: baseline present; removed public functions are RISK
 #   5. Migration doc: required on mainnet and whenever RISK is found; sections present;
 #      every RISK named in it
-#   6. Rollback feasibility (deployment log and rollback procedure)
+#   6. Rollback feasibility (deployment log, rollback procedure, and rollback
+#      checkpoint health via scripts/ops/verify-rollback-checkpoints.sh)
 #   7. Admin / initialise guard present in new contract source
 #   8. Network-specific safety gate (mainnet requires --confirm)
 # =============================================================================
@@ -283,6 +284,26 @@ if grep -qi "rollback" "docs/deployment.md" 2>/dev/null; then
   pass "Rollback procedures present in docs/deployment.md"
 else
   warn "No 'rollback' section in docs/deployment.md"
+fi
+
+ROLLBACK_CHECKPOINT_SCRIPT="$SCRIPT_DIR/ops/verify-rollback-checkpoints.sh"
+if [[ ! -f "$ROLLBACK_CHECKPOINT_SCRIPT" ]]; then
+  fail "Rollback checkpoint verifier not found at $ROLLBACK_CHECKPOINT_SCRIPT"
+  info "Rollback points cannot be verified; promotion is blocked until it is restored."
+elif [[ ! -x "$ROLLBACK_CHECKPOINT_SCRIPT" ]]; then
+  fail "Rollback checkpoint verifier is not executable: $ROLLBACK_CHECKPOINT_SCRIPT"
+  info "Run: chmod +x $ROLLBACK_CHECKPOINT_SCRIPT"
+else
+  ROLLBACK_CHECKPOINT_LOG=$(mktemp)
+  if bash "$ROLLBACK_CHECKPOINT_SCRIPT" "$CONTRACT" "$NETWORK" >"$ROLLBACK_CHECKPOINT_LOG" 2>&1; then
+    pass "Rollback checkpoints verified healthy for '$CONTRACT' on $NETWORK"
+    sed 's/^/       /' "$ROLLBACK_CHECKPOINT_LOG"
+  else
+    fail "Rollback checkpoints are unhealthy for '$CONTRACT' on $NETWORK — promotion blocked"
+    sed 's/^/       /' "$ROLLBACK_CHECKPOINT_LOG"
+    info "Resolve the unhealthy rollback points before approving promotion."
+  fi
+  rm -f "$ROLLBACK_CHECKPOINT_LOG"
 fi
 
 # ---------------------------------------------------------------------------

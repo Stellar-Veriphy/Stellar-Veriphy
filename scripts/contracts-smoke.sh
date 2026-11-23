@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Runs the `smoke_*` tests for the Soroban contracts and reports one line per
-# contract. Each contract's full cargo output is kept in contracts/target/smoke-logs/
-# so a failure can be inspected without rerunning.
+# Runs the `smoke_*`, `invariant_fuzz_*` and `governance_simulation_*` tests for
+# the Soroban contracts and reports one line per contract. Each contract's full
+# cargo output is kept in contracts/target/smoke-logs/ so a failure can be
+# inspected without rerunning.
 #
 # Usage:
 #   scripts/contracts-smoke.sh                 # all contracts
@@ -48,19 +49,34 @@ for name in "${CONTRACTS[@]}"; do
   fi
 
   log="$LOG_DIR/$name.log"
-  (cd "$ROOT/contracts/$name" && cargo test --lib smoke_ >"$log" 2>&1)
-  status=$?
+  : >"$log"
+  status=0
+  summaries=()
 
-  summary=$(grep -E "^test result:" "$log" | tail -1)
+  # Each filter runs as its own cargo invocation so a build error or a failing
+  # suite is attributed to the right group in the summary line.
+  for filter in smoke_ invariant_fuzz_ governance_simulation_; do
+    echo "=== cargo test --lib $filter ===" >>"$log"
+    (cd "$ROOT/contracts/$name" && cargo test --lib "$filter" >>"$log" 2>&1)
+    filter_status=$?
+    if [ "$filter_status" -ne 0 ]; then
+      status=$filter_status
+    fi
+    filter_summary=$(grep -E "^test result:" "$log" | tail -1)
+    summaries+=("$filter: ${filter_summary:-no tests matched}")
+  done
+
+  summary=$(printf '%s; ' "${summaries[@]}")
+  summary=${summary%; }
   if [ "$status" -eq 0 ]; then
-    echo "PASS  $name  ${summary:-no tests matched smoke_}"
+    echo "PASS  $name  $summary"
   else
     overall=1
     if grep -q "^error" "$log" && ! grep -q "^test result:" "$log"; then
       echo "FAIL  $name  build or manifest error (see $log)"
       grep -E "^error" -A4 "$log" | head -20 | sed 's/^/    /'
     else
-      echo "FAIL  $name  ${summary:-tests failed} (log: $log)"
+      echo "FAIL  $name  $summary (log: $log)"
       print_failures "$log"
     fi
   fi

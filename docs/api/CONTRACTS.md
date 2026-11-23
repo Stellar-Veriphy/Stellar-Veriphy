@@ -213,6 +213,170 @@ stellar contract invoke --id $REGISTRY_ID --network testnet --source admin -- \
   add_tee_hash --code-hash 7c9e6f3a...
 ```
 
+## Attestation Witness Verification & Trusted Key Configuration
+
+Attestations are accepted only after the witness signature and the trusted key
+state have both been validated. Verification is performed consistently in the
+oracle contract (`verify_attestation`) and in the registry contract
+(`verify_and_mint`, `is_provider_authorized`) before any record is written.
+
+### Signature Scheme
+
+- **Algorithm:** Ed25519 (RFC 8032).
+- **Public key:** 32-byte compressed Ed25519 public key, represented on-chain as
+  `BytesN<32>` (the `provider` / `provider_key` argument).
+- **Signature:** 64-byte Ed25519 signature, represented on-chain as
+  `BytesN<64>`.
+- **Signed message:** the raw attestation `payload: Bytes` exactly as submitted.
+  The contract does not re-hash or re-encode the payload before verification;
+  callers must sign the same bytes they pass to the contract.
+- **Verification:** the contract verifies `signature` over `payload` against the
+  provider's registered public key. Any mismatch, malformed length, or
+  non-canonical encoding is rejected.
+
+### Trusted Key Registration
+
+Trusted keys are the provider public keys and TEE code hashes registered in the
+registry contract. They are the single source of truth consulted by the oracle
+during attestation verification.
+
+| Operation                | Contract   | Function                     | Authorization |
+| ------------------------ | ---------- | ---------------------------- | ------------- |
+| Register provider key    | `registry` | `add_provider`               | Admin         |
+| Register TEE code hash   | `registry` | `add_tee_hash`               | Admin         |
+| Version a TEE hash       | `registry` | `add_tee_hash_version`       | Admin         |
+| Check key is trusted     | `registry` | `is_provider`                | Public read   |
+| Check key is authorized  | `registry` | `is_provider_authorized`     | Public read   |
+| Check TEE hash approved  | `registry` | `is_tee_hash_approved`       | Public read   |
+
+A key is considered trusted for attestation purposes only when it is
+registered (`is_provider` returns `true`) **and** not blacklisted
+(`is_provider_authorized` returns `true`). The associated TEE code hash must
+also be approved (`is_tee_hash_approved` returns `true`).
+
+### Key Rotation
+
+TEE code hashes are rotated rather than overwritten so that historical
+attestations remain auditable:
+
+| Operation                | Contract   | Function                    | Authorization |
+| ------------------------ | ---------- | --------------------------- | ------------- |
+| Rotate TEE hash          | `registry` | `rotate_tee_hash`           | Admin         |
+| Read migration mapping   | `registry` | `get_tee_hash_migration`    | Public read   |
+| Deprecate a hash version | `registry` | `deprecate_tee_hash`        | Admin         |
+| Read version history     | `registry` | `get_tee_hash_version_history` | Public read |
+
+Provider keys are rotated by deactivating the old key
+(`deactivate_provider`), waiting out the grace period, finalizing removal
+(`finalize_removal`), and registering the replacement with `add_provider`.
+During the grace period the old key can no longer accept new requests
+(`can_accept_new_requests` returns `false`).
+
+### Verification Failures and Auditability
+
+Every verification failure is rejected with a typed contract error and emits an
+audit event so that failures can be reconstructed off-chain. Failures never
+write an accepted record.
+
+| Failure condition                          | Result                       | Audit event                     |
+| ------------------------------------------ | ---------------------------- | ------------------------------- |
+| Provider key not registered                | `Err(Error::...)`            | `attestation_verification_failed` |
+| Provider key blacklisted                   | `Err(Error::...)`            | `attestation_verification_failed` |
+| TEE hash not approved                      | `Err(Error::...)`            | `attestation_verification_failed` |
+| Signature does not verify over payload     | `Err(Error::...)`            | `attestation_verification_failed` |
+| Malformed key or signature length          | `Err(Error::...)`            | `attestation_verification_failed` |
+
+Each `attestation_verification_failed` event includes the provider key, the TEE
+hash, and a reason code identifying which check failed. Indexers and the backend
+consume these events to surface verification failures to operators and to feed
+provider reputation and dispute workflows.
+
+```bash
+stellar contract invoke --id $ORACLE_ID --network testnet --source provider -- \
+  verify_attestation \
+  --provider 7c9e6f3a... \
+  --tee-hash 3b2f9c11... \
+  --payload 0a1b2c... \
+  --signature 9f86d081...
+```
+
+## Event Replay Verification
+
+`scripts/contract-event-replay.mjs` rebuilds verification state from raw
+contract events and compares it against an exported snapshot of the current
+indexed state. Operators use it to detect records that were dropped or
+mutated between the chain and the indexer.
+
+### Inputs
+
+The tool takes two JSON files:
+
+- **Event dump** — an array of contract events (as returned by
+  `stellar contract events` or the indexer's raw event log). Each entry must
+  include `contract`, `ledger`, `txHash`, `type`, and `value`.
+- **Indexed state export** — the indexer's current view, keyed by record ID,
+  with the same fields the replay reconstructs (e.g. `requestId`,
+  `certificateId`, `provider`, `state`, `manifestHash`).
+
+```bash
+node scripts/contract-event-replay.mjs \
+  --events ./artifacts/events-1000-2000.json \
+  --state ./artifacts/indexed-state.json \
+  --from-ledger 1000 \
+  --to-ledger 2000 \
+  --out ./artifacts/replay-report.json
+```
+
+### Bounded ranges
+
+`--from-ledger` and `--to-ledger` are inclusive and required for
+deterministic runs. The tool refuses to scan unbounded ranges; split large
+backfills into windows (e.g. 10,000 ledgers) and run each window separately.
+`--contract` may be repeated to restrict replay to specific contract IDs.
+
+### Output format
+
+The report is stable, sorted JSON so successive runs can be diffed:
+
+```json
+{
+  "range": { "fromLedger": 1000, "toLedger": 2000 },
+  "contracts": ["C..."],
+  "summary": { "replayed": 412, "matched": 400, "missing": 7, "altered": 5 },
+  "missing": [
+    { "recordId": "req:1042", "lastSeenLedger": 1187, "reason": "no indexed record" }
+  ],
+  "altered": [
+    {
+      "recordId": "cert:88",
+      "fields": [
+        { "field": "manifestHash", "replayed": "9f86...", "indexed": "0000..." }
+      ]
+    }
+  ]
+}
+```
+
+### Exit codes
+
+| Code | Meaning                                                              |
+| ---- | -------------------------------------------------------------------- |
+| `0`  | Replay completed and every record matched.                           |
+| `1`  | Replay completed with `missing` or `altered` records (see report).   |
+| `2`  | Invalid arguments, unreadable input, or malformed event/state data.  |
+
+### Interpreting results
+
+- **Missing** records exist in the event stream but not in the indexed
+  state. Re-run the indexer for the affected ledger range; if the record is
+  still absent, treat it as a dropped write and escalate.
+- **Altered** records exist in both but disagree on one or more fields. The
+  `fields` array lists each mismatch with the replayed and indexed values.
+  Altered records usually indicate a bug in indexer update logic or an
+  out-of-band manual edit; do not trust the indexed copy until reconciled.
+- A clean run (`exit 0`) with an empty `missing`/`altered` set is the
+  expected state before promoting an indexer deployment.
+
 ## Error Handling
 
 Contract-defined failures use `#[contracterror]` enums such as `Error` and
@@ -231,4 +395,3 @@ match client.try_get_certificate(&certificate_id) {
         // Handle invocation, auth, or host failure.
     }
 }
-```

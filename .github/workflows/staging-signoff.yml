@@ -1,0 +1,195 @@
+name: Staging Smoke Test Sign-Off
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_url:
+        description: 'Staging environment URL to run smoke tests against'
+        required: true
+        type: string
+      test_scope:
+        description: 'Scope of tests covered by this sign-off (e.g. "auth, checkout, API health")'
+        required: true
+        type: string
+      reviewer:
+        description: 'Name/username of the reviewer providing sign-off'
+        required: true
+        type: string
+      emergency_exception:
+        description: 'Request an emergency exception to bypass failed checks (requires justification)'
+        required: false
+        default: false
+        type: boolean
+      exception_justification:
+        description: 'Justification required when emergency_exception is true'
+        required: false
+        default: ''
+        type: string
+  pull_request:
+    types: [labeled, unlabeled, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  smoke-test:
+    name: Run staging smoke tests
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.smoke.outcome }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate inputs
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TEST_SCOPE: ${{ inputs.test_scope }}
+          REVIEWER: ${{ inputs.reviewer }}
+          EMERGENCY: ${{ inputs.emergency_exception }}
+          JUSTIFICATION: ${{ inputs.exception_justification }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TEST_SCOPE}" ]; then
+            echo "::error::test_scope is required for sign-off."
+            exit 1
+          fi
+          if [ -z "${REVIEWER}" ]; then
+            echo "::error::reviewer is required for sign-off."
+            exit 1
+          fi
+          if [ "${EMERGENCY}" = "true" ] && [ -z "${JUSTIFICATION}" ]; then
+            echo "::error::exception_justification is required when emergency_exception is true."
+            exit 1
+          fi
+
+      - name: Run smoke tests against staging
+        id: smoke
+        continue-on-error: true
+        env:
+          STAGING_URL: ${{ inputs.staging_url || vars.STAGING_URL }}
+        run: |
+          set -euo pipefail
+          if [ ! -f scripts/ci/smoke-test.sh ]; then
+            echo "::error::scripts/ci/smoke-test.sh not found."
+            exit 1
+          fi
+          chmod +x scripts/ci/smoke-test.sh
+          ./scripts/ci/smoke-test.sh
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: |
+            smoke-test-results/**
+            **/smoke-test-report.*
+          if-no-files-found: ignore
+          retention-days: 30
+
+  sign-off:
+    name: Record sign-off
+    needs: smoke-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download smoke test results
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-test-results
+          path: smoke-test-results
+        continue-on-error: true
+
+      - name: Evaluate promotion gate
+        id: gate
+        env:
+          SMOKE_RESULT: ${{ needs.smoke-test.outputs.result }}
+          EMERGENCY: ${{ inputs.emergency_exception }}
+          JUSTIFICATION: ${{ inputs.exception_justification }}
+        run: |
+          set -euo pipefail
+          echo "Smoke test result: ${SMOKE_RESULT}"
+          if [ "${SMOKE_RESULT}" = "success" ]; then
+            echo "promote=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::All staging smoke checks passed. Promotion permitted."
+          elif [ "${EMERGENCY}" = "true" ] && [ -n "${JUSTIFICATION}" ]; then
+            echo "promote=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Emergency exception invoked. Failed checks bypassed with justification: ${JUSTIFICATION}"
+          else
+            echo "promote=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Staging smoke checks failed. Promotion blocked. Provide an emergency exception with justification to override."
+          fi
+
+      - name: Write sign-off record
+        env:
+          TEST_SCOPE: ${{ inputs.test_scope }}
+          REVIEWER: ${{ inputs.reviewer }}
+          STAGING_URL: ${{ inputs.staging_url }}
+          SMOKE_RESULT: ${{ needs.smoke-test.outputs.result }}
+          PROMOTE: ${{ steps.gate.outputs.promote }}
+          EMERGENCY: ${{ inputs.emergency_exception }}
+          JUSTIFICATION: ${{ inputs.exception_justification }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p sign-off
+          cat > sign-off/staging-signoff.json <<EOF
+          {
+            "test_scope": "${TEST_SCOPE}",
+            "reviewer": "${REVIEWER}",
+            "staging_url": "${STAGING_URL}",
+            "smoke_test_result": "${SMOKE_RESULT}",
+            "promotion_permitted": "${PROMOTE}",
+            "emergency_exception": "${EMERGENCY}",
+            "exception_justification": "${JUSTIFICATION}",
+            "workflow_run": "${RUN_URL}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          cat sign-off/staging-signoff.json
+
+      - name: Upload sign-off artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-signoff
+          path: sign-off/staging-signoff.json
+          retention-days: 90
+
+      - name: Post sign-off comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PROMOTE: ${{ steps.gate.outputs.promote }}
+          SMOKE_RESULT: ${{ needs.smoke-test.outputs.result }}
+        with:
+          script: |
+            const promote = process.env.PROMOTE === 'true';
+            const result = process.env.SMOKE_RESULT;
+            const body = [
+              '### Staging Smoke Test Sign-Off',
+              '',
+              `- **Smoke test result:** \`${result}\``,
+              `- **Promotion permitted:** \`${promote}\``,
+              '',
+              promote
+                ? '✅ Staging sign-off recorded. Promotion may proceed.'
+                : '❌ Staging checks failed. Promotion is blocked pending a passing run or an emergency exception with justification.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Enforce promotion gate
+        if: steps.gate.outputs.promote != 'true'
+        run: |
+          echo "::error::Promotion blocked: staging smoke checks failed and no valid emergency exception was provided."
+          exit 1

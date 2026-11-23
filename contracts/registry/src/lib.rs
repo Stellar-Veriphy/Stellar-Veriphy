@@ -3199,6 +3199,8 @@ mod tests {
 #[cfg(test)]
 mod integration_tests;
 #[cfg(test)]
+mod pause_recovery_tests;
+#[cfg(test)]
 mod smoke_tests;
 // #793 — cost benchmark for common registry calls (see docs/benchmarks/README.md)
 #[cfg(test)]

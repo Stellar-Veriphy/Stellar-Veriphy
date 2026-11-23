@@ -368,3 +368,60 @@ export const externalApiSlowResponses = new Counter({ name: "sv_external_api_slo
 export const providerCalls = new Counter({ name: "sv_provider_calls_total", help: "Logical provider calls, including all attempts", labelNames: ["provider", "environment", "traffic", "outcome"] as const, registers });
 export const providerLatency = new Histogram({ name: "sv_provider_latency_seconds", help: "Logical provider response time including retries and body parsing", labelNames: ["provider", "environment", "traffic", "outcome"] as const, buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120], registers });
 export const providerLastSuccess = new Gauge({ name: "sv_provider_last_success_timestamp_seconds", help: "Last successful logical provider call", labelNames: ["provider", "environment", "traffic"] as const, registers });
+
+// --- Capacity forecast (#980) ------------------------------------------------
+//
+// The capacity forecast dashboard projects storage, queue and API capacity from
+// observed usage trends. Forecasts are recomputed periodically from a rolling
+// window of historical samples and published here so the dashboard (and
+// alerting rules) can read them without re-running the model.
+//
+// Forecast assumptions (visible on the dashboard and in docs/operations):
+//   - Trend model: linear extrapolation of the observed usage rate over the
+//     forecast window. No seasonality or step changes are modelled, so sudden
+//     traffic shifts will not be reflected until the window rolls over.
+//   - Window: CAPACITY_FORECAST_WINDOW_HOURS (default 168 = 7 days) of history
+//     is used to fit the trend.
+//   - Horizon: CAPACITY_FORECAST_HORIZON_HOURS (default 168 = 7 days) ahead.
+//   - Capacity: storage uses the configured quota, queue uses the configured
+//     max depth, API uses the configured request-rate ceiling.
+//   - Releases: every series carries the `release` label (the deployed build
+//     version) so historical forecasts can be compared across releases.
+//
+// `resource` is a bounded label: storage, queue or api. `release` is the
+// deployed build version. Never add unbounded labels (IDs, URLs, input).
+
+export const capacityForecastStorageBytes = new Gauge({
+  name: "sv_capacity_forecast_storage_bytes",
+  help: "Forecasted storage usage in bytes at the forecast horizon",
+  labelNames: ["resource", "release"] as const,
+  registers,
+});
+
+export const capacityForecastQueueDepth = new Gauge({
+  name: "sv_capacity_forecast_queue_depth",
+  help: "Forecasted queue depth (jobs) at the forecast horizon",
+  labelNames: ["resource", "release"] as const,
+  registers,
+});
+
+export const capacityForecastApiRate = new Gauge({
+  name: "sv_capacity_forecast_api_request_rate",
+  help: "Forecasted API request rate (requests per second) at the forecast horizon",
+  labelNames: ["resource", "release"] as const,
+  registers,
+});
+
+export const capacityForecastDaysUntilThreshold = new Gauge({
+  name: "sv_capacity_forecast_days_until_threshold",
+  help: "Forecasted days until the resource reaches its critical threshold (0 when already exceeded, +Inf when the trend never reaches it)",
+  labelNames: ["resource", "release"] as const,
+  registers,
+});
+
+export const capacityForecastWarnings = new Counter({
+  name: "sv_capacity_forecast_warnings_total",
+  help: "Advance warnings emitted because a forecast crosses a critical threshold within the horizon",
+  labelNames: ["resource", "severity", "release"] as const,
+  registers,
+});
