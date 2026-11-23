@@ -15,6 +15,7 @@ It assumes you've already completed the [Developer Onboarding Guide](onboarding.
 - [Verification process](#verification-process)
 - [Rollback procedures](#rollback-procedures)
 - [Deployment checklist](#deployment-checklist)
+- [Data migrations and restore tests](#data-migrations-and-restore-tests)
 
 ## Deployment prerequisites
 
@@ -140,6 +141,21 @@ If contract upgradeability becomes a real requirement, that's a design decision 
 - [ ] Deployment transaction confirmed on a block explorer.
 - [ ] Consumers (frontend, oracle worker) updated to point at the new contract ID.
 - [ ] If replacing a previous deployment: rollback/migration plan for existing on-chain state decided _before_ the old contract ID is dropped from any config, per [Rollback procedures](#rollback-procedures).
+
+## Data migrations and restore tests
+
+Releases that include schema changes or indexed data migrations need more than the contract checklist above — they need explicit backups, validation, rollback steps, and named owners/approvers. Use these documents and scripts together:
+
+- **[Release data migration checklist](operations/release-data-migration-checklist.md)** — the standard, per-release checklist for any release containing a schema or indexed data migration. It makes backups, validation, and rollback steps explicit, identifies data ownership and required approvals, and is linked from this deployment procedure so it is completed before the release proceeds.
+- **[Backup restore test schedule](operations/backup-restore-test-schedule.md)** — the schedule and procedure for automated restore tests. Restore tests run periodically (on a schedule) against representative production and staging data sets in **isolated environments**, so a restore never touches live data. Each run verifies key record counts and integrity checks; any failure automatically creates actionable follow-up work (a tracked issue assigned to the owning team) rather than being silently retried.
+
+Supporting scripts:
+
+- `scripts/migrations/validate.sh` — validates migration state (schema version, applied migrations, and data integrity checks) after a migration runs.
+- `scripts/upgrade-safety-check.sh` — pre-release safety gate; run it before deploying to confirm backups exist, migrations are validated, and rollback steps are documented.
+- `scripts/ops/restore-test.sh` — runs a restore test in an isolated environment and verifies key record counts and integrity checks; used by the scheduled restore-test job and runnable manually.
+
+Run the safety check as part of the release, and confirm the restore-test schedule is green (or that any failures have follow-up work assigned) before considering the release complete.
 
 ## Environment-Aware API Configuration
 

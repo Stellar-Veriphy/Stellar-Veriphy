@@ -11,8 +11,9 @@ Do not include secrets or other users' data, disrupt services or access unnecess
 data. Coordinate publication with maintainers. Acknowledgement target: 48 hours;
 initial triage: five business days. Full scope and disclosure timelines follow below.
 
-Operational guides: [dependency review](docs/security/dependency-review.md) and
-[incident communication](docs/operations/incident-communication.md).
+Operational guides: [dependency review](docs/security/dependency-review.md),
+[incident communication](docs/operations/incident-communication.md) and
+[secret rotation rehearsal](docs/security/secret-rotation-rehearsal.md).
 
 This document describes StellarVeriphy's vulnerability disclosure process, security scope, known risk areas, and how we handle security reports. For implementation-level security controls (rate limiting, input validation, key management, HTTP headers, smart contract audit procedures), see the detailed guides in [`docs/security/`](./docs/security/).
 
@@ -29,8 +30,9 @@ This document describes StellarVeriphy's vulnerability disclosure process, secur
 7. [Known Risks and Accepted Limitations](#7-known-risks-and-accepted-limitations)
 8. [Security Controls Summary](#8-security-controls-summary)
 9. [Dependency Security](#9-dependency-security)
-10. [Responsible Disclosure Policy](#10-responsible-disclosure-policy)
-11. [Security Documentation Index](#11-security-documentation-index)
+10. [Secret Rotation Rehearsal](#10-secret-rotation-rehearsal)
+11. [Responsible Disclosure Policy](#11-responsible-disclosure-policy)
+12. [Security Documentation Index](#12-security-documentation-index)
 
 ---
 
@@ -266,7 +268,53 @@ Workflow steps pin third-party actions by version tag (e.g., `actions/checkout@v
 
 ---
 
-## 10. Responsible Disclosure Policy
+## 10. Secret Rotation Rehearsal
+
+Service credentials (API keys, signing keys, webhook secrets, database and KMS
+credentials) are rotated on a fixed schedule and rehearsed before the first
+production rotation. The full runbook is in
+[`docs/security/secret-rotation-rehearsal.md`](./docs/security/secret-rotation-rehearsal.md).
+
+### Zero-downtime rotation (dual-credential overlap)
+
+Rotation never replaces a credential in place. Instead:
+
+1. **Issue the new credential** alongside the old one. Both are valid at the same time.
+2. **Deploy consumers** configured with the new credential, one service at a time, verifying health checks between steps.
+3. **Confirm traffic** — all consumers must be observed using the new credential (logs, metrics, or audit trail) before proceeding.
+4. **Revoke the old credential** only after the overlap window has elapsed and no consumer has used it.
+
+The overlap window must be long enough to cover the slowest deploy and rollback path
+(at minimum one full deployment cycle plus the rollback window). If any consumer fails
+during the overlap, roll back to the old credential — it is still valid until revoked.
+
+### Revocation schedule for old credentials
+
+- Old credentials are revoked on a published schedule, not ad hoc. The default is
+  **7 days after the new credential is confirmed in use**, or immediately on suspicion
+  of compromise.
+- Revocation is recorded with the credential identifier (never the value), the
+  revocation time, and the operator who performed it.
+- A credential that misses its revocation date is treated as an incident and escalated
+  per [`docs/operations/incident-communication.md`](./docs/operations/incident-communication.md).
+
+### Rehearsal output must exclude secret values
+
+Rehearsal runs (and any logs, transcripts, or artifacts they produce) must never
+contain credential values, partial values, hashes of low-entropy secrets, or
+environment dumps. Output records only credential identifiers, timestamps, the
+services exercised, and pass/fail results. Redact before sharing rehearsal output in
+issues, pull requests, or incident channels.
+
+### Detecting stale credentials
+
+Run [`scripts/ops/config-audit.sh`](./scripts/ops/config-audit.sh) to detect
+credentials that are past their rotation or revocation date. The script reports
+identifiers and ages only — it does not print secret values.
+
+---
+
+## 11. Responsible Disclosure Policy
 
 StellarVeriphy follows coordinated vulnerability disclosure:
 
@@ -292,7 +340,7 @@ We commit to:
 
 ---
 
-## 11. Security Documentation Index
+## 12. Security Documentation Index
 
 Detailed security implementation guides are in [`docs/security/`](./docs/security/):
 
@@ -306,6 +354,7 @@ Detailed security implementation guides are in [`docs/security/`](./docs/securit
 | [`docs/security/verification-service-security.md`](./docs/security/verification-service-security.md) | Rate limiting configuration, input validation schema, CSP setup, audit logging |
 | [`docs/security/security-headers.md`](./docs/security/security-headers.md) | HTTP header set, rationale per header, how to verify, policy change guidance |
 | [`docs/security/governance-framework.md`](./docs/security/governance-framework.md) | Autonomous governance — stakeholder roles, review paths, trust thresholds, emergency actions, audit trail |
+| [`docs/security/secret-rotation-rehearsal.md`](./docs/security/secret-rotation-rehearsal.md) | Secret rotation rehearsal — dual-credential overlap, revocation schedule, redacted rehearsal output, stale-credential detection |
 
 Related documents:
 - [`contracts/IMPLEMENTATION.md`](./contracts/IMPLEMENTATION.md) — storage conventions, cross-contract call patterns, error enum stability rules

@@ -1,5 +1,6 @@
 import type { Logger } from "../lib/logger.js";
 import {
+  capacityForecastWarnings,
   dependencyCheckDuration,
   dependencyCheckFailures,
   dependencyConsecutiveFailures,
@@ -45,12 +46,105 @@ export interface HealthMonitorOptions {
   timeoutMs: number;
   /** In-check retries before a dependency is marked down (absorbs single dropped requests). */
   retries: number;
+  /** Capacity forecasting configuration; omitted disables forecasting. */
+  capacity?: CapacityForecastOptions;
+}
+
+export type CapacityResource = "storage" | "queue" | "api";
+
+/** A single observed usage sample for a capacity resource. */
+export interface CapacitySample {
+  /** Epoch milliseconds when the sample was taken. */
+  at: number;
+  /** Observed usage in the resource's native unit (bytes, messages, requests/min, ...). */
+  value: number;
+  /** Release tag the sample was collected under, for cross-release comparison. */
+  release?: string;
+}
+
+export interface CapacityThreshold {
+  /** Usage level that is considered critical for this resource. */
+  critical: number;
+  /** Unit label shown alongside the forecast (e.g. "bytes", "messages", "req/min"). */
+  unit: string;
+}
+
+export interface CapacityForecastOptions {
+  /** How far back to look when fitting the trend. */
+  windowMs: number;
+  /** How far ahead to project usage when looking for threshold breaches. */
+  horizonMs: number;
+  /** Minimum number of samples required before a forecast is produced. */
+  minSamples: number;
+  /** Release tag of the running build, recorded in the forecast assumptions. */
+  release: string;
+  /** Per-resource critical thresholds. */
+  thresholds: Partial<Record<CapacityResource, CapacityThreshold>>;
+}
+
+/** Visible assumptions behind a forecast so operators can judge its validity. */
+export interface CapacityForecastAssumptions {
+  windowMs: number;
+  horizonMs: number;
+  minSamples: number;
+  growthModel: "linear";
+  release: string;
+  sampleCount: number;
+  windowStart?: string;
+  windowEnd?: string;
+}
+
+export interface CapacityForecast {
+  resource: CapacityResource;
+  unit: string;
+  current: number;
+  /** Projected usage at the end of the forecast horizon. */
+  projected: number;
+  /** Growth per hour derived from the linear fit (may be negative). */
+  growthPerHour: number;
+  critical: number;
+  /** Epoch ms when the critical threshold is projected to be crossed, if within the horizon. */
+  thresholdEtaMs?: number;
+  warning: boolean;
+  assumptions: CapacityForecastAssumptions;
+  /** Per-release aggregates for comparing historical usage across releases. */
+  byRelease: Record<string, { samples: number; latest: number; peak: number }>;
+}
+
+export interface CapacityForecastReport {
+  generatedAt: string;
+  forecasts: CapacityForecast[];
+  warnings: CapacityResource[];
 }
 
 const STATE_VALUE: Record<HealthState, number> = { up: 2, degraded: 1, down: 0 };
 
 /** While a dependency stays down, repeat the warning every N failed checks instead of every check. */
 const STILL_DOWN_LOG_EVERY = 10;
+
+/** Maximum number of samples retained per capacity resource. */
+const CAPACITY_SAMPLE_LIMIT = 5_000;
+
+function linearFit(samples: CapacitySample[]): { slopePerMs: number; intercept: number } {
+  const n = samples.length;
+  if (n < 2) return { slopePerMs: 0, intercept: n === 1 ? samples[0].value : 0 };
+  const base = samples[0].at;
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumXX = 0;
+  for (const s of samples) {
+    const x = s.at - base;
+    sumX += x;
+    sumY += s.value;
+    sumXY += x * s.value;
+    sumXX += x * x;
+  }
+  const denom = n * sumXX - sumX * sumX;
+  const slopePerMs = denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slopePerMs * sumX) / n;
+  return { slopePerMs, intercept };
+}
 
 function errorMessage(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
@@ -81,6 +175,7 @@ async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>, ms: numbe
 export class HealthMonitor {
   private readonly statuses = new Map<string, DependencyStatus>();
   private readonly inFlight = new Map<string, Promise<DependencyStatus>>();
+  private readonly capacitySamples = new Map<CapacityResource, CapacitySample[]>();
   private timer?: NodeJS.Timeout;
 
   constructor(
@@ -148,6 +243,114 @@ export class HealthMonitor {
     return [...this.statuses.values()]
       .filter((d) => d.critical && (d.status === "down" || d.status === "unknown"))
       .map((d) => d.name);
+  }
+
+  /** Records an observed usage sample for a capacity resource. */
+  recordCapacitySample(resource: CapacityResource, value: number, at: number = Date.now(), release?: string): void {
+    const samples = this.capacitySamples.get(resource) ?? [];
+    samples.push({ at, value, release: release ?? this.opts.capacity?.release });
+    if (samples.length > CAPACITY_SAMPLE_LIMIT) samples.splice(0, samples.length - CAPACITY_SAMPLE_LIMIT);
+    this.capacitySamples.set(resource, samples);
+  }
+
+  /**
+   * Derives storage, queue, and API usage trends from recent samples, projects them forward over the
+   * configured horizon, and emits advance warnings when a critical threshold is projected to be crossed.
+   */
+  forecastCapacity(now: number = Date.now()): CapacityForecastReport {
+    const cfg = this.opts.capacity;
+    const generatedAt = new Date(now).toISOString();
+    if (!cfg) return { generatedAt, forecasts: [], warnings: [] };
+
+    const windowStart = now - cfg.windowMs;
+    const forecasts: CapacityForecast[] = [];
+    const warnings: CapacityResource[] = [];
+
+    for (const resource of ["storage", "queue", "api"] as CapacityResource[]) {
+      const threshold = cfg.thresholds[resource];
+      if (!threshold) continue;
+      const all = this.capacitySamples.get(resource) ?? [];
+      const windowed = all.filter((s) => s.at >= windowStart && s.at <= now).sort((a, b) => a.at - b.at);
+
+      const byRelease: CapacityForecast["byRelease"] = {};
+      for (const s of all) {
+        if (!s.release) continue;
+        const agg = (byRelease[s.release] ??= { samples: 0, latest: s.value, peak: s.value });
+        agg.samples += 1;
+        agg.latest = s.value;
+        agg.peak = Math.max(agg.peak, s.value);
+      }
+
+      const assumptions: CapacityForecastAssumptions = {
+        windowMs: cfg.windowMs,
+        horizonMs: cfg.horizonMs,
+        minSamples: cfg.minSamples,
+        growthModel: "linear",
+        release: cfg.release,
+        sampleCount: windowed.length,
+        windowStart: windowed.length ? new Date(windowed[0].at).toISOString() : undefined,
+        windowEnd: windowed.length ? new Date(windowed[windowed.length - 1].at).toISOString() : undefined,
+      };
+
+      const current = windowed.length ? windowed[windowed.length - 1].value : 0;
+      if (windowed.length < cfg.minSamples) {
+        forecasts.push({
+          resource,
+          unit: threshold.unit,
+          current,
+          projected: current,
+          growthPerHour: 0,
+          critical: threshold.critical,
+          warning: false,
+          assumptions,
+          byRelease,
+        });
+        continue;
+      }
+
+      const { slopePerMs, intercept } = linearFit(windowed);
+      const base = windowed[0].at;
+      const projected = Math.max(0, intercept + slopePerMs * (now + cfg.horizonMs - base));
+      const growthPerHour = slopePerMs * 3_600_000;
+
+      let thresholdEtaMs: number | undefined;
+      if (slopePerMs > 0) {
+        const eta = base + (threshold.critical - intercept) / slopePerMs;
+        if (eta > now && eta <= now + cfg.horizonMs) thresholdEtaMs = eta;
+      }
+      const warning = thresholdEtaMs !== undefined || projected >= threshold.critical;
+
+      if (warning) {
+        warnings.push(resource);
+        capacityForecastWarnings.inc({ resource });
+        this.log.warn("capacity threshold projected within horizon", {
+          resource,
+          unit: threshold.unit,
+          current,
+          projected,
+          critical: threshold.critical,
+          growthPerHour,
+          thresholdEta: thresholdEtaMs ? new Date(thresholdEtaMs).toISOString() : undefined,
+          horizonMs: cfg.horizonMs,
+          release: cfg.release,
+        });
+      }
+
+      forecasts.push({
+        resource,
+        unit: threshold.unit,
+        current,
+        projected,
+        growthPerHour,
+        critical: threshold.critical,
+        thresholdEtaMs,
+        warning,
+        assumptions,
+        byRelease,
+      });
+    }
+
+    return { generatedAt, forecasts, warnings };
   }
 
   private async execute(check: DependencyCheck): Promise<DependencyStatus> {
