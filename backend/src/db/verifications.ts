@@ -34,12 +34,12 @@ export class VerificationRepository {
 
   /** Index: jobId_unique */
   getStatus(jobId: string) {
-    return this.col.findOne({ jobId }, { projection: STATUS_PROJECTION });
+    return this.col.findOne({ jobId, softDeletedAt: { $exists: false } }, { projection: STATUS_PROJECTION });
   }
 
   /** Index: contentHash_createdAt */
   findLatestByContentHash(contentHash: string) {
-    return this.col.findOne({ contentHash }, { sort: { createdAt: -1 } });
+    return this.col.findOne({ contentHash, softDeletedAt: { $exists: false } }, { sort: { createdAt: -1 } });
   }
 
   /**
@@ -47,7 +47,7 @@ export class VerificationRepository {
    * instead of using skip(), which scans and discards every skipped document.
    */
   listByCreator(creator: string, { limit = 20, before }: { limit?: number; before?: Date } = {}) {
-    const filter: Filter<VerificationDoc> = { creator };
+    const filter: Filter<VerificationDoc> = { creator, softDeletedAt: { $exists: false } };
     if (before) filter.createdAt = { $lt: before };
     return this.col
       .find(filter)
@@ -67,7 +67,7 @@ export class VerificationRepository {
 
   /** Index: certId_unique */
   findByCertId(certId: string) {
-    return this.col.findOne({ certId });
+    return this.col.findOne({ certId, softDeletedAt: { $exists: false } });
   }
 
   /** Index: jobId_unique — bulk load for selective reindexing. */

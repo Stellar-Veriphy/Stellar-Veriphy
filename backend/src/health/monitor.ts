@@ -366,6 +366,12 @@ export class HealthMonitor {
           retries: this.opts.retries,
           baseDelayMs: 250,
           maxDelayMs: 2_000,
+          // Only retry transient failures (timeout, connection, unhealthy);
+          // never retry misconfiguration or invalid responses — those need a fix, not a retry.
+          shouldRetry: (err) => {
+            const reason = failureReason(err);
+            return reason === "timeout" || reason === "connection" || reason === "unhealthy" || reason === "error";
+          },
           onRetry: (err, attempt, delayMs) =>
             this.log.debug("dependency check attempt failed, retrying", {
               dependency: check.name,

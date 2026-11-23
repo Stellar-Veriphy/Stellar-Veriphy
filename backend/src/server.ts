@@ -7,7 +7,9 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { ObjectId } from "mongodb";
 import { config } from "./config.js";
 import type { CachedVerificationReads } from "./db/verifications.js";
+import type { SoftDeleteRepository } from "./db/soft-delete.js";
 import type { HealthMonitor } from "./health/monitor.js";
+import type { ProviderDegradationTracker } from "./lib/degraded.js";
 import type { JobQueue } from "./jobs/queue.js";
 import type { Logger } from "./lib/logger.js";
 import type { RateLimitResult, RateLimiter } from "./lib/rate-limiter.js";
@@ -31,6 +33,8 @@ export interface ServerDeps {
   maintenance: MaintenanceMode;
   webhooks: WebhookService;
   rateLimiter: RateLimiter;
+  softDelete: SoftDeleteRepository;
+  degradation: ProviderDegradationTracker;
   log: Logger;
 }
 
@@ -192,7 +196,7 @@ function permissionState(userId: string, permission: string): { granted: boolean
   return { granted: request?.status === "approved", request };
 }
 
-export function createHttpServer({ security, health, queue, cleanup, verifications, maintenance, webhooks, rateLimiter, log }: ServerDeps): Server {
+export function createHttpServer({ security, health, queue, cleanup, verifications, maintenance, webhooks, rateLimiter, softDelete, degradation, log }: ServerDeps): Server {
   const routes: Route[] = [
     { method: "GET", pattern: /^\/admin\/risk\/(?<creator>[^/]+)$/, admin: true,
       handler: async (_req, res, { creator }) => {
@@ -442,6 +446,55 @@ export function createHttpServer({ security, health, queue, cleanup, verificatio
       },
     },
 
+    // --- Soft-delete and recovery -----------------------------------------------
+    {
+      method: "POST",
+      pattern: /^\/admin\/verifications\/(?<jobId>[^/]+)\/soft-delete$/,
+      admin: true,
+      handler: async (req, res, { jobId }) => {
+        const body = await readJson(req);
+        const reason = body.reason;
+        if (typeof reason !== "string" || reason.trim().length === 0 || reason.length > 500) {
+          return send(res, 400, { error: "reason must be a non-empty string of at most 500 characters" });
+        }
+        const actor = req.socket.remoteAddress ?? "unknown";
+        const ok = await softDelete.softDelete(jobId, actor, reason.trim());
+        if (!ok) return send(res, 404, { error: "Verification not found or already soft-deleted" });
+        verifications.clear();
+        log.info("verification soft-deleted by operator", { jobId, actor, reason: reason.trim() });
+        send(res, 200, { jobId, softDeleted: true });
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/admin\/verifications\/(?<jobId>[^/]+)\/recover$/,
+      admin: true,
+      handler: async (req, res, { jobId }) => {
+        const actor = req.socket.remoteAddress ?? "unknown";
+        const snapshot = await softDelete.findSnapshot(jobId);
+        if (!snapshot) return send(res, 404, { error: "No soft-deleted verification found for this jobId" });
+        if (snapshot.recoveredAt) {
+          return send(res, 409, { error: "Verification has already been recovered", recoveredAt: snapshot.recoveredAt });
+        }
+        const ok = await softDelete.recover(jobId, actor);
+        if (!ok) return send(res, 409, { error: "Verification is not currently soft-deleted" });
+        verifications.clear();
+        log.info("soft-deleted verification recovered by operator", { jobId, actor });
+        send(res, 200, { jobId, recovered: true });
+      },
+    },
+    {
+      method: "GET",
+      pattern: /^\/admin\/verifications\/soft-deleted$/,
+      admin: true,
+      handler: async (_req, res, _params, url) => {
+        const limit = Number(url.searchParams.get("limit") ?? 50) || 50;
+        const includeRecovered = ["1", "true"].includes(url.searchParams.get("includeRecovered") ?? "");
+        const items = await softDelete.listSnapshots({ limit, includeRecovered });
+        send(res, 200, { items });
+      },
+    },
+
     {
       method: "POST",
       pattern: /^\/api\/verifications\/(?<jobId>[^/]+)\/cancel$/,
@@ -494,6 +547,18 @@ export function createHttpServer({ security, health, queue, cleanup, verificatio
       handler: async (_req, res) => {
         const { enabled, message, startedAt, endsAt } = maintenance.current();
         send(res, 200, enabled ? { enabled, message, startedAt, endsAt } : { enabled });
+      },
+    },
+    {
+      method: "GET",
+      pattern: /^\/api\/status\/providers$/,
+      handler: async (_req, res) => {
+        const state = degradation.current();
+        // 200 in normal and partial_degradation; 503 in full_degradation so
+        // clients can detect complete optional-provider outages without polling
+        // every individual field.
+        const statusCode = state.mode === "full_degradation" ? 503 : 200;
+        send(res, statusCode, state);
       },
     },
     {

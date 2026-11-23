@@ -9,9 +9,13 @@ import {
   type VerificationDoc,
   type VerificationSessionDoc,
   type VerificationStatus,
+  type SoftDeletedVerificationDoc,
 } from "../db/collections.js";
 import type { OrphanMediaCleaner } from "./orphans.js";
 import { assertRetentionDeletable } from "./protection.js";
+
+/** Days to keep soft-deleted verification snapshots before permanent purge. */
+const SOFT_DELETE_RETENTION_DAYS = 90;
 
 export type RetentionPolicy = Config["retention"];
 
@@ -95,6 +99,14 @@ export class RetentionCleaner {
       [
         "purge_dead_jobs",
         () => this.purge(Collections.jobs, { status: "dead", finishedAt: { $lt: new Date(now - p.deadJobDays * DAY_MS) } }, dryRun),
+      ],
+      [
+        "purge_soft_deleted_verifications",
+        () =>
+          this.purgeSoftDeletedSnapshots(
+            new Date(now - SOFT_DELETE_RETENTION_DAYS * DAY_MS),
+            dryRun,
+          ),
       ],
     ];
     const orphans = this.orphans;
@@ -231,6 +243,30 @@ export class RetentionCleaner {
       this.log.info("kept stale sessions linked to in-flight verifications", { reason, count: protectedIds.length });
     }
     return { archived, deleted: 0, skippedActive: protectedIds.length, truncated };
+  }
+
+  /**
+   * Permanently purges soft-deleted verification snapshots whose `softDeletedAt` is before
+   * `retentionCutoff`. Records past this window cannot be recovered by operators.
+   * The collection is not on RETENTION_DELETABLE_COLLECTIONS by design — soft-delete snapshots
+   * are managed exclusively here, never by the generic purge path.
+   */
+  private async purgeSoftDeletedSnapshots(retentionCutoff: Date, dryRun: boolean): Promise<TaskResult> {
+    const col = this.db.collection(Collections.softDeletedVerifications);
+    const filter: Filter<Record<string, unknown>> = { softDeletedAt: { $lt: retentionCutoff } };
+    if (dryRun) {
+      return { matched: await col.countDocuments(filter), archived: 0, deleted: 0, skippedActive: 0, truncated: false };
+    }
+    let deleted = 0;
+    let truncated = true;
+    for (let batch = 0; batch < this.policy.maxBatchesPerRun; batch++) {
+      const ids = (await col.find(filter, { projection: { _id: 1 } }).limit(this.policy.batchSize).toArray()).map((d) => d._id);
+      if (ids.length === 0) { truncated = false; break; }
+      const res = await col.deleteMany({ $and: [filter, { _id: { $in: ids } }] });
+      deleted += res.deletedCount;
+      if (ids.length < this.policy.batchSize) { truncated = false; break; }
+    }
+    return { archived: 0, deleted, skippedActive: 0, truncated };
   }
 
   /** Batched delete by _id so large purges never hold one long-running operation. */

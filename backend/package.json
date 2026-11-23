@@ -12,6 +12,10 @@
     "retention:dry-run": "tsx src/scripts/retention-cleanup.ts --dry-run",
     "test:retention": "node --import tsx --test test/retention-protection.test.ts",
     "test:seed": "node --import tsx --test test/seed-fixtures.test.ts",
+    "test:retry": "node --import tsx --test test/retry-policy.test.ts",
+    "test:soft-delete": "node --import tsx --test test/soft-delete.test.ts",
+    "test:degradation": "node --import tsx --test test/provider-degradation.test.ts",
+    "test": "node --import tsx --test test/*.test.ts",
     "db:seed": "tsx src/scripts/seed-fixtures.ts"
   },
   "dependencies": {
@@ -20,7 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
-    "tsx": "^4.19.0",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

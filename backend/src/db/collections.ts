@@ -10,6 +10,7 @@ export const Collections = {
   webhookDeliveries: "webhook_deliveries",
   rateLimitBuckets: "rate_limit_buckets",
   migrationCheckpoints: "migration_checkpoints",
+  softDeletedVerifications: "soft_deleted_verifications",
 } as const;
 
 // --- Verifications -----------------------------------------------------------
@@ -40,6 +41,32 @@ export interface VerificationDoc {
   completedAt?: Date;
   cancelledAt?: Date;
   finalizationStartedAt?: Date;
+  /**
+   * Soft-delete fields. When set the record is hidden from public reads but
+   * recoverable by an authorized operator until permanent retention cleanup runs.
+   * See docs/operations/soft-delete-recovery.md.
+   */
+  softDeletedAt?: Date;
+  softDeletedBy?: string;
+  softDeleteReason?: string;
+}
+
+/**
+ * Snapshot of a verification stored in `soft_deleted_verifications` at the
+ * moment of soft deletion. Kept until permanent retention cleanup removes it.
+ * The original record in `verifications` is marked with `softDeletedAt` and
+ * hidden from normal reads; this document preserves the full payload for audit
+ * and recovery.
+ */
+export interface SoftDeletedVerificationDoc extends VerificationDoc {
+  /** Original `_id` of the verification, stored for recovery look-ups. */
+  originalId: ObjectId;
+  softDeletedAt: Date;
+  softDeletedBy: string;
+  softDeleteReason: string;
+  /** Set when an authorized operator recovers the record. */
+  recoveredAt?: Date;
+  recoveredBy?: string;
 }
 
 // --- Verification sessions ---------------------------------------------------
