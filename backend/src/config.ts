@@ -168,6 +168,49 @@ export const config = {
     /** Abort without deleting if more than this share of scanned files look orphaned. */
     maxDeletePercent: int("ORPHAN_MEDIA_MAX_DELETE_PERCENT", 25),
   },
+
+  /**
+   * Capacity forecast dashboard (#980). Projects storage, queue, and API capacity from
+   * observed usage trends. Forecast assumptions are surfaced in the dashboard; the
+   * thresholds below drive advance warnings before a resource is exhausted.
+   */
+  capacityForecast: {
+    enabled: bool("CAPACITY_FORECAST_ENABLED", true),
+    /** How many days ahead the linear trend is projected (default 30). */
+    horizonDays: int("CAPACITY_FORECAST_HORIZON_DAYS", 30),
+    /** How many days of historical samples feed the trend (default 14). */
+    sampleWindowDays: int("CAPACITY_FORECAST_SAMPLE_WINDOW_DAYS", 14),
+    /** Minimum number of samples required before a forecast is emitted (default 3). */
+    minSamples: int("CAPACITY_FORECAST_MIN_SAMPLES", 3),
+    /** Warning threshold as a percentage of total capacity (default 80). */
+    warningPercent: int("CAPACITY_FORECAST_WARNING_PERCENT", 80),
+    /** Critical threshold as a percentage of total capacity (default 90). */
+    criticalPercent: int("CAPACITY_FORECAST_CRITICAL_PERCENT", 90),
+    storage: {
+      /** Total storage capacity in bytes; 0 disables storage forecasting (default 0). */
+      capacityBytes: int("CAPACITY_FORECAST_STORAGE_CAPACITY_BYTES", 0),
+      /** Warning threshold percentage for storage (defaults to warningPercent). */
+      warningPercent: int("CAPACITY_FORECAST_STORAGE_WARNING_PERCENT", 80),
+      /** Critical threshold percentage for storage (defaults to criticalPercent). */
+      criticalPercent: int("CAPACITY_FORECAST_STORAGE_CRITICAL_PERCENT", 90),
+    },
+    queue: {
+      /** Maximum acceptable pending jobs; 0 disables queue forecasting (default 0). */
+      capacity: int("CAPACITY_FORECAST_QUEUE_CAPACITY", 0),
+      /** Warning threshold percentage for the job queue (default 80). */
+      warningPercent: int("CAPACITY_FORECAST_QUEUE_WARNING_PERCENT", 80),
+      /** Critical threshold percentage for the job queue (default 90). */
+      criticalPercent: int("CAPACITY_FORECAST_QUEUE_CRITICAL_PERCENT", 90),
+    },
+    api: {
+      /** Maximum requests per minute the deployment is sized for; 0 disables API forecasting (default 0). */
+      capacityRpm: int("CAPACITY_FORECAST_API_CAPACITY_RPM", 0),
+      /** Warning threshold percentage for API throughput (default 80). */
+      warningPercent: int("CAPACITY_FORECAST_API_WARNING_PERCENT", 80),
+      /** Critical threshold percentage for API throughput (default 90). */
+      criticalPercent: int("CAPACITY_FORECAST_API_CRITICAL_PERCENT", 90),
+    },
+  },
 };
 
 if (config.mongo.maxPoolSize < 1) {
@@ -181,6 +224,31 @@ if (config.webhooks.maxAttempts < 1 || config.webhooks.maxAttempts > 20) {
 }
 if (config.rateLimits.trustedTokens.some((token) => token.length < 32)) {
   throw new Error("Invalid RATE_LIMIT_TRUSTED_TOKENS: every token must contain at least 32 characters");
+}
+if (config.capacityForecast.horizonDays < 1) {
+  throw new Error("Invalid CAPACITY_FORECAST_HORIZON_DAYS: expected a positive integer");
+}
+if (config.capacityForecast.sampleWindowDays < 1) {
+  throw new Error("Invalid CAPACITY_FORECAST_SAMPLE_WINDOW_DAYS: expected a positive integer");
+}
+if (config.capacityForecast.minSamples < 2) {
+  throw new Error("Invalid CAPACITY_FORECAST_MIN_SAMPLES: expected an integer of at least 2");
+}
+for (const [scope, thresholds] of Object.entries({
+  default: config.capacityForecast,
+  storage: config.capacityForecast.storage,
+  queue: config.capacityForecast.queue,
+  api: config.capacityForecast.api,
+})) {
+  if (thresholds.warningPercent < 1 || thresholds.warningPercent > 100) {
+    throw new Error(`Invalid capacity forecast warning threshold for ${scope}: expected an integer from 1 to 100`);
+  }
+  if (thresholds.criticalPercent < 1 || thresholds.criticalPercent > 100) {
+    throw new Error(`Invalid capacity forecast critical threshold for ${scope}: expected an integer from 1 to 100`);
+  }
+  if (thresholds.criticalPercent < thresholds.warningPercent) {
+    throw new Error(`Invalid capacity forecast thresholds for ${scope}: critical must be greater than or equal to warning`);
+  }
 }
 
 export type Config = typeof config;

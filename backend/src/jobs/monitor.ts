@@ -1,5 +1,11 @@
 import type { Logger } from "../lib/logger.js";
-import { jobOldestReadyAge, jobsHeartbeatOverdue, jobsInState, jobsRetryLoopSuspects } from "../lib/metrics.js";
+import {
+  jobOldestReadyAge,
+  jobsHeartbeatOverdue,
+  jobsInState,
+  jobsRetryLoopSuspects,
+  queueDepthHistory,
+} from "../lib/metrics.js";
 import { QUEUE_NAMES } from "../db/collections.js";
 import type { JobQueue } from "./queue.js";
 
@@ -8,6 +14,8 @@ export interface QueueMonitorOptions {
   stallTimeoutMs: number;
   heartbeatMs: number;
   retryLoopThreshold: number;
+  /** Release identifier used to tag capacity history samples for cross-release comparison. */
+  release?: string;
 }
 
 /**
@@ -53,6 +61,14 @@ export class QueueMonitor {
         jobsInState.set({ queue: q.queue, state: "running" }, q.running);
         jobsInState.set({ queue: q.queue, state: "dead" }, q.dead);
         jobOldestReadyAge.set({ queue: q.queue }, q.oldestReadyAgeSeconds);
+
+        // Capacity forecast history: sample queue depth tagged by release so trends
+        // can be compared across releases.
+        const release = this.opts.release ?? "unknown";
+        queueDepthHistory.set({ queue: q.queue, state: "ready", release }, q.ready);
+        queueDepthHistory.set({ queue: q.queue, state: "delayed", release }, q.delayed);
+        queueDepthHistory.set({ queue: q.queue, state: "running", release }, q.running);
+        queueDepthHistory.set({ queue: q.queue, state: "dead", release }, q.dead);
       }
       for (const queue of QUEUE_NAMES) {
         jobsRetryLoopSuspects.set({ queue }, stats.retryLoops.filter((j) => j.queue === queue).length);
