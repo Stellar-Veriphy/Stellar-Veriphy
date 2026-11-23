@@ -1,0 +1,190 @@
+{
+  "certificate_card": {
+    "success": {
+      "description": "Display state for a valid, active certificate",
+      "elements": {
+        "id": "1",
+        "manifest_hash": "a3f5c2e1b4d6...",
+        "creator": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "creator_short": "GBRPY...GLZ",
+        "timestamp": "2024-06-01T12:00:00Z",
+        "verification_badge": {
+          "level": "standard",
+          "label": "Verified",
+          "color": "green"
+        },
+        "status": "active",
+        "expiration": null,
+        "endorsements": 5,
+        "view_count": 42
+      },
+      "accessibility": {
+        "role": "article",
+        "label": "Certificate 1, verified, created by GBRPY...GLZ"
+      }
+    },
+    "expired": {
+      "description": "Display state for an expired certificate",
+      "elements": {
+        "id": "2",
+        "manifest_hash": "b4d6c3f2e5a7...",
+        "creator": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "creator_short": "GBRPY...GLZ",
+        "timestamp": "2023-01-15T10:00:00Z",
+        "verification_badge": {
+          "level": "standard",
+          "label": "Expired",
+          "color": "gray"
+        },
+        "status": "expired",
+        "expiration": "2024-01-15T10:00:00Z",
+        "renew_button_visible": true
+      },
+      "accessibility": {
+        "role": "article",
+        "label": "Certificate 2, expired, can be renewed"
+      }
+    },
+    "revoked": {
+      "description": "Display state for a revoked certificate",
+      "elements": {
+        "id": "3",
+        "manifest_hash": "c5e7d4f3a6b8...",
+        "creator": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "creator_short": "GBRPY...GLZ",
+        "timestamp": "2023-06-01T12:00:00Z",
+        "verification_badge": {
+          "level": "none",
+          "label": "Revoked",
+          "color": "red"
+        },
+        "status": "revoked",
+        "revocation_reason": "Counterfeit content detected",
+        "revoked_at": "2024-02-01T14:30:00Z"
+      },
+      "accessibility": {
+        "role": "article",
+        "label": "Certificate 3, revoked"
+      }
+    },
+    "locked": {
+      "description": "Display state for a permanently locked certificate",
+      "elements": {
+        "id": "4",
+        "manifest_hash": "d6f8e5a4b7c9...",
+        "creator": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "creator_short": "GBRPY...GLZ",
+        "timestamp": "2024-03-01T12:00:00Z",
+        "verification_badge": {
+          "level": "enhanced",
+          "label": "Locked",
+          "color": "amber"
+        },
+        "status": "locked",
+        "lock_reason": "Permanently immutable"
+      },
+      "accessibility": {
+        "role": "article",
+        "label": "Certificate 4, locked, immutable"
+      }
+    },
+    "transfer_pending": {
+      "description": "Display state during a pending transfer",
+      "elements": {
+        "id": "5",
+        "manifest_hash": "e7a9f6b5c8d0...",
+        "creator": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "creator_short": "GBRPY...GLZ",
+        "owner": "GAXMFXXTG3IY3CVX7V5DUI3I7M5DGO5QFJ5UHZDMXDJJ3M6ZJ2GM3MR",
+        "owner_short": "GAXMF...3MR",
+        "timestamp": "2024-04-01T12:00:00Z",
+        "verification_badge": {
+          "level": "standard",
+          "label": "Transfer Pending",
+          "color": "yellow"
+        },
+        "status": "transfer_pending",
+        "pending_recipient": "GAXMFXXTG3IY3CVX7V5DUI3I7M5DGO5QFJ5UHZDMXDJJ3M6ZJ2GM3MR"
+      },
+      "accessibility": {
+        "role": "article",
+        "label": "Certificate 5, transfer pending to GAXMF...3MR"
+      }
+    }
+  },
+  "verification_badge": {
+    "standard": {
+      "label": "Verified",
+      "icon": "check-circle",
+      "color": "#22c55e",
+      "aria_label": "Standard verification level"
+    },
+    "enhanced": {
+      "label": "Enhanced",
+      "icon": "shield-check",
+      "color": "#3b82f6",
+      "aria_label": "Enhanced verification level"
+    },
+    "none": {
+      "label": "Unverified",
+      "icon": "alert-circle",
+      "color": "#ef4444",
+      "aria_label": "No verification"
+    },
+    "pending": {
+      "label": "Pending",
+      "icon": "clock",
+      "color": "#f59e0b",
+      "aria_label": "Verification pending"
+    }
+  },
+  "error_states": {
+    "not_found": {
+      "message": "Certificate not found",
+      "code": "CERT_NOT_FOUND",
+      "suggestion": "Check the certificate ID and try again"
+    },
+    "network_error": {
+      "message": "Unable to connect to network",
+      "code": "NETWORK_ERROR",
+      "suggestion": "Check your internet connection and try again"
+    },
+    "wallet_not_connected": {
+      "message": "Wallet not connected",
+      "code": "WALLET_NOT_CONNECTED",
+      "suggestion": "Connect your Stellar wallet to continue"
+    },
+    "unauthorized": {
+      "message": "You are not authorized to perform this action",
+      "code": "UNAUTHORIZED",
+      "suggestion": "Connect with the correct wallet address"
+    },
+    "invalid_parameters": {
+      "message": "Invalid certificate parameters",
+      "code": "INVALID_PARAMS",
+      "suggestion": "Verify all fields are correctly filled"
+    }
+  },
+  "loading_states": {
+    "skeleton": {
+      "elements": ["id", "creator", "timestamp", "badge"],
+      "aria_label": "Loading certificate details"
+    },
+    "spinner": {
+      "message": "Loading...",
+      "aria_label": "Loading"
+    }
+  },
+  "empty_states": {
+    "no_certificates": {
+      "message": "No certificates found",
+      "suggestion": "Mint your first certificate to get started",
+      "action_label": "Mint Certificate"
+    },
+    "no_search_results": {
+      "message": "No certificates match your search",
+      "suggestion": "Try different search terms or filters",
+      "action_label": "Clear Filters"
+    }
+  }
+}

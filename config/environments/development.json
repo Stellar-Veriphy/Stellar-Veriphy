@@ -1,0 +1,19 @@
+{
+  "$comment": "Expected public configuration for development. Compared by scripts/env-drift.mjs (docs/operations/environment-drift.md).",
+  "environment": "development",
+  "url": "http://localhost:3000",
+  "expected": {
+    "NODE_ENV": "development",
+    "NEXT_PUBLIC_APP_ENV": "development",
+    "NEXT_PUBLIC_NETWORK": "testnet",
+    "NEXT_PUBLIC_RPC_URL": "https://soroban-testnet.stellar.org",
+    "NEXT_PUBLIC_MOCK_WALLET": "false"
+  },
+  "required": [
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_ORACLE_CONTRACT_ID",
+    "NEXT_PUBLIC_PROVENANCE_CONTRACT_ID",
+    "NEXT_PUBLIC_REGISTRY_CONTRACT_ID"
+  ],
+  "forbidden": {}
+}
