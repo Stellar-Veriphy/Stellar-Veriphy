@@ -184,6 +184,10 @@ mod registry_integration_tests {
     // Multiple TEE hashes — all independently approved
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Invariant fuzz tests (#968) live in `invariant_fuzz_tests.rs`
+    // -----------------------------------------------------------------------
+
     #[test]
     fn test_multiple_tee_hashes_are_independently_tracked() {
         let env = make_env();

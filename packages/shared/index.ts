@@ -36,3 +36,5 @@ export * from "./governance";
 export * from "./tee-attestation";
 export * from "./verifier-reputation";
 export * from "./contracts/api";
+export * from "./contracts/invariants";
+export * from "./governance/thresholdSimulation";

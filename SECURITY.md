@@ -228,6 +228,7 @@ The following are documented, tracked risks that have been deliberately accepted
 | Stake slashing for malicious providers | `contracts/oracle/src/lib.rs` — `slash_stake()` |
 | Circuit breaker (pause/unpause) | `contracts/oracle/src/lib.rs` — `pause()` / `unpause()` |
 | Multisig governance for admin operations | `contracts/registry/src/lib.rs` — `propose_operation()`, `approve_proposal()`, `execute_proposal()` |
+| Governance threshold simulation (offline, no privileged actions) | `docs/api/CONTRACTS.md` — modeled majority, supermajority, quorum/abstention, tie, and insufficient-participation scenarios |
 | Non-root container user | `Dockerfile` — `appuser` |
 | Production-only dependency install | `Dockerfile` — `pnpm install --prod` in runtime stage |
 | Cryptographic key management | Documented in [`docs/security/key-management.md`](./docs/security/key-management.md) |
