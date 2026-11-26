@@ -174,9 +174,26 @@ export const INDEXES: Record<string, IndexSpec[]> = {
       serves: "Resume lookups — find the checkpoint for a migration at a given stage before reprocessing records",
     },
   ],
-};
 
-/** MongoDB error codes raised when an index exists with the same name/key but different options. */
+  [Collections.softDeletedVerifications]: [
+    {
+      name: "jobId_unique",
+      key: { jobId: 1 },
+      unique: true,
+      serves: "SoftDeleteRepository.findByJobId — point look-up for operator recovery",
+    },
+    {
+      name: "softDeletedAt",
+      key: { softDeletedAt: 1 },
+      serves: "Permanent retention cleanup — purge soft-deleted records past the archive window",
+    },
+    {
+      name: "originalId",
+      key: { originalId: 1 },
+      serves: "SoftDeleteRepository.recover — resolve the original _id for the recovery update",
+    },
+  ],
+};
 const INDEX_CONFLICT_CODES = new Set([85, 86]);
 
 export interface EnsureIndexesReport {

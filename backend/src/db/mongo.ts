@@ -156,6 +156,11 @@ export async function connectMongo(log: Logger): Promise<{ client: MongoClient; 
       retries: 5,
       baseDelayMs: 1_000,
       maxDelayMs: 15_000,
+      // Only retry transient connection failures; never retry programming errors.
+      shouldRetry: (err) => {
+        const name = err instanceof Error ? err.name : "";
+        return /^Mongo(ServerSelection|Network|Timeout)/.test(name) || name === "MongoServerError";
+      },
       onRetry: (err, attempt, delayMs) => log.warn("mongodb connection failed, retrying", { attempt, delayMs, err }),
     },
   );

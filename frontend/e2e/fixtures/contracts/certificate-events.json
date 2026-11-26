@@ -1,0 +1,282 @@
+/**
+ * Contract event fixtures — synchronized between smart contract and UI tests.
+ * 
+ * These fixtures represent the canonical event shapes emitted by the provenance
+ * contract. UI tests should use these to verify that displays match contract behavior.
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { certificateEvents } from '../fixtures/contracts/certificate-events';
+ * 
+ * // Success: verify UI displays minted certificate correctly
+ * const mintedEvent = certificateEvents.minted.success;
+ * expect(screen.getByText(mintedEvent.topics.certificate_id)).toBeInTheDocument();
+ * ```
+ * 
+ * ## Maintenance
+ * 
+ * When modifying contract events:
+ * 1. Update this file with the new event shape
+ * 2. Update corresponding UI component tests
+ * 3. Run contract tests to verify fixture validity
+ */
+
+{
+  "minted": {
+    "description": "Emitted when a new certificate is minted",
+    "success": {
+      "topic": "CertificateMinted",
+      "topics": {
+        "owner": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "certificate_id": 1,
+        "manifest_hash": "a3f5c2e1b4d6789012345678901234567890abcdef1234567890abcdef123456"
+      },
+      "data": {
+        "timestamp": 1717243200,
+        "verification_level": "standard"
+      }
+    },
+    "failure": {
+      "description": "Duplicate manifest hash rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 3,
+        "error_message": "DuplicateCertificate"
+      },
+      "data": {
+        "manifest_hash": "a3f5c2e1b4d6789012345678901234567890abcdef1234567890abcdef123456"
+      }
+    }
+  },
+  "transferred": {
+    "description": "Emitted when certificate ownership is transferred",
+    "success": {
+      "topic": "CertificateTransferred",
+      "topics": {
+        "certificate_id": 1,
+        "from": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ",
+        "to": "GAXMFXXTG3IY3CVX7V5DUI3I7M5DGO5QFJ5UHZDMXDJJ3M6ZJ2GM3MR"
+      },
+      "data": {
+        "timestamp": 1717329600
+      }
+    },
+    "failure": {
+      "description": "Transfer by non-owner rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 2,
+        "error_message": "Unauthorized"
+      },
+      "data": {
+        "certificate_id": 1
+      }
+    }
+  },
+  "revoked": {
+    "description": "Emitted when a certificate is revoked",
+    "success": {
+      "topic": "CertificateRevoked",
+      "topics": {
+        "certificate_id": 1,
+        "owner": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      },
+      "data": {
+        "reason": "Counterfeit content detected",
+        "timestamp": 1717416000
+      }
+    },
+    "failure": {
+      "description": "Revocation by non-owner rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 7,
+        "error_message": "UnauthorizedRevocation"
+      },
+      "data": {
+        "certificate_id": 1
+      }
+    }
+  },
+  "metadata_updated": {
+    "description": "Emitted when certificate metadata is updated",
+    "success": {
+      "topic": "MetadataUpdated",
+      "topics": {
+        "certificate_id": 1,
+        "updated_by": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      },
+      "data": {
+        "new_version": 2,
+        "timestamp": 1717502400
+      }
+    },
+    "failure": {
+      "description": "Update of non-existent certificate",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 1,
+        "error_message": "CertificateNotFound"
+      },
+      "data": {
+        "certificate_id": 9999
+      }
+    }
+  },
+  "batch_minted": {
+    "description": "Emitted when multiple certificates are minted in one transaction",
+    "success": {
+      "topic": "BatchMinted",
+      "topics": {
+        "owner": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      },
+      "data": {
+        "certificate_ids": [1, 2, 3, 4, 5],
+        "count": 5,
+        "timestamp": 1717588800
+      }
+    },
+    "failure": {
+      "description": "Batch size exceeds maximum",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 4,
+        "error_message": "BatchSizeExceeded"
+      },
+      "data": {
+        "requested": 101,
+        "max": 100
+      }
+    }
+  },
+  "renewed": {
+    "description": "Emitted when certificate expiration is extended",
+    "success": {
+      "topic": "CertificateRenewed",
+      "topics": {
+        "certificate_id": 1,
+        "renewed_by": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      },
+      "data": {
+        "new_expires_at": 1748779200,
+        "previous_expires_at": 1717243200
+      }
+    },
+    "failure": {
+      "description": "Expiration set in the past",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 8,
+        "error_message": "InvalidExpiration"
+      },
+      "data": {
+        "requested_expires_at": 1000000,
+        "current_time": 1717588800
+      }
+    }
+  },
+  "endorsed": {
+    "description": "Emitted when a certificate is endorsed",
+    "success": {
+      "topic": "CertificateEndorsed",
+      "topics": {
+        "certificate_id": 1,
+        "endorser": "GAXMFXXTG3IY3CVX7V5DUI3I7M5DGO5QFJ5UHZDMXDJJ3M6ZJ2GM3MR"
+      },
+      "data": {
+        "total_endorsements": 5,
+        "timestamp": 1717675200
+      }
+    },
+    "failure": {
+      "description": "Self-endorsement rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 2,
+        "error_message": "Unauthorized"
+      },
+      "data": {
+        "certificate_id": 1,
+        "endorser": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      }
+    }
+  },
+  "locked": {
+    "description": "Emitted when a certificate is permanently locked",
+    "success": {
+      "topic": "CertificateLockedEvent",
+      "topics": {
+        "certificate_id": 1,
+        "locked_by": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      },
+      "data": {
+        "timestamp": 1717761600
+      }
+    },
+    "failure": {
+      "description": "Lock by non-admin rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 2,
+        "error_message": "Unauthorized"
+      },
+      "data": {
+        "certificate_id": 1,
+        "caller": "GAXMFXXTG3IY3CVX7V5DUI3I7M5DGO5QFJ5UHZDMXDJJ3M6ZJ2GM3MR"
+      }
+    }
+  },
+  "verification_level_updated": {
+    "description": "Emitted when verification level changes",
+    "success": {
+      "topic": "VerificationLevelUpdated",
+      "topics": {
+        "certificate_id": 1,
+        "updated_by": "GBRPYHIL2CI3WHZDTOOQFC6EB4RRJC3XNSOLXAUJVLVWXVVNQNYWGLZ"
+      },
+      "data": {
+        "new_level": "enhanced",
+        "previous_level": "standard"
+      }
+    },
+    "failure": {
+      "description": "Update by non-oracle rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 2,
+        "error_message": "Unauthorized"
+      },
+      "data": {
+        "certificate_id": 1,
+        "caller": "GAXMFXXTG3IY3CVX7V5DUI3I7M5DGO5QFJ5UHZDMXDJJ3M6ZJ2GM3MR"
+      }
+    }
+  },
+  "linked": {
+    "description": "Emitted when certificates are linked",
+    "success": {
+      "topic": "CertificatesLinked",
+      "topics": {
+        "certificate_id": 1,
+        "related_id": 2
+      },
+      "data": {
+        "relation": "parent"
+      }
+    },
+    "failure": {
+      "description": "Circular reference rejected",
+      "topic": "ContractError",
+      "topics": {
+        "error_code": 6,
+        "error_message": "InvalidMediaMetadata"
+      },
+      "data": {
+        "certificate_id": 1,
+        "related_id": 2,
+        "reason": "Circular reference"
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@ import type { QueueName } from "./db/collections.js";
 import { ensureIndexes } from "./db/indexes.js";
 import { connectMongo } from "./db/mongo.js";
 import { CachedVerificationReads, VerificationRepository, createPublicVerificationCaches } from "./db/verifications.js";
+import { SoftDeleteRepository } from "./db/soft-delete.js";
 import { buildDependencyChecks } from "./health/checks.js";
 import { HealthMonitor } from "./health/monitor.js";
 import { buildJobHandlers } from "./jobs/handlers.js";
@@ -13,6 +14,7 @@ import { Worker } from "./jobs/worker.js";
 import { ExternalApiClient } from "./lib/http.js";
 import { logger } from "./lib/logger.js";
 import { RateLimiter } from "./lib/rate-limiter.js";
+import { ProviderDegradationTracker } from "./lib/degraded.js";
 import { RetentionCleaner } from "./maintenance/cleanup.js";
 import { createOrphanMediaCleaner } from "./maintenance/orphans.js";
 import { MaintenanceMode } from "./maintenance/mode.js";
@@ -81,6 +83,14 @@ async function main(): Promise<void> {
     createPublicVerificationCaches(config.cache, log.child({ component: "cache" })),
   );
 
+  const softDelete = new SoftDeleteRepository(db, log.child({ component: "soft-delete" }));
+
+  const degradation = new ProviderDegradationTracker(
+    health,
+    log.child({ component: "degradation" }),
+  );
+  degradation.start();
+
   const server = createHttpServer({
     health,
     queue,
@@ -90,6 +100,8 @@ async function main(): Promise<void> {
     maintenance,
     webhooks,
     rateLimiter: new RateLimiter(db),
+    softDelete,
+    degradation,
     log: log.child({ component: "http" }),
   });
   server.listen(config.port, () => log.info("backend listening", { port: config.port }));
@@ -108,6 +120,7 @@ async function main(): Promise<void> {
     cleanup.stop();
     queueMonitor.stop();
     health.stop();
+    degradation.stop();
     maintenance.stop();
     await Promise.all(workers.map((w) => w.stop()));
     await client.close();

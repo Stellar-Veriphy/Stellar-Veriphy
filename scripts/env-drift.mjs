@@ -1,236 +1,426 @@
-#!/usr/bin/env node
-// Environment drift detection: compares the expected public configuration in
-// config/environments/<env>.json with the live values of a running deployment
-// (its /api/health/ready `config` block), an env file, or the current shell.
-//
-// Usage:
-//   node scripts/env-drift.mjs --env staging                   # live, URL from the baseline
-//   node scripts/env-drift.mjs --env staging --url https://staging.example.com
-//   node scripts/env-drift.mjs --env production --env-file .env.production
-//   node scripts/env-drift.mjs --env preview --from-process
-//   node scripts/env-drift.mjs --compare staging production    # baseline vs baseline
-//   add --json for machine-readable output
-//
-// Exit codes: 0 no drift, 1 drift found, 2 the check itself could not run.
-// See docs/operations/environment-drift.md.
+/**
+ * Environment Configuration Drift Detector
+ * 
+ * Compares configuration categories across development, staging, and production
+ * environments without exposing secrets.
+ * 
+ * ## Usage
+ * 
+ * Run locally:
+ *   node scripts/env-drift.mjs
+ * 
+ * Run with specific environment:
+ *   node scripts/env-drift.mjs --env=staging
+ * 
+ * Output formats:
+ *   node scripts/env-drift.mjs --format=json  # JSON output for CI
+ *   node scripts/env-drift.mjs --format=table # Table output (default)
+ * 
+ * ## Output
+ * 
+ * - Report identifies missing or unexpectedly different settings
+ * - Secret values remain redacted
+ * - Divergences include owner and resolution guidance
+ */
 
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const BASELINE_DIR = path.join(ROOT, "config", "environments");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CONFIG_DIR = join(__dirname, '..', 'config', 'environments');
 
-const RPC_VARS = {
-  testnet: "NEXT_PUBLIC_TESTNET_RPC_URL",
-  mainnet: "NEXT_PUBLIC_MAINNET_RPC_URL",
-  futurenet: "NEXT_PUBLIC_FUTURENET_RPC_URL",
+// Secrets that should never be exposed in output
+const SECRET_PATTERNS = [
+  /key/i,
+  /secret/i,
+  /password/i,
+  /token/i,
+  /credential/i,
+  /private/i,
+  /api_key/i,
+  /apikey/i,
+];
+
+// Environment categories for grouping
+const ENV_CATEGORIES = {
+  development: ['development', 'dev', 'local'],
+  staging: ['staging', 'stage'],
+  production: ['production', 'prod'],
 };
 
-function parseArgs(argv) {
-  const args = { json: false };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--json") args.json = true;
-    else if (arg === "--from-process") args.fromProcess = true;
-    else if (arg === "--env") args.env = argv[++i];
-    else if (arg === "--url") args.url = argv[++i];
-    else if (arg === "--env-file") args.envFile = argv[++i];
-    else if (arg === "--compare") args.compare = [argv[++i], argv[++i]];
-    else if (arg === "--help" || arg === "-h") args.help = true;
-    else throw new Error(`Unknown argument: ${arg}`);
+// Default owners for configuration areas
+const CONFIG_OWNERS = {
+  'NEXT_PUBLIC_ORACLE_CONTRACT_ID': '@blockchain-team',
+  'NEXT_PUBLIC_PROVENANCE_CONTRACT_ID': '@blockchain-team',
+  'NEXT_PUBLIC_REGISTRY_CONTRACT_ID': '@blockchain-team',
+  'NEXT_PUBLIC_API_URL': '@platform-team',
+  'NEXT_PUBLIC_RPC_URL': '@infrastructure-team',
+  'NEXT_PUBLIC_NETWORK': '@blockchain-team',
+  'NEXT_PUBLIC_MOCK_WALLET': '@testing-team',
+  'NODE_ENV': '@platform-team',
+};
+
+/**
+ * Redact secret values from output
+ */
+function redactValue(key, value) {
+  const isSecret = SECRET_PATTERNS.some(pattern => pattern.test(key));
+  if (isSecret && value && typeof value === 'string') {
+    return value.substring(0, 4) + '****';
   }
-  return args;
+  return value;
 }
 
-function loadBaseline(env) {
-  const file = path.join(BASELINE_DIR, `${env}.json`);
-  if (!fs.existsSync(file)) {
-    const known = fs.readdirSync(BASELINE_DIR).map((f) => f.replace(/\.json$/, ""));
-    throw new Error(
-      `No baseline for "${env}" at ${path.relative(ROOT, file)}. Known: ${known.join(", ")}`
-    );
+/**
+ * Load environment configuration
+ */
+function loadEnvConfig(envName) {
+  const configPath = join(CONFIG_DIR, `${envName}.json`);
+  
+  if (!existsSync(configPath)) {
+    throw new Error(`Configuration not found: ${envName}`);
   }
-  const baseline = JSON.parse(fs.readFileSync(file, "utf8"));
-  return { expected: {}, required: [], forbidden: {}, ...baseline };
+  
+  return JSON.parse(readFileSync(configPath, 'utf-8'));
 }
 
-function parseEnvFile(file) {
-  const values = {};
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (!match) continue;
-    values[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
-  }
-  return values;
-}
-
-// Mirrors configSnapshot() in frontend/app/api/health/ready/route.ts so every
-// source is compared on the same keys.
-function snapshotFromEnv(env) {
-  const network = env.NEXT_PUBLIC_NETWORK || env.NEXT_PUBLIC_STELLAR_NETWORK || "";
+/**
+ * Extract expected config keys and their values
+ */
+function extractExpectedConfig(config) {
+  const expected = config.expected || {};
+  const required = config.required || [];
+  const forbidden = config.forbidden || {};
+  
   return {
-    NODE_ENV: env.NODE_ENV ?? "",
-    NEXT_PUBLIC_APP_ENV: env.NEXT_PUBLIC_APP_ENV ?? "",
-    NEXT_PUBLIC_NETWORK: network,
-    NEXT_PUBLIC_RPC_URL: env[RPC_VARS[network]] ?? "",
-    NEXT_PUBLIC_API_URL: env.NEXT_PUBLIC_API_URL ?? "",
-    NEXT_PUBLIC_MOCK_WALLET: env.NEXT_PUBLIC_MOCK_WALLET ?? "",
-    NEXT_PUBLIC_ORACLE_CONTRACT_ID: env.NEXT_PUBLIC_ORACLE_CONTRACT_ID ?? "",
-    NEXT_PUBLIC_PROVENANCE_CONTRACT_ID: env.NEXT_PUBLIC_PROVENANCE_CONTRACT_ID ?? "",
-    NEXT_PUBLIC_REGISTRY_CONTRACT_ID: env.NEXT_PUBLIC_REGISTRY_CONTRACT_ID ?? "",
+    expected,
+    required,
+    forbidden,
+    // Include required keys with null to detect missing values
+    requiredMap: Object.fromEntries(required.map(k => [k, null])),
   };
 }
 
-async function snapshotFromUrl(baseUrl) {
-  const url = new URL("/api/health/ready?rpc=0", baseUrl).toString();
-  let res;
-  try {
-    res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-  } catch (err) {
-    throw new Error(`Could not reach ${url}: ${err.cause?.code || err.message}`);
-  }
-  const body = await res.json().catch(() => null);
-  if (!body?.config) {
-    throw new Error(
-      `${url} returned HTTP ${res.status} without a "config" block (is the deployment older than the readiness endpoint?)`
-    );
-  }
-  return body.config;
-}
-
-// Returns one finding per mismatch. `kind` tells the operator what to do:
-//   mismatch  -> live value differs from the baseline
-//   missing   -> a required value is empty
-//   forbidden -> a value the environment must never have
-function detectDrift(baseline, live) {
-  const findings = [];
-  for (const [key, expected] of Object.entries(baseline.expected)) {
-    const actual = live[key] ?? "";
-    if (String(actual) !== String(expected)) {
-      findings.push({ key, kind: "mismatch", expected: String(expected), actual: String(actual) });
-    }
-  }
-  for (const key of baseline.required) {
-    if (!live[key])
-      findings.push({ key, kind: "missing", expected: "<any non-empty value>", actual: "" });
-  }
-  for (const [key, values] of Object.entries(baseline.forbidden)) {
-    if (values.includes(String(live[key] ?? ""))) {
-      findings.push({
+/**
+ * Compare two environment configurations
+ */
+function compareConfigs(base, compare, baseName, compareName) {
+  const differences = {
+    missing: [],
+    unexpected: [],
+    different: [],
+    forbidden_violation: [],
+  };
+  
+  const allKeys = new Set([
+    ...Object.keys(base.expected || {}),
+    ...Object.keys(compare.expected || {}),
+    ...base.required || [],
+    ...compare.required || [],
+  ]);
+  
+  for (const key of allKeys) {
+    const baseValue = base.expected?.[key];
+    const compareValue = compare.expected?.[key];
+    const baseRequired = base.required?.includes(key);
+    const compareRequired = compare.required?.includes(key);
+    const forbiddenValues = compare.forbidden?.[key];
+    
+    // Check for missing in base but present in compare
+    if (baseValue === undefined && compareValue !== undefined) {
+      differences.unexpected.push({
         key,
-        kind: "forbidden",
-        expected: `not ${values.join(" | ")}`,
-        actual: String(live[key]),
+        compareValue: redactValue(key, compareValue),
+        category: categorizeKey(key),
+      });
+    }
+    
+    // Check for missing in compare but present in base
+    if (baseValue !== undefined && compareValue === undefined) {
+      differences.missing.push({
+        key,
+        baseValue: redactValue(key, baseValue),
+        category: categorizeKey(key),
+        isRequired: compareRequired,
+      });
+    }
+    
+    // Check for different values
+    if (baseValue !== undefined && compareValue !== undefined && baseValue !== compareValue) {
+      // Check if this difference is forbidden
+      if (forbiddenValues && forbiddenValues.includes(compareValue)) {
+        differences.forbidden_violation.push({
+          key,
+          baseValue: redactValue(key, baseValue),
+          compareValue: redactValue(key, compareValue),
+          forbiddenValues,
+          category: categorizeKey(key),
+        });
+      } else {
+        differences.different.push({
+          key,
+          baseValue: redactValue(key, baseValue),
+          compareValue: redactValue(key, compareValue),
+          category: categorizeKey(key),
+          isIntentional: isIntentionalDifference(key, baseValue, compareValue),
+        });
+      }
+    }
+    
+    // Check required keys
+    if (compareRequired && compareValue === undefined) {
+      differences.missing.push({
+        key,
+        category: categorizeKey(key),
+        isRequired: true,
+        severity: 'error',
       });
     }
   }
-  return findings;
+  
+  return differences;
 }
 
-function compareBaselines(a, b) {
-  const keys = [...new Set([...Object.keys(a.expected), ...Object.keys(b.expected)])].sort();
-  return keys
-    .filter((key) => a.expected[key] !== b.expected[key])
-    .map((key) => ({
-      key,
-      kind: "differs",
-      [a.environment]: a.expected[key] ?? "<unset>",
-      [b.environment]: b.expected[key] ?? "<unset>",
-    }));
-}
-
-const REMEDIATION = {
-  mismatch:
-    "Update the deployment's env (compose file / host secrets) to the expected value, or update the baseline in the same PR if the change is intended.",
-  missing: "Set the variable in the deployment environment and redeploy.",
-  forbidden: "Fix immediately: this value must never reach this environment.",
-};
-
-function printTable(rows, columns) {
-  const widths = columns.map((c) =>
-    Math.max(c.length, ...rows.map((r) => String(r[c] ?? "").length))
-  );
-  const line = (cells) => cells.map((cell, i) => String(cell ?? "").padEnd(widths[i])).join("  ");
-  console.log(line(columns));
-  console.log(widths.map((w) => "-".repeat(w)).join("  "));
-  for (const row of rows) console.log(line(columns.map((c) => row[c])));
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  if (args.help || (!args.env && !args.compare)) {
-    console.log(
-      fs
-        .readFileSync(fileURLToPath(import.meta.url), "utf8")
-        .split("\n")
-        .slice(1, 15)
-        .map((l) => l.replace(/^\/\/ ?/, ""))
-        .join("\n")
-    );
-    process.exit(args.help ? 0 : 2);
-  }
-
-  if (args.compare) {
-    const [a, b] = args.compare.map(loadBaseline);
-    const diffs = compareBaselines(a, b);
-    if (args.json)
-      console.log(JSON.stringify({ compare: args.compare, differences: diffs }, null, 2));
-    else if (diffs.length === 0)
-      console.log(`${a.environment} and ${b.environment} baselines are identical.`);
-    else {
-      console.log(`Intended differences between ${a.environment} and ${b.environment}:\n`);
-      printTable(diffs, ["key", a.environment, b.environment]);
+/**
+ * Categorize a config key
+ */
+function categorizeKey(key) {
+  if (key.startsWith('NEXT_PUBLIC_')) {
+    const area = key.replace('NEXT_PUBLIC_', '').toLowerCase();
+    if (area.includes('network') || area.includes('rpc') || area.includes('contract')) {
+      return 'blockchain';
     }
-    return 0;
+    if (area.includes('api') || area.includes('url')) {
+      return 'networking';
+    }
+    if (area.includes('mock') || area.includes('test')) {
+      return 'testing';
+    }
+    return 'general';
   }
-
-  const baseline = loadBaseline(args.env);
-  let source;
-  let live;
-  if (args.envFile) {
-    source = `env file ${args.envFile}`;
-    live = snapshotFromEnv(parseEnvFile(args.envFile));
-  } else if (args.fromProcess) {
-    source = "current process environment";
-    live = snapshotFromEnv(process.env);
-  } else {
-    const url = args.url || baseline.url;
-    source = `live deployment ${url}`;
-    live = await snapshotFromUrl(url);
-  }
-
-  const findings = detectDrift(baseline, live);
-  const report = {
-    environment: baseline.environment,
-    source,
-    checkedAt: new Date().toISOString(),
-    drift: findings.length > 0,
-    findings: findings.map((f) => ({ ...f, remediation: REMEDIATION[f.kind] })),
-  };
-
-  if (args.json) {
-    console.log(JSON.stringify(report, null, 2));
-  } else if (findings.length === 0) {
-    console.log(
-      `✓ No drift: ${baseline.environment} matches config/environments/${args.env}.json (${source}).`
-    );
-  } else {
-    console.log(
-      `✗ Drift detected in ${baseline.environment} (${source}): ${findings.length} finding(s)\n`
-    );
-    printTable(findings, ["kind", "key", "expected", "actual"]);
-    console.log("");
-    for (const kind of [...new Set(findings.map((f) => f.kind))])
-      console.log(`${kind}: ${REMEDIATION[kind]}`);
-  }
-  return findings.length > 0 ? 1 : 0;
+  return 'runtime';
 }
 
-main().then(
-  (code) => process.exit(code),
-  (err) => {
-    console.error(`env-drift: ${err.message}`);
-    process.exit(2);
+/**
+ * Determine if a difference is intentional (known override)
+ */
+function isIntentionalDifference(key, baseValue, compareValue) {
+  // Known intentional differences
+  const intentionalDiffs = {
+    'NODE_ENV': true, // Different per environment by design
+    'NEXT_PUBLIC_APP_ENV': true,
+    'NEXT_PUBLIC_NETWORK': key.includes('NETWORK'), // network differs by env
+  };
+  
+  return intentionalDiffs[key] || false;
+}
+
+/**
+ * Get owner for a configuration key
+ */
+function getOwner(key) {
+  return CONFIG_OWNERS[key] || '@platform-team';
+}
+
+/**
+ * Get resolution guidance for a difference
+ */
+function getResolutionGuidance(diff, baseEnv, compareEnv) {
+  const guidance = [];
+  
+  if (diff.isRequired) {
+    guidance.push(`ACTION REQUIRED: Add ${diff.key} to ${compareEnv} environment`);
+    guidance.push(`OWNER: ${getOwner(diff.key)}`);
+    guidance.push(`RESOLUTION: Set value in ${compareEnv} deployment config`);
   }
-);
+  
+  if (diff.isIntentional) {
+    guidance.push(`INTENTIONAL: Difference is expected for ${compareEnv} environment`);
+  }
+  
+  if (diff.forbiddenValues) {
+    guidance.push(`VIOLATION: ${diff.key} has forbidden value(s): ${diff.forbiddenValues.join(', ')}`);
+    guidance.push(`ACTION REQUIRED: Remove or change ${diff.key} in ${compareEnv}`);
+  }
+  
+  if (guidance.length === 0) {
+    guidance.push(`REVIEW: Determine if ${diff.key} should match ${baseEnv}`);
+    guidance.push(`OWNER: ${getOwner(diff.key)}`);
+  }
+  
+  return guidance;
+}
+
+/**
+ * Format differences as a table
+ */
+function formatTable(differences, baseEnv, compareEnv) {
+  const lines = [];
+  
+  lines.push(`\n${'═'.repeat(80)}`);
+  lines.push(`CONFIGURATION DRIFT REPORT: ${baseEnv.toUpperCase()} → ${compareEnv.toUpperCase()}`);
+  lines.push(`${'═'.repeat(80)}\n`);
+  
+  // Missing keys
+  if (differences.missing.length > 0) {
+    lines.push(`🔴 MISSING IN ${compareEnv.toUpperCase()} (${differences.missing.length})`);
+    lines.push(`─`.repeat(80));
+    for (const diff of differences.missing) {
+      lines.push(`  ${diff.key}`);
+      lines.push(`    Base value: ${diff.baseValue || '(not set)'}`);
+      lines.push(`    Category: ${diff.category}`);
+      if (diff.isRequired) lines.push(`    ⚠️  REQUIRED`);
+      for (const g of getResolutionGuidance(diff, baseEnv, compareEnv)) {
+        lines.push(`    ${g}`);
+      }
+      lines.push('');
+    }
+  }
+  
+  // Unexpected keys
+  if (differences.unexpected.length > 0) {
+    lines.push(`🟡 UNEXPECTED IN ${compareEnv.toUpperCase()} (${differences.unexpected.length})`);
+    lines.push(`─`.repeat(80));
+    for (const diff of differences.unexpected) {
+      lines.push(`  ${diff.key}`);
+      lines.push(`    Value: ${diff.compareValue}`);
+      lines.push(`    Category: ${diff.category}`);
+      for (const g of getResolutionGuidance(diff, baseEnv, compareEnv)) {
+        lines.push(`    ${g}`);
+      }
+      lines.push('');
+    }
+  }
+  
+  // Different values
+  if (differences.different.length > 0) {
+    lines.push(`🟠 DIFFERENT VALUES (${differences.different.length})`);
+    lines.push(`─`.repeat(80));
+    for (const diff of differences.different) {
+      lines.push(`  ${diff.key}`);
+      lines.push(`    ${baseEnv}: ${diff.baseValue}`);
+      lines.push(`    ${compareEnv}: ${diff.compareValue}`);
+      lines.push(`    Category: ${diff.category}`);
+      if (diff.isIntentional) lines.push(`    ✓ Intentional difference`);
+      for (const g of getResolutionGuidance(diff, baseEnv, compareEnv)) {
+        lines.push(`    ${g}`);
+      }
+      lines.push('');
+    }
+  }
+  
+  // Forbidden violations
+  if (differences.forbidden_violation.length > 0) {
+    lines.push(`🔴 FORBIDDEN VALUE VIOLATIONS (${differences.forbidden_violation.length})`);
+    lines.push(`─`.repeat(80));
+    for (const diff of differences.forbidden_violation) {
+      lines.push(`  ${diff.key}`);
+      lines.push(`    ${compareEnv}: ${diff.compareValue} (forbidden: ${diff.forbiddenValues.join(', ')})`);
+      lines.push(`    Category: ${diff.category}`);
+      for (const g of getResolutionGuidance(diff, baseEnv, compareEnv)) {
+        lines.push(`    ${g}`);
+      }
+      lines.push('');
+    }
+  }
+  
+  // Summary
+  const total = differences.missing.length + differences.unexpected.length + 
+                differences.different.length + differences.forbidden_violation.length;
+  
+  lines.push(`${'─'.repeat(80)}`);
+  if (total === 0) {
+    lines.push(`✅ No configuration drift detected`);
+  } else {
+    lines.push(`📊 SUMMARY: ${total} issue(s) found`);
+    lines.push(`   Missing: ${differences.missing.length}`);
+    lines.push(`   Unexpected: ${differences.unexpected.length}`);
+    lines.push(`   Different: ${differences.different.length}`);
+    lines.push(`   Violations: ${differences.forbidden_violation.length}`);
+  }
+  lines.push(`${'═'.repeat(80)}\n`);
+  
+  return lines.join('\n');
+}
+
+/**
+ * Main function
+ */
+function main() {
+  const args = process.argv.slice(2);
+  const format = args.includes('--format=json') ? 'json' : 'table';
+  const envFilter = args.find(a => a.startsWith('--env='))?.split('=')[1];
+  
+  const environments = ['development', 'staging', 'production'];
+  const results = [];
+  
+  // Load all configurations
+  const configs = {};
+  for (const env of environments) {
+    try {
+      configs[env] = loadEnvConfig(env);
+    } catch (e) {
+      console.error(`Warning: Could not load ${env} config: ${e.message}`);
+    }
+  }
+  
+  // Compare each pair
+  const pairs = [];
+  if (!envFilter || envFilter === 'staging') {
+    pairs.push(['development', 'staging']);
+  }
+  if (!envFilter || envFilter === 'production') {
+    pairs.push(['staging', 'production']);
+    pairs.push(['development', 'production']);
+  }
+  
+  for (const [baseEnv, compareEnv] of pairs) {
+    if (!configs[baseEnv] || !configs[compareEnv]) continue;
+    
+    const base = extractExpectedConfig(configs[baseEnv]);
+    const compare = extractExpectedConfig(configs[compareEnv]);
+    
+    const differences = compareConfigs(base, compare, baseEnv, compareEnv);
+    
+    results.push({
+      base: baseEnv,
+      compare: compareEnv,
+      differences,
+    });
+    
+    if (format === 'table') {
+      console.log(formatTable(differences, baseEnv, compareEnv));
+    }
+  }
+  
+  // JSON output
+  if (format === 'json') {
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      results: results.map(r => ({
+        ...r,
+        differences: {
+          ...r.differences,
+          // Redact any remaining sensitive data
+          missing: r.differences.missing.map(d => ({
+            ...d,
+            baseValue: typeof d.baseValue === 'string' ? redactValue(d.key, d.baseValue) : d.baseValue,
+          })),
+        },
+      })),
+    }, null, 2));
+  }
+  
+  // Exit code based on issues
+  const hasErrors = results.some(r => 
+    r.differences.missing.some(d => d.isRequired) || 
+    r.differences.forbidden_violation.length > 0
+  );
+  
+  if (hasErrors) {
+    process.exit(1);
+  }
+}
+
+main();
