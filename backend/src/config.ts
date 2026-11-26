@@ -159,6 +159,17 @@ export const config = {
     deadJobDays: int("RETENTION_DEAD_JOB_DAYS", 30),
   },
 
+  /** Evidence checksum scanner. Re-hashes stored objects and reports mismatches. */
+  checksumScanner: {
+    enabled: bool("CHECKSUM_SCANNER_ENABLED", true),
+    /** How often to run a full scan (default: every 6 hours). */
+    intervalMinutes: int("CHECKSUM_SCANNER_INTERVAL_MINUTES", 360),
+    /** Records processed per batch within a single scan run. */
+    batchSize: int("CHECKSUM_SCANNER_BATCH_SIZE", 50),
+    /** Maximum affected job IDs to include in a single alert payload. */
+    maxAlertIds: int("CHECKSUM_SCANNER_MAX_ALERT_IDS", 100),
+  },
+
   /** Orphaned media cleanup (#782). Runs as a retention task when MEDIA_STORAGE_DIR is set. */
   orphanMedia: {
     enabled: bool("ORPHAN_MEDIA_CLEANUP_ENABLED", true),

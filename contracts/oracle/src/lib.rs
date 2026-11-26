@@ -2434,6 +2434,13 @@ mod test;
 #[cfg(test)]
 mod integration_tests;
 
+// Event payload compatibility tests: pin every public contract event to its
+// exact field names, types, and topic/data layout.  Any breaking change
+// (renamed symbol, removed topic, altered type) causes these tests to fail,
+// blocking the CI run before the change reaches consumers.
+#[cfg(test)]
+mod event_compat_tests;
+
 // #807 — repeatable cost benchmark for the most-used calls. Run via scripts/benchmark-contracts.mjs.
 #[cfg(test)]
 mod benchmark;

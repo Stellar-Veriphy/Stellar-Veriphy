@@ -115,3 +115,11 @@ jobs:
       - name: Test
         working-directory: contracts/${{ matrix.contract }}
         run: cargo test --lib
+
+      # Event payload compatibility: runs the event_compat_tests module in
+      # isolation so a breaking event change is surfaced with a clear test
+      # name rather than buried inside a full test run.  Fails fast on the
+      # first renamed symbol, removed topic, or altered field type.
+      - name: Event compatibility
+        working-directory: contracts/${{ matrix.contract }}
+        run: cargo test --lib event_compat

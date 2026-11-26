@@ -1,69 +1,108 @@
-# API versioning
+# API Versioning and Sunset Policy
 
-## Selecting a version
+StellarVeriphy uses route-level deprecation annotations rather than a URL
+version prefix. This keeps existing URLs stable while giving consumers enough
+lead time to migrate before an endpoint is removed.
 
-There are two equivalent ways to select a version:
+## How deprecation works
 
-1. **Path prefix (recommended):** `/api/v1/records/bulk-status`
-2. **Header:** call the unversioned path and send `X-API-Version: 1` (`v1` is also accepted):
+When a route is marked deprecated in `server.ts`, every response from that
+route automatically carries:
 
-   ```
-   POST /api/records/bulk-status
-   X-API-Version: 1
-   ```
+### Response headers (RFC 8594)
 
-The middleware rewrites the header form to the path form (`frontend/middleware.ts`). If a request has both, the path wins. If it has neither, the request is served by the **default version**, currently `1`.
+| Header | Value | Example |
+|---|---|---|
+| `Deprecation` | `true` | `Deprecation: true` |
+| `Sunset` | HTTP-date of removal | `Sunset: Sun, 01 Jun 2027 00:00:00 GMT` |
+| `Link` | Replacement endpoint | `Link: </api/v2/verifications>; rel="successor-version"` |
 
-Every response includes `X-API-Version`, the version that actually handled the request. Clients should log it.
+`Sunset` and `Link` are only sent when the route's `sunsetDate` / `successorPath`
+are set.
 
-If the requested version is unknown, the server returns `400 UNSUPPORTED_API_VERSION`. `details.supportedVersions` and `details.latestVersion` tell the client what it can switch to.
+### Response body
 
-`/api/health` is not versioned.
+A `meta.deprecation` envelope is merged into every JSON response:
+
+```json
+{
+  "jobId": "...",
+  "status": "certified",
+  "meta": {
+    "deprecation": {
+      "deprecated": true,
+      "reason": "Replaced by /api/verifications — see docs/api/versioning.md",
+      "sunsetDate": "2027-06-01T00:00:00Z",
+      "successorPath": "/api/verifications"
+    }
+  }
+}
+```
+
+This makes the deprecation discoverable even for clients that do not inspect
+headers (e.g. REST clients that only parse the body).
+
+## Discovering deprecated routes
+
+**Authenticated operators** can call `GET /admin/api/deprecated` to get a full
+list of deprecated routes including their sunset dates and successors.
+
+**Public callers** can call `GET /api/deprecations` for a list of deprecated
+public (non-admin) routes.
+
+Both responses follow the same shape:
+
+```json
+{
+  "deprecated": [
+    {
+      "method": "GET",
+      "pattern": "^\\/api\\/old-certificates\\/(?<certId>[^/]+)$",
+      "reason": "Replaced by /api/certificates/:certId",
+      "sunsetDate": "2027-06-01T00:00:00Z",
+      "successorPath": "/api/certificates/:certId"
+    }
+  ]
+}
+```
+
+`sunsetDate` and `successorPath` are `null` when not set.
+
+## Marking a route as deprecated
+
+In `src/server.ts`, add a `deprecation` field to the route entry:
+
+```typescript
+{
+  method: "GET",
+  pattern: /^\/api\/old-certificates\/(?<certId>[^/]+)$/,
+  deprecation: {
+    reason: "Replaced by /api/certificates/:certId — see docs/api/versioning.md",
+    sunsetDate: "2027-06-01T00:00:00Z",
+    successorPath: "/api/certificates/:certId",
+  },
+  handler: async (_req, res, { certId }) => { /* ... */ },
+},
+```
+
+## Deprecation lifecycle
+
+1. **Announce**: add `deprecation` to the route; set `sunsetDate` at least 90
+   days in the future.
+2. **Notify**: the CI and staging deploy logs will surface new deprecations.
+3. **Warn**: headers and body envelopes alert consumers automatically.
+4. **Remove**: after `sunsetDate`, delete the route from `server.ts` and add a
+   migration note to this document.
+
+## Currently deprecated routes
+
+_No routes are currently deprecated._
+
+Deprecated routes will be listed here and in `GET /api/deprecations`.
 
 ## Supported versions
 
-| Version | Status | Deprecated | Sunset | Successor |
-|---|---|---|---|---|
-| `1` | current | — | — | — |
-
-The registry in `frontend/lib/api/versioning.ts` is the source of truth. Update this table whenever you change that registry.
-
-## What counts as a breaking change
-
-Breaking changes **require a new version**:
-
-- Removing or renaming a field, endpoint, or error code
-- Changing a field's type, or its meaning
-- Making an optional request field required, or tightening validation on an existing field
-- Changing the default of a request option (for example, `atomic`)
-- Changing the status code returned for an existing outcome
-
-These changes are **non-breaking** and can ship within the current version:
-
-- Adding endpoints, optional request fields, or response fields
-- Adding new error codes. Clients must handle unknown codes by falling back to `retryable`.
-- Relaxing validation
-
-Clients must ignore response fields they don't recognize.
-
-## Rolling out a new version
-
-1. Add `"2": { status: "current" }` to `API_VERSIONS`. Implement the changed routes under `app/api/v2/...`. Routes that didn't change can share their handler function: move the inner function into a shared module and wrap it with `defineRoute("2", handler)` in the v2 route. Don't re-export the v1 route itself, because it would send `X-API-Version: 1`.
-2. Set `LATEST_API_VERSION` to `"2"`. The bundled client (`apiRequest`) now sends v2 by default. Callers can pin `version: "1"` while they migrate.
-3. Mark v1 deprecated by setting `status: "deprecated"`, `deprecatedAt`, `sunsetAt` (at least 90 days out) and `successor: "2"`. Every v1 response then carries these headers:
-   - `Deprecation: @<unix-seconds>` (RFC 9745)
-   - `Sunset: <HTTP date>` (RFC 8594)
-   - `Link: <...versioning.md#v2>; rel="successor-version"`
-4. Move `DEFAULT_API_VERSION` to `"2"` only after v1 has been deprecated for at least one release cycle. Clients that never chose a version are the ones this step affects.
-5. After the sunset date, remove v1 from the registry and delete `app/api/v1`. Requests for v1 then receive `UNSUPPORTED_API_VERSION`.
-
-## Migration guide template
-
-Add a section to this file for each new version:
-
-```
-### v1 → v2
-- Changed: <endpoint>: <what changed and why>
-- Removed: <field>: use <replacement>
-- Client action: <concrete steps>
-```
+| Endpoint prefix | Status | Notes |
+|---|---|---|
+| `/api/` | ✅ Current | Public API |
+| `/admin/` | ✅ Current | Authenticated operator API |

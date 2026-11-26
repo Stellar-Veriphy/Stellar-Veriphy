@@ -36,15 +36,39 @@ export interface ServerDeps {
   softDelete: SoftDeleteRepository;
   degradation: ProviderDegradationTracker;
   log: Logger;
+  checksumScanner?: import("./maintenance/checksum-scanner.js").EvidenceChecksumScanner;
+  batchValidation?: import("./db/batch-validate.js").BatchValidationRepository;
 }
 
 type Params = Record<string, string>;
 type Handler = (req: IncomingMessage, res: ServerResponse, params: Params, url: URL) => Promise<void>;
 
+/**
+ * Sunset metadata for a deprecated route (RFC 8594).
+ *
+ * When present, every response from this route will carry:
+ *   - `Deprecation: true` header
+ *   - `Sunset: <HTTP-date>` header (when `sunsetDate` is set)
+ *   - `Link: <successorPath>; rel="successor-version"` header (when `successorPath` is set)
+ *   - A `meta.deprecation` envelope in the JSON body
+ *
+ * See docs/api/versioning.md for the full API sunset process.
+ */
+export interface DeprecationMeta {
+  /** Human-readable description of why the route is deprecated. */
+  reason: string;
+  /** ISO-8601 date after which the route will stop accepting requests. */
+  sunsetDate?: string;
+  /** Replacement endpoint path, e.g. "/api/v2/verifications". */
+  successorPath?: string;
+}
+
 interface Route {
   method: string;
   pattern: RegExp;
   admin?: boolean;
+  /** When set, the route is deprecated and responses include sunset headers. */
+  deprecation?: DeprecationMeta;
   handler: Handler;
 }
 
@@ -78,8 +102,23 @@ const RATE_LIMITS: Record<RateLimitRouteClass, Record<RateLimitTier, number>> = 
 
 class BadRequestError extends Error {}
 
-function send(res: ServerResponse, status: number, body: unknown): void {
-  const payload = JSON.stringify(body);
+function send(res: ServerResponse, status: number, body: unknown, deprecation?: DeprecationMeta): void {
+  // Wrap the body in a `meta.deprecation` envelope when the route is deprecated.
+  const payload = JSON.stringify(
+    deprecation
+      ? {
+          ...(typeof body === "object" && body !== null && !Array.isArray(body) ? body : { data: body }),
+          meta: {
+            deprecation: {
+              deprecated: true,
+              reason: deprecation.reason,
+              ...(deprecation.sunsetDate ? { sunsetDate: deprecation.sunsetDate } : {}),
+              ...(deprecation.successorPath ? { successorPath: deprecation.successorPath } : {}),
+            },
+          },
+        }
+      : body,
+  );
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(payload);
 }
@@ -196,6 +235,7 @@ function permissionState(userId: string, permission: string): { granted: boolean
   return { granted: request?.status === "approved", request };
 }
 
+export function createHttpServer({ security, health, queue, cleanup, verifications, maintenance, webhooks, rateLimiter, log, checksumScanner, batchValidation }: ServerDeps): Server {
 export function createHttpServer({ security, health, queue, cleanup, verifications, maintenance, webhooks, rateLimiter, softDelete, degradation, log }: ServerDeps): Server {
   const routes: Route[] = [
     { method: "GET", pattern: /^\/admin\/risk\/(?<creator>[^/]+)$/, admin: true,
@@ -323,6 +363,59 @@ export function createHttpServer({ security, health, queue, cleanup, verificatio
           if (err instanceof CleanupAlreadyRunningError) return send(res, 409, { error: err.message });
           throw err;
         }
+      },
+    },
+
+    // --- Evidence checksum scanner -------------------------------------------
+    {
+      method: "POST",
+      pattern: /^\/admin\/maintenance\/checksum-scan$/,
+      admin: true,
+      handler: async (_req, res) => {
+        if (!checksumScanner) {
+          return send(res, 503, {
+            error: "Evidence checksum scanner is not configured",
+            code: "CHECKSUM_SCANNER_UNAVAILABLE",
+          });
+        }
+        const result = await checksumScanner.run();
+        send(res, 200, result);
+      },
+    },
+
+    // --- API sunset / deprecation catalogue (#api-sunset) -------------------
+    {
+      method: "GET",
+      pattern: /^\/admin\/api\/deprecated$/,
+      admin: true,
+      handler: async (_req, res) => {
+        const deprecated = routes
+          .filter((r) => r.deprecation)
+          .map((r) => ({
+            method: r.method,
+            pattern: r.pattern.source,
+            reason: r.deprecation!.reason,
+            sunsetDate: r.deprecation!.sunsetDate ?? null,
+            successorPath: r.deprecation!.successorPath ?? null,
+          }));
+        send(res, 200, { deprecated });
+      },
+    },
+    {
+      method: "GET",
+      pattern: /^\/api\/deprecations$/,
+      handler: async (_req, res) => {
+        // Public (unauthenticated) endpoint: lists only public (non-admin) deprecated routes.
+        const deprecated = routes
+          .filter((r) => r.deprecation && !r.admin)
+          .map((r) => ({
+            method: r.method,
+            pattern: r.pattern.source,
+            reason: r.deprecation!.reason,
+            sunsetDate: r.deprecation!.sunsetDate ?? null,
+            successorPath: r.deprecation!.successorPath ?? null,
+          }));
+        send(res, 200, { deprecated });
       },
     },
 
@@ -701,6 +794,71 @@ export function createHttpServer({ security, health, queue, cleanup, verificatio
       },
     },
 
+    // --- Dry-run batch validation (#batch-validate) -------------------------
+    //
+    // POST /api/admin/verifications/validate
+    //
+    // Validates a batch of verification records WITHOUT mutating any data.
+    // Returns per-record outcomes (valid / error list) and supports keyset
+    // pagination.  See docs/operations/batch-validate.md.
+    {
+      method: "POST",
+      pattern: /^\/api\/admin\/verifications\/validate$/,
+      admin: true,
+      handler: async (req, res) => {
+        if (!batchValidation) {
+          return send(res, 503, {
+            error: "Batch validation is not configured",
+            code: "BATCH_VALIDATE_UNAVAILABLE",
+          });
+        }
+
+        const body = await readJson(req);
+
+        // jobIds: optional array of specific record ids to validate
+        const jobIds = body.jobIds;
+        if (jobIds !== undefined) {
+          if (!Array.isArray(jobIds) || jobIds.length === 0) {
+            return send(res, 400, { error: "jobIds must be a non-empty array when provided" });
+          }
+          if (jobIds.length > 100) {
+            return send(res, 400, { error: "jobIds must contain at most 100 entries" });
+          }
+          const invalid = jobIds.filter((id) => typeof id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(id));
+          if (invalid.length > 0) {
+            return send(res, 400, { error: "invalid jobIds entries", invalid: invalid.slice(0, 5) });
+          }
+        }
+
+        // cursor: keyset pagination — createdAt ISO-8601 of the last seen record
+        const cursor = body.cursor;
+        if (cursor !== undefined && typeof cursor !== "string") {
+          return send(res, 400, { error: "cursor must be an ISO-8601 date string" });
+        }
+        if (cursor) {
+          const d = new Date(cursor as string);
+          if (Number.isNaN(d.getTime())) {
+            return send(res, 400, { error: "cursor must be a valid ISO-8601 date string" });
+          }
+        }
+
+        // limit: 1–100 (default: 20)
+        const rawLimit = body.limit;
+        const limit = rawLimit !== undefined ? Number(rawLimit) : 20;
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+          return send(res, 400, { error: "limit must be an integer from 1 to 100" });
+        }
+
+        const result = await batchValidation.validate({
+          jobIds: jobIds as string[] | undefined,
+          cursor: cursor as string | undefined,
+          limit,
+        });
+
+        send(res, 200, result);
+      },
+    },
+
     // --- Verification lookups (#773) ---------------------------------------------
     {
       method: "GET",
@@ -765,6 +923,22 @@ export function createHttpServer({ security, health, queue, cleanup, verificatio
     const routeLabel = `${route.method} ${route.pattern.source}`;
     const handle = async () => {
       const method = req.method ?? "unknown";
+
+      // --- Deprecation / sunset headers (RFC 8594) --------------------------
+      // Set before any response so even 4xx/5xx from downstream carry them.
+      if (route.deprecation) {
+        const { sunsetDate, successorPath } = route.deprecation;
+        res.setHeader("Deprecation", "true");
+        if (sunsetDate) {
+          // Sunset header value must be an HTTP-date (RFC 7231).
+          const d = new Date(sunsetDate);
+          if (!Number.isNaN(d.getTime())) res.setHeader("Sunset", d.toUTCString());
+        }
+        if (successorPath) {
+          res.setHeader("Link", `<${successorPath}>; rel="successor-version"`);
+        }
+      }
+
       const limitClass = rateLimitClass(route, method);
       if (limitClass) {
         const { tier, identity } = rateLimitIdentity(req);
@@ -807,7 +981,7 @@ export function createHttpServer({ security, health, queue, cleanup, verificatio
       if (route.admin && !isAdmin(req)) {
         return send(res, config.adminToken ? 401 : 403, {
           error: config.adminToken ? "Unauthorized" : "Admin API disabled; set ADMIN_TOKEN to enable it",
-        });
+        }, route.deprecation);
       }
 
       if (maintenance.isEnabled()) {

@@ -2706,6 +2706,13 @@ impl ProvenanceContract {
 #[cfg(test)]
 mod smoke_tests;
 
+// Event payload compatibility tests: pin every public contract event to its
+// exact field names, types, and topic/data layout.  Any breaking change
+// (renamed field, removed topic, altered type) causes these tests to fail,
+// blocking the CI run before the change reaches frontend/backend consumers.
+#[cfg(test)]
+mod event_compat_tests;
+
 // #966 — contract pause-state recovery tests
 #[cfg(test)]
 mod pause_recovery_tests;
