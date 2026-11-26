@@ -73,6 +73,28 @@ export const externalApiRetries = new Counter({
   registers,
 });
 
+// --- Retry policy observability -----------------------------------------------
+//
+// Makes retry behaviour visible beyond the per-service external API counters.
+// `sv_retry_attempts_total` counts every retry decision (including skipped ones)
+// so operators can see how often retries fire and whether they help.
+// `sv_retry_skipped_total` counts retries that were eligible but skipped because
+// the overall deadline would be exceeded.
+
+export const retryAttempts = new Counter({
+  name: "sv_retry_attempts_total",
+  help: "Retry attempts scheduled by the retry policy, by operation and reason",
+  labelNames: ["operation", "reason"] as const,
+  registers,
+});
+
+export const retrySkipped = new Counter({
+  name: "sv_retry_skipped_total",
+  help: "Retries skipped because the overall deadline would be exceeded, by operation and reason",
+  labelNames: ["operation", "reason"] as const,
+  registers,
+});
+
 // --- Database (#773) ---------------------------------------------------------
 
 export const dbCommandDuration = new Histogram({
@@ -368,6 +390,39 @@ export const externalApiSlowResponses = new Counter({ name: "sv_external_api_slo
 export const providerCalls = new Counter({ name: "sv_provider_calls_total", help: "Logical provider calls, including all attempts", labelNames: ["provider", "environment", "traffic", "outcome"] as const, registers });
 export const providerLatency = new Histogram({ name: "sv_provider_latency_seconds", help: "Logical provider response time including retries and body parsing", labelNames: ["provider", "environment", "traffic", "outcome"] as const, buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120], registers });
 export const providerLastSuccess = new Gauge({ name: "sv_provider_last_success_timestamp_seconds", help: "Last successful logical provider call", labelNames: ["provider", "environment", "traffic"] as const, registers });
+
+// --- Provider degraded mode (#XXX) -------------------------------------------
+//
+// Optional enrichment providers (ipfs, kms, tee_oracle) can be unavailable
+// without blocking core verification flows. These metrics track when a provider
+// is in degraded mode and when it recovers.
+//
+// `sv_provider_degraded_mode` is 1 while the provider is unavailable (down or
+// degraded), 0 when it is confirmed up. Use it to alert on sustained outages
+// and to gate attestation submissions in job handlers.
+
+export const providerDegradedMode = new Gauge({
+  name: "sv_provider_degraded_mode",
+  help: "1 while an optional enrichment provider is unavailable (down or degraded), 0 when up",
+  labelNames: ["provider"] as const,
+  registers,
+});
+
+export const providerDegradedModeRecoveries = new Counter({
+  name: "sv_provider_degraded_mode_recoveries_total",
+  help: "Times an optional provider transitioned from unavailable back to up",
+  labelNames: ["provider"] as const,
+  registers,
+});
+
+// --- Queue depth history (capacity forecast sampling) -----------------------
+
+export const queueDepthHistory = new Gauge({
+  name: "sv_queue_depth_history",
+  help: "Sampled queue depth by queue, state and release, used by the capacity forecast model",
+  labelNames: ["queue", "state", "release"] as const,
+  registers,
+});
 
 // --- Capacity forecast (#980) ------------------------------------------------
 //
